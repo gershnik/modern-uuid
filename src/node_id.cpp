@@ -1,0 +1,211 @@
+// Copyright (c) 2024, Eugene Gershnik
+// SPDX-License-Identifier: BSD-3-Clause
+
+#include "node_id.h"
+#include "random_generator.h"
+
+#include <optional>
+#include <array>
+
+#if __has_include(<net/if.h>)
+    #define HAVE_NET_IF_H 1
+    #include <net/if.h>
+
+    #if __has_include(<net/if_dl.h>)
+        #define HAVE_NET_IF_DL_H 1
+        #include <net/if_dl.h>
+    #endif
+
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <sys/ioctl.h>
+    #if __has_include(<sys/sockio.h>)
+        #include <sys/sockio.h>
+    #endif
+    #include <netinet/in.h>
+    #include <unistd.h>
+
+#elif defined(_WIN32) || defined(_WIN64)
+    #define WIN32_LEAN_AND_MEAN
+
+    #include <windows.h>
+    #include <winsock2.h>
+    #include <iphlpapi.h>
+
+    #pragma comment(lib, "iphlpapi.lib")
+#endif
+
+#include <cstring>
+#include <type_traits>
+#include <algorithm>
+#include <vector>
+
+using namespace muuid;
+
+#ifdef HAVE_NET_IF_H
+
+    #define MUUID_DECLARE_MEMBER_DETECTOR(type, member, name) \
+        struct name##_detector { \
+            template<class T> \
+            static std::true_type detect(decltype(T::member) *); \
+            template<class T> \
+            static std::false_type detect(...); \
+        }; \
+        constexpr bool name = decltype(name##_detector::detect<type>(nullptr))::value
+
+
+    MUUID_DECLARE_MEMBER_DETECTOR(struct sockaddr, sa_len, sockaddr_has_sa_len);
+
+
+    MUUID_DECLARE_MEMBER_DETECTOR(struct ifreq, ifr_hwaddr, ifreq_has_ifr_hwaddr);
+
+
+    /*
+     * BSD 4.4 defines the size of an ifreq to be
+     * max(sizeof(ifreq), sizeof(ifreq.ifr_name)+ifreq.ifr_addr.sa_len
+     * However, on some systems, sa_len isn't present, so the size is
+     * just sizeof(struct ifreq)
+     */
+    template<std::same_as<struct ifreq> T>
+    static inline size_t ifreq_size(const T & req) {
+        if constexpr (sockaddr_has_sa_len) {
+            return std::max(sizeof(struct ifreq), 
+                            sizeof(req.ifr_name) + req.ifr_addr.sa_len);
+        } else {
+            return sizeof(struct ifreq);
+        }
+    }
+
+
+    template<std::same_as<struct ifreq> T>
+    static inline const sockaddr & ifreq_hwaddr(const T & req) {
+        if constexpr (ifreq_has_ifr_hwaddr)
+            return req.ifr_hwaddr;
+        else
+            return req.ifr_addr;
+    }
+#endif
+
+static auto get_hardware_node_id() -> std::optional<std::array<uint8_t, 6>> {
+
+#if defined(HAVE_NET_IF_H) && (defined(SIOCGIFHWADDR) || defined(SIOCGENADDR) || defined(HAVE_NET_IF_DL_H))
+    auto sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (sd < 0)
+		return std::nullopt;
+
+    struct autoclose_sd_t {
+        decltype(sd) s;
+        ~autoclose_sd_t() { close(s); }
+    } autoclose_sd{sd};
+	
+    std::vector<char> buf(1024);
+
+    struct ifconf ifc;
+    for ( ; ; ) {
+        ifc.ifc_len = int(buf.size());
+        ifc.ifc_buf = buf.data();
+        if (ioctl(sd, SIOCGIFCONF, &ifc) < 0)
+            return std::nullopt;
+        if (int(buf.size()) - ifc.ifc_len > sizeof(struct ifreq))
+            break;
+        buf.resize(buf.size() + 1024);
+    }
+	
+    if (ioctl(sd, SIOCGIFCONF, &ifc) < 0)
+		return std::nullopt;
+    
+    struct ifreq * ifrp;
+	for (size_t i = 0; i < size_t(ifc.ifc_len); i+= ifreq_size(*ifrp)) {
+		ifrp = (struct ifreq *)((uint8_t *)ifc.ifc_buf + i);
+
+        struct ifreq ifr;
+		strncpy(ifr.ifr_name, ifrp->ifr_name, IFNAMSIZ);
+
+        uint8_t * res = nullptr;
+#if defined(SIOCGIFHWADDR)
+        if (ioctl(sd, SIOCGIFHWADDR, &ifr) < 0)
+			continue;
+        res = (uint8_t *)&ifreq_hwaddr(ifr).sa_data;
+#elif defined(SIOCGENADDR)
+        if (ioctl(sd, SIOCGENADDR, &ifr) < 0)
+			continue;
+		res = (uint8_t *) ifr.ifr_enaddr;
+#elif defined(HAVE_NET_IF_DL_H)
+        auto sdlp = (struct sockaddr_dl *) &ifrp->ifr_addr;
+		if ((sdlp->sdl_family != AF_LINK) || (sdlp->sdl_alen != 6))
+			continue;
+		res = (uint8_t *) &sdlp->sdl_data[sdlp->sdl_nlen];
+#else
+		static_assert(false);
+#endif 
+		if (res == nullptr || (!res[0] && !res[1] && !res[2] && !res[3] && !res[4] && !res[5]))
+			continue;
+		
+        return std::array{res[0], res[1], res[2], res[3], res[4], res[5]};
+	}
+
+#elif defined(_WIN32) || defined(_WIN64)
+
+    static_assert(MAX_ADAPTER_ADDRESS_LENGTH >= 6);
+
+    ULONG addresses_size = sizeof(IP_ADAPTER_ADDRESSES);
+    auto addresses = (IP_ADAPTER_ADDRESSES *)malloc(addresses_size);
+    if (!addresses)
+        return std::nullopt;
+    struct autofree_addresses_t {
+        decltype(addresses) & addresses;
+        ~autofree_addresses_t() { free(addresses); }
+    } autofree_addresses{addresses};
+
+    for ( ; ; ) {
+        
+        ULONG err = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_ALL_INTERFACES, nullptr, addresses, &addresses_size);
+        if (err == ERROR_BUFFER_OVERFLOW) {
+            free(addresses);
+            addresses = (IP_ADAPTER_ADDRESSES *)malloc(addresses_size);
+            if (!addresses)
+                return std::nullopt;
+            continue;
+        }
+        if (err != 0)
+            return std::nullopt;
+        break;
+    }
+
+    for (auto cur = addresses; cur; cur = cur->Next) {
+        uint8_t * res = cur->PhysicalAddress + (cur->PhysicalAddressLength - 6);
+        if (!res[0] && !res[1] && !res[2] && !res[3] && !res[4] && !res[5])
+            continue;
+        return std::array{res[0], res[1], res[2], res[3], res[4], res[5]};
+    }
+
+#endif
+
+
+    return std::nullopt;
+}
+
+std::span<const uint8_t, 6> muuid::impl::get_node_id() {
+
+    static const std::array<uint8_t, 6> cached_node_id = [](){
+        if (auto res = get_hardware_node_id()) 
+            return *res;
+
+        auto & gen = get_random_generator();
+        std::uniform_int_distribution<unsigned> distrib(0, 255);
+
+        std::array<uint8_t, 6> ret;
+        for(auto & b: ret)
+            b = uint8_t(distrib(gen));
+
+        // Set multicast bit, to prevent conflicts
+        // with IEEE 802 addresses obtained from
+        // network cards
+        ret[0] |= 0x01;
+        return ret;
+    }();
+
+    return cached_node_id;
+}
+
+

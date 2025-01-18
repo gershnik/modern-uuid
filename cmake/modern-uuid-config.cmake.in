@@ -1,0 +1,33 @@
+# Copyright (c) 2024, Eugene Gershnik
+# SPDX-License-Identifier: BSD-3-Clause
+
+@PACKAGE_INIT@
+
+
+# Avoid repeatedly including the targets
+if(NOT TARGET modern-uuid::modern-uuid)
+    include(${CMAKE_CURRENT_LIST_DIR}/modern-uuid-exports.cmake)
+
+    if (NOT DEFINED MUUID_STATIC AND NOT DEFINED MUUID_SHARED)
+
+        if (BUILD_SHARED_LIBS)
+            set(MUUID_SHARED ON)
+            set(MUUID_STATIC OFF)
+        else()
+            set(MUUID_SHARED OFF)
+            set(MUUID_STATIC ON)
+        endif()
+    endif()
+
+    if (MUUID_SHARED AND MUUID_STATIC)
+        if (BUILD_SHARED_LIBS)
+            add_library(modern-uuid::modern-uuid ALIAS modern-uuid::modern-uuid-shared)
+        elseif (MUUID_STATIC)
+            add_library(modern-uuid::modern-uuid ALIAS modern-uuid::modern-uuid-static)
+        endif()
+    elseif (MUUID_SHARED)
+        add_library(modern-uuid::modern-uuid ALIAS modern-uuid::modern-uuid-shared)
+    elseif (MUUID_STATIC)
+        add_library(modern-uuid::modern-uuid ALIAS modern-uuid::modern-uuid-static)
+    endif()
+endif()

@@ -1,0 +1,75 @@
+# Acknowledgements
+
+modern-uuid makes use of the open source code listed below.
+
+
+For your convenience here is the index by license type:
+
+* Public Domain
+  * [MD5 message-digest algorithm by Colin Plumb](#md5-message-digest-algorithm-by-colin-plumb)
+  * [SHA-1 in C by Steve Reid](#sha-1-in-c-by-steve-reid)
+* MIT License
+  * [Random-Number Utilities (randutil)](#random-number-utilities-randutil)
+  
+
+# Software
+
+
+## MD5 message-digest algorithm by Colin Plumb
+  
+Code is in public domain
+
+----
+```
+This code implements the MD5 message-digest algorithm.
+The algorithm is due to Ron Rivest.  This code was
+written by Colin Plumb in 1993, no copyright is claimed.
+This code is in the public domain; do with it what you wish.
+```
+----
+
+## [Random-Number Utilities (randutil)](https://gist.github.com/imneme/540829265469e673d045)
+
+Distributed under MIT License
+
+----
+```
+The MIT License (MIT)
+
+Copyright (c) 2015-2022 Melissa E. O'Neill
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+----
+
+## SHA-1 in C by Steve Reid
+
+Code is in public domain
+
+----
+```
+No copyright is claimed.  This code is in the public domain; do with
+it what you wish.
+
+SHA-1 in C by Steve Reid <steve@edmweb.com>
+100% Public Domain
+```
+----
+
+
