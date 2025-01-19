@@ -34,14 +34,14 @@ TEST_CASE("simple") {
         auto u3 = uuid::generate_time_based();
         auto u4 = uuid::generate_unix_time_based();
 
-        while (write(pipes[1], u3.bytes().data(), u3.bytes().size()) == -1) {
+        while (write(pipes[1], u3.bytes.data(), u3.bytes.size()) == -1) {
             int err = errno;
             if (err == EINTR)
                 continue;
             std::cout << "child: 1st write failed: " << err << '\n';
             exit(2);
         }
-        while (write(pipes[1], u4.bytes().data(), u4.bytes().size()) == -1) {
+        while (write(pipes[1], u4.bytes.data(), u4.bytes.size()) == -1) {
             int err = errno;
             if (err == EINTR)
                 continue;

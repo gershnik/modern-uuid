@@ -24,8 +24,8 @@ auto uuid::generate_random() noexcept -> uuid {
     }
     uuid * ret = reinterpret_cast<uuid *>(&buf);
     
-    ret->m_bytes[8] = (ret->m_bytes[8] & 0x3F) | 0x80;
-    ret->m_bytes[6] = (ret->m_bytes[6] & 0x0F) | 0x40;
+    ret->bytes[8] = (ret->bytes[8] & 0x3F) | 0x80;
+    ret->bytes[6] = (ret->bytes[6] & 0x0F) | 0x40;
 
     return *ret;
 }
@@ -36,13 +36,13 @@ auto uuid::generate_md5(uuid ns, std::string_view name) -> uuid {
     
     MUUID_MD5_CTX ctx;
 	muuid_MD5Init(&ctx);
-	muuid_MD5Update(&ctx, ns.m_bytes.data(), ns.m_bytes.size());
+	muuid_MD5Update(&ctx, ns.bytes.data(), ns.bytes.size());
 	muuid_MD5Update(&ctx, (const uint8_t *)name.data(), unsigned(name.size()));
     uuid ret;
-	muuid_MD5Final(ret.m_bytes.data(), &ctx);
+	muuid_MD5Final(ret.bytes.data(), &ctx);
 
-	ret.m_bytes[8] = (ret.m_bytes[8] & 0x3F) | 0x80;
-	ret.m_bytes[6] = (ret.m_bytes[6] & 0x0F) | 0x30;
+	ret.bytes[8] = (ret.bytes[8] & 0x3F) | 0x80;
+	ret.bytes[6] = (ret.bytes[6] & 0x0F) | 0x30;
 	return ret;
 }
 
@@ -59,13 +59,13 @@ auto uuid::generate_sha1(uuid ns, std::string_view name) -> uuid {
     
     MUUID_SHA1_CTX ctx;
 	muuid_SHA1Init(&ctx);
-	muuid_SHA1Update(&ctx, ns.m_bytes.data(), ns.m_bytes.size());
+	muuid_SHA1Update(&ctx, ns.bytes.data(), ns.bytes.size());
 	muuid_SHA1Update(&ctx, (const uint8_t *)name.data(), unsigned(name.size()));
     buffer buf;
-    muuid_SHA1Final(buf.ret.m_bytes.data(), &ctx);
+    muuid_SHA1Final(buf.ret.bytes.data(), &ctx);
 
-    buf.ret.m_bytes[8] = (buf.ret.m_bytes[8] & 0x3F) | 0x80;
-	buf.ret.m_bytes[6] = (buf.ret.m_bytes[6] & 0x0F) | 0x50;
+    buf.ret.bytes[8] = (buf.ret.bytes[8] & 0x3F) | 0x80;
+	buf.ret.bytes[6] = (buf.ret.bytes[6] & 0x0F) | 0x50;
     return buf.ret;
 }
 

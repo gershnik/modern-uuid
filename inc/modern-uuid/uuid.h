@@ -210,6 +210,10 @@ namespace muuid
             *str++ = digits[fmt][uint8_t(val >> 4)];
             *str++ = digits[fmt][uint8_t(val & 0x0F)];
         }
+
+    public:
+        std::array<uint8_t, 16> bytes{};
+
     public:
         ///Construct a null uuid
         constexpr uuid() noexcept = default;
@@ -217,7 +221,7 @@ namespace muuid
         ///Construct from a string literal
         consteval uuid(const char (&src)[37]) noexcept {
             const char * str = src;
-            uint8_t * data = m_bytes.data();
+            uint8_t * data = this->bytes.data();
             for (int i = 0; i < 4; ++i, str += 2, ++data) {
                 if (!read_hex(str, *data))
                     impl::invalid_constexpr_call("invalid uuid string");
@@ -242,7 +246,7 @@ namespace muuid
 
         template<impl::byte_like Byte>
         constexpr uuid(std::span<Byte, 16> src) noexcept {
-            std::copy(src.begin(), src.end(), m_bytes.data());
+            std::copy(src.begin(), src.end(), this->bytes.data());
         }
 
         template<class T>
@@ -256,7 +260,7 @@ namespace muuid
         {}
 
         constexpr uuid(const uuid_parts & parts) noexcept {
-            auto dest = m_bytes.data();
+            auto dest = this->bytes.data();
             dest = write_bytes(parts.time_low, dest);
             dest = write_bytes(parts.time_mid, dest);
             dest = write_bytes(parts.time_hi_and_version, dest);
@@ -279,11 +283,11 @@ namespace muuid
         }
 
         constexpr auto get_type() const noexcept -> type {
-            return static_cast<type>(m_bytes[6] >> 4);
+            return static_cast<type>(this->bytes[6] >> 4);
         }
 
         constexpr auto get_variant() const noexcept -> variant {
-            uint8_t val = m_bytes[8];
+            uint8_t val = this->bytes[8];
             if ((val & 0x80) == 0)
                 return variant::reserved_ncs;
             if ((val & 0x40) == 0)
@@ -293,15 +297,12 @@ namespace muuid
             return variant::reserved_future;
         }
 
-        constexpr auto bytes() const noexcept -> const std::array<uint8_t, 16> &
-            { return m_bytes; }
-
         constexpr friend auto operator==(const uuid & lhs, const uuid & rhs) noexcept -> bool = default;
         constexpr friend auto operator<=>(const uuid & lhs, const uuid & rhs) noexcept -> std::strong_ordering = default;
 
         constexpr auto to_parts() const noexcept -> uuid_parts {
             uuid_parts ret;
-            auto ptr = m_bytes.data();
+            auto ptr = this->bytes.data();
             ptr = read_bytes(ptr, ret.time_low);
             ptr = read_bytes(ptr, ret.time_mid);
             ptr = read_bytes(ptr, ret.time_hi_and_version);
@@ -317,7 +318,7 @@ namespace muuid
             
             uuid ret;
             const char * str = src.data();
-            uint8_t * dest = ret.m_bytes.data();
+            uint8_t * dest = ret.bytes.data();
             for(int i = 0; i < 4; ++i, str += 2, ++dest) {
                 if (!read_hex(str, *dest))
                     return std::nullopt;
@@ -360,7 +361,7 @@ namespace muuid
             }
 
             char * out = dest.data();
-            const uint8_t * src = m_bytes.data();
+            const uint8_t * src = this->bytes.data();
             for (int i = 0; i < 4; ++i, ++src, out += 2)
                 write_hex(*src, out, fmt);
             *out++ = '-';
@@ -435,7 +436,7 @@ namespace muuid
         constexpr size_t hash_code() const noexcept {
             static_assert(sizeof(uuid) > sizeof(size_t) && sizeof(uuid) % sizeof(size_t) == 0);
             size_t temp;
-            const uint8_t * data = m_bytes.data();
+            const uint8_t * data = this->bytes.data();
             size_t ret = 0;
             for(unsigned i = 0; i < sizeof(uuid) / sizeof(size_t); ++i) {
                 memcpy(&temp, data, sizeof(size_t));
@@ -444,9 +445,6 @@ namespace muuid
             }
             return ret;
         }
-
-    private:
-        std::array<uint8_t, 16> m_bytes{};
     };
 
     static_assert(sizeof(uuid) == 16);

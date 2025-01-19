@@ -37,6 +37,9 @@ static_assert(std::three_way_comparable<uuid>);
 #endif
 static_assert(std::regular<uuid>);
 
+template<uuid U1> class some_class {};
+some_class<uuid("bc961bfb-b006-42f4-93ae-206f02658810")> some_object;
+
 TEST_CASE("nil") {
 
     constexpr uuid u;
@@ -44,11 +47,9 @@ TEST_CASE("nil") {
     static_assert(u.get_variant() == uuid::variant::reserved_ncs);
     static_assert(u.get_type() == uuid::type::none);
 
-    auto bytes = u.bytes();
-
     constexpr uint8_t null_bytes[16] = {};
 
-    CHECK(memcmp(bytes.data(), null_bytes, bytes.size()) == 0);
+    CHECK(memcmp(u.bytes.data(), null_bytes, u.bytes.size()) == 0);
 }
 
 TEST_CASE("bytes") {
@@ -64,17 +65,15 @@ TEST_CASE("bytes") {
     CHECK(uuid() < u2);
     CHECK(u2 == u3);
 
-    constexpr auto bytes2 = u2.bytes();
-    CHECK(bytes2 == buf1);
-    auto bytes3 = u3.bytes();
-    CHECK(bytes3 == buf1);
+    CHECK(u2.bytes == buf1);
+    CHECK(u3.bytes == buf1);
 }
 
 TEST_CASE("literals") {
     constexpr uuid us("7d444840-9dc0-11d1-b245-5ffdce74fad2");
 
     constexpr std::array<uint8_t, 16> expected = {0x7d,0x44,0x48, 0x40, 0x9d, 0xc0, 0x11, 0xd1, 0xb2, 0x45, 0x5f, 0xfd, 0xce, 0x74, 0xfa, 0xd2};
-    CHECK(us.bytes() == expected);
+    CHECK(us.bytes == expected);
 }
 
 TEST_CASE("hash") {
