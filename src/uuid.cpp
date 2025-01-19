@@ -90,13 +90,14 @@ auto uuid::generate_reordered_time_based() -> uuid {
     std::span<const uint8_t, 6> node_id = impl::get_node_id();
     auto [clock, clock_seq] = impl::get_clock_v1();
 
+    clock <<= 4;
     uint32_t clock_high = uint32_t(clock >> 32);
     uint32_t clock_low = uint32_t(clock);
 
     uuid_parts parts;
     parts.time_low = clock_high;
     parts.time_mid = uint16_t(clock_low >> 16);
-    parts.time_hi_and_version = (clock_low & 0x0FFF) | 0x6000;
+    parts.time_hi_and_version = ((clock_low >> 4) & 0x0FFF) | 0x6000;
     parts.clock_seq = clock_seq | 0x8000;
     memcpy(parts.node, node_id.data(), node_id.size());
 
@@ -104,23 +105,18 @@ auto uuid::generate_reordered_time_based() -> uuid {
 }
 
 auto uuid::generate_unix_time_based() -> uuid {  
-    auto [clock, extra] = impl::get_clock_v7();
-    
-    std::array<uint32_t, 4> buf;
-    uuid * ret = reinterpret_cast<uuid *>(&buf);
+    auto [clock, extra, clock_seq] = impl::get_clock_v7();
 
-    auto dest = ret->m_bytes.data();
-    dest = write_bytes(uint32_t(clock >> 16), dest);
-    dest = write_bytes(uint16_t(clock), dest);
-    dest = write_bytes(extra, dest);
+    uuid_parts parts;
+    parts.time_low = uint32_t(clock >> 16);
+    parts.time_mid = uint16_t(clock);
+    parts.time_hi_and_version = (extra & 0x0FFF) | 0x7000;
+    parts.clock_seq = clock_seq | 0x8000;
     
     auto & gen = impl::get_random_generator();
-    std::uniform_int_distribution<uint32_t> distrib;
-    buf[2] = distrib(gen);
-    buf[3] = distrib(gen);
+    std::uniform_int_distribution<unsigned> distrib(0, 255);
+    for (auto & b: parts.node)
+        b = uint8_t(distrib(gen));
     
-    ret->m_bytes[8] = (ret->m_bytes[8] & 0x3F) | 0x80;
-    ret->m_bytes[6] = (ret->m_bytes[6] & 0x0F) | 0x70;
-    
-    return *ret;
+    return uuid(parts);
 }

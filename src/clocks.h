@@ -5,12 +5,22 @@
 #define HEADER_MODERN_UUID_CLOCKS_H_INCLUDED
 
 #include <cstdint>
-#include <utility>
 
 namespace muuid::impl {
 
-    std::pair<uint64_t, uint16_t> get_clock_v1();
-    std::pair<uint64_t, uint16_t> get_clock_v7();
+    struct clock_result_v1 {
+        uint64_t value;
+        uint16_t sequence;
+    };
+
+    struct clock_result_v7 {
+        uint64_t value;
+        uint16_t extra;
+        uint16_t sequence;
+    };
+
+    clock_result_v1 get_clock_v1();
+    clock_result_v7 get_clock_v7();
 }
 
 #endif
