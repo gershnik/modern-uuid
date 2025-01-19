@@ -202,3 +202,24 @@ jobs:
             cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE:FILEPATH=$ANDROID_SDK_ROOT/ndk/${{ matrix.version }}/build/cmake/android.toolchain.cmake -DANDROID_ABI:STRING=${{ matrix.arch }} -DANDROID_PLATFORM:STRING=${{ matrix.api }} -DANDROID_STL:STRING=c++_static
             cmake --build out --target run-tests
 
+  emscripten:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set Up Emscripten
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: 3.1.70
+        actions-cache-folder: 'emsdk-cache'
+
+    - name: Configure
+      shell: bash
+      run: cmake -S . -B out -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+
+    - name: Build and Test
+      shell: bash
+      run: cmake --build out --target run-tests

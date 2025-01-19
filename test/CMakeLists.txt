@@ -92,7 +92,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         add_custom_target(run-test-${suffix}
             DEPENDS test-${suffix}
             COMMAND echo "Running test-${suffix}"
-            COMMAND node test-${suffix} -ni
+            COMMAND node $<TARGET_FILE:test-${suffix}> -ni
         )
 
     else()

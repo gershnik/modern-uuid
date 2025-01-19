@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#if __has_include(<unistd.h>) && __has_include(<signal.h>) && !defined(__MINGW32__)
+#if __has_include(<unistd.h>) && __has_include(<signal.h>) && !defined(__MINGW32__) && !defined(__EMSCRIPTEN__)
 
 #include <unistd.h>
 #include <signal.h>
