@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#if __has_include(<unistd.h>) && __has_include(<signal.h>) 
+#if __has_include(<unistd.h>) && __has_include(<signal.h>) && !defined(__MINGW32__)
 
 #include <unistd.h>
 #include <signal.h>
@@ -34,16 +34,39 @@ TEST_CASE("simple") {
         auto u3 = uuid::generate_time_based();
         auto u4 = uuid::generate_unix_time_based();
 
-        write(pipes[1], u3.bytes().data(), u3.bytes().size());
-        write(pipes[1], u4.bytes().data(), u4.bytes().size());
-        
+        while (write(pipes[1], u3.bytes().data(), u3.bytes().size()) == -1) {
+            int err = errno;
+            if (err == EINTR)
+                continue;
+            std::cout << "child: 1st write failed: " << err << '\n';
+            exit(2);
+        }
+        while (write(pipes[1], u4.bytes().data(), u4.bytes().size()) == -1) {
+            int err = errno;
+            if (err == EINTR)
+                continue;
+            std::cout << "child: 2nd write failed: " << err << '\n';
+            exit(2);
+        }
+        close(pipes[1]);
         exit(0);
     } else {
         //parent
         close(pipes[1]);
 
         uint8_t buf[2 * sizeof(uuid)];
-        read(pipes[0], buf, sizeof(buf));
+        for (size_t read_count = 0; read_count < sizeof(buf); ) {
+            auto res = read(pipes[0], buf + read_count, sizeof(buf) - read_count);
+            if (res < 0) {
+                int err = errno;
+                if (err == EINTR)
+                    continue;
+                FAIL_CHECK("pipe read failed, errno", err);
+                break;
+            }
+            read_count += res;
+        }
+        close(pipes[0]);
 
         int stat = 0;
         for ( ; ; ) {

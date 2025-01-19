@@ -83,6 +83,33 @@ namespace muuid
         static_assert(byte_like<std::byte>);
 
         void invalid_constexpr_call(const char *);
+
+        template<std::same_as<size_t> S>
+        static constexpr size_t hash_combine(S prev, S next) {
+            constexpr auto digits = std::numeric_limits<S>::digits;
+            static_assert(digits == 64 || digits == 32);
+            
+            if constexpr (digits == 64) {
+                S x = prev + 0x9e3779b9 + next;
+                const S m = 0xe9846af9b1a615d;
+                x ^= x >> 32;
+                x *= m;
+                x ^= x >> 32;
+                x *= m;
+                x ^= x >> 28;
+                return x;
+            } else {
+                S x = prev + 0x9e3779b9 + next;
+                const S m1 = 0x21f0aaad;
+                const S m2 = 0x735a2d97;
+                x ^= x >> 16;
+                x *= m1;
+                x ^= x >> 15;
+                x *= m2;
+                x ^= x >> 15;
+                return x;
+            }
+        }
     }
 
     struct uuid_parts {
@@ -131,6 +158,8 @@ namespace muuid
             lowercase,
             uppercase
         };
+
+        struct namespaces;
     private:
         template<impl::byte_like Byte, class T>
         static constexpr const uint8_t * read_bytes(const Byte * bytes, T & val) noexcept {
@@ -143,14 +172,11 @@ namespace muuid
 
         template<impl::byte_like Byte, class T>
         static constexpr uint8_t * write_bytes(T val, Byte * bytes) noexcept {
-            for(unsigned i = 0; ; ) {
-                bytes[sizeof(T) - i - 1] = Byte(static_cast<uint8_t>(val));
-                if constexpr (sizeof(T) == 1) {
-                    break;
-                } else {
-                    if (++i == sizeof(T))
-                        break;
+            bytes[sizeof(T) - 1] = Byte(static_cast<uint8_t>(val));
+            if constexpr (sizeof(T) > 1) {
+                for(unsigned i = 1; i != sizeof(T); ++i) {
                     val >>= 8;
+                    bytes[sizeof(T) - i - 1] = Byte(static_cast<uint8_t>(val));
                 }
             }
             return bytes + sizeof(T);
@@ -160,28 +186,28 @@ namespace muuid
             uint8_t ret = 0;
             for (int i = 0; i < 2; ++i) {
                 char c = *str++;
+                uint8_t nibble;
                 if (c >= '0' && c <= '9')
-                    ret = (ret << 4) | (c - '0');
+                    nibble = (c - '0');
                 else if (c >= 'a' && c <= 'f')
-                    ret = (ret << 4) | (c - 'a' + 10);
+                    nibble = (c - 'a' + 10);
                 else if (c >= 'A' && c <= 'F')
-                    ret = (ret << 4) | (c - 'A' + 10);
+                    nibble = (c - 'A' + 10);
                 else 
                     return false;
+                ret = (ret << 4) | nibble;
             }
             val = ret;
             return true;
         }
 
         static constexpr void write_hex(uint8_t val, char * str, format fmt) noexcept {
-            const uint8_t nibbles[] = {uint8_t(val >> 4), uint8_t(val & 0x0F)};
             constexpr char digits[2][17] = {
                 "0123456789abcdef",
                 "0123456789ABCDEF",
             };
-            for (auto nibble: nibbles) {
-                *str++ = digits[fmt][nibble];
-            }
+            *str++ = digits[fmt][uint8_t(val >> 4)];
+            *str++ = digits[fmt][uint8_t(val & 0x0F)];
         }
     public:
         ///Construct a null uuid
@@ -368,6 +394,9 @@ namespace muuid
             return ret;
         }
 
+    #if __cpp_lib_constexpr_string >= 201907L
+        constexpr 
+    #endif
         auto to_string(format fmt = lowercase) const -> std::string
         {
             std::string ret(36, '\0');
@@ -402,45 +431,17 @@ namespace muuid
             return str;
         }
 
-        size_t hash_code() const noexcept {
+        constexpr size_t hash_code() const noexcept {
             static_assert(sizeof(uuid) > sizeof(size_t) && sizeof(uuid) % sizeof(size_t) == 0);
             size_t temp;
             const uint8_t * data = m_bytes.data();
             size_t ret = 0;
             for(unsigned i = 0; i < sizeof(uuid) / sizeof(size_t); ++i) {
                 memcpy(&temp, data, sizeof(size_t));
-                ret = hash_combine(ret, std::hash<size_t>()(temp));
+                ret = impl::hash_combine(ret, temp);
                 data += sizeof(size_t);
             }
             return ret;
-        }
-
-    private:
-        template<std::same_as<size_t> S>
-        static constexpr size_t hash_combine(S prev, S next) {
-            constexpr auto digits = std::numeric_limits<S>::digits;
-            static_assert(digits == 64 || digits == 32);
-            
-            if constexpr (digits == 64) {
-                S x = prev + 0x9e3779b9 + next;
-                const S m = 0xe9846af9b1a615d;
-                x ^= x >> 32;
-                x *= m;
-                x ^= x >> 32;
-                x *= m;
-                x ^= x >> 28;
-                return x;
-            } else {
-                S x = prev + 0x9e3779b9 + next;
-                const S m1 = 0x21f0aaad;
-                const S m2 = 0x735a2d97;
-                x ^= x >> 16;
-                x *= m1;
-                x ^= x >> 15;
-                x *= m2;
-                x ^= x >> 15;
-                return x;
-            }
         }
 
     private:
@@ -449,26 +450,25 @@ namespace muuid
 
     static_assert(sizeof(uuid) == 16);
 
-    namespace namespaces {
+    struct uuid::namespaces {
         /* Name string is a fully-qualified domain name */
-        constexpr uuid dns("6ba7b810-9dad-11d1-80b4-00c04fd430c8");
+        static constexpr uuid dns{"6ba7b810-9dad-11d1-80b4-00c04fd430c8"};
 
         /* Name string is a URL */
-        constexpr uuid url("6ba7b811-9dad-11d1-80b4-00c04fd430c8");
+        static constexpr uuid url{"6ba7b811-9dad-11d1-80b4-00c04fd430c8"};
 
         /* Name string is an ISO OID */
-        constexpr uuid oid("6ba7b812-9dad-11d1-80b4-00c04fd430c8");
+        static constexpr uuid oid{"6ba7b812-9dad-11d1-80b4-00c04fd430c8"};
 
         /* Name string is an X.500 DN (in DER or a text output format) */
-        constexpr uuid x500("6ba7b814-9dad-11d1-80b4-00c04fd430c8");
-
-    }
+        static constexpr uuid x500{"6ba7b814-9dad-11d1-80b4-00c04fd430c8"};
+    };
 }
 
 template<>
 struct std::hash<muuid::uuid> {
 
-    size_t operator()(muuid::uuid val) const noexcept {
+    constexpr size_t operator()(muuid::uuid val) const noexcept {
         return val.hash_code();
     }
 };

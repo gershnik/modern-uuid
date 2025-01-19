@@ -32,7 +32,9 @@ static_assert(std::is_trivially_destructible_v<uuid>);
 static_assert(std::is_nothrow_destructible_v<uuid>);
 static_assert(std::equality_comparable<uuid>);
 static_assert(std::totally_ordered<uuid>);
+#if !defined(_LIBCPP_VERSION) || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 140000)
 static_assert(std::three_way_comparable<uuid>);
+#endif
 static_assert(std::regular<uuid>);
 
 TEST_CASE("nil") {
@@ -186,7 +188,7 @@ TEST_CASE("random") {
 }
 
 TEST_CASE("md5") {
-    uuid u1 = uuid::generate_md5(namespaces::dns, "www.widgets.com");
+    uuid u1 = uuid::generate_md5(uuid::namespaces::dns, "www.widgets.com");
     CHECK(u1 == uuid("3d813cbb-47fb-32ba-91df-831e1593ac29"));
     
     CHECK(u1.get_variant() == uuid::variant::standard);
@@ -195,7 +197,7 @@ TEST_CASE("md5") {
 }
 
 TEST_CASE("sha1") {
-    uuid u1 = uuid::generate_sha1(namespaces::dns, "www.widgets.com");
+    uuid u1 = uuid::generate_sha1(uuid::namespaces::dns, "www.widgets.com");
     CHECK(u1 == uuid("21f7f8de-8051-5b89-8680-0195ef798b6a"));
     
     CHECK(u1.get_variant() == uuid::variant::standard);
@@ -241,6 +243,7 @@ TEST_CASE("reordered_time_based") {
     
     std::cout << "v6: " << u1 << '\n';
     std::cout << "v6: " << u2 << '\n';
+    std::cout << "v6: " << u3 << '\n';
 }
 
 TEST_CASE("unix_time_based") {
@@ -262,6 +265,7 @@ TEST_CASE("unix_time_based") {
     
     std::cout << "v7: " << u1 << '\n';
     std::cout << "v7: " << u2 << '\n';
+    std::cout << "v7: " << u3 << '\n';
 }
 
 }
