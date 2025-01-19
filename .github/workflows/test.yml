@@ -1,0 +1,204 @@
+name: Build
+
+on: 
+  push:
+    branches: 
+      - '*'
+      - '*/**'
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'CHANGELOG.md'
+      - '.tools/**'
+
+
+jobs:
+  # selfhosted:
+  #   concurrency: ${{ matrix.remote_host }}
+  #   runs-on: [self-hosted, server]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       remote_host: [freebsd-13.1, freebsd-14, openbsd-7-5, alpine-3, archlinux]
+        
+  #   steps:
+  #   - name: Run remote build
+  #     run: |
+  #       "$RUNNER_TOOLS_PATH"/run-agent gh-${{ matrix.remote_host }} <<'EOF'
+  #       set -e
+  #       rm -rf work/modern-uuid
+  #       if [ ! -d work/modern-uuid ]; then
+  #         git clone https://github.com/gershnik/modern-uuid.git work/modern-uuid
+  #       fi
+  #       cd work/modern-uuid
+  #       git fetch --all
+  #       git fetch -f --prune --tags
+  #       git reset --hard ${{ github.sha }}
+  #       rm -rf out
+  #       cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+  #       cmake --build out --target run-tests
+  #       EOF
+
+  local:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - {os: macos-13, version: "14.3.1" }
+        - {os: macos-14, version: "15.4" }
+        - {os: macos-15, version: "16.2" }
+        
+        - os: windows-latest
+        
+        - {os: ubuntu-20.04, compiler: gcc, version: 10 }
+        - {os: ubuntu-22.04, compiler: gcc, version: 11 }
+        - {os: ubuntu-22.04, compiler: gcc, version: 12 }
+        - {os: ubuntu-22.04, compiler: gcc, version: 13 }
+        - {os: ubuntu-24.04, compiler: gcc, version: 14 }
+        
+        - {os: ubuntu-22.04, compiler: clang, version: 13 }
+        - {os: ubuntu-22.04, compiler: clang, version: 14 }
+        - {os: ubuntu-22.04, compiler: clang, version: 15 }
+        - {os: ubuntu-22.04, compiler: clang, version: 16 }
+        - {os: ubuntu-latest, compiler: clang, version: 17 }
+        - {os: ubuntu-latest, compiler: clang, version: 18 }
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: System Setup
+      shell: bash
+      run: |
+        if [[ '${{ matrix.os }}' == ubuntu-* ]]; then
+          if [[ '${{ matrix.compiler }}' == 'clang' ]]; then
+            wget https://apt.llvm.org/llvm.sh
+            chmod u+x llvm.sh
+            sudo ./llvm.sh ${{ matrix.version }} 
+            sudo apt-get install -y clang-tools-${{ matrix.version }} libc++-${{ matrix.version }}-dev libc++abi-${{ matrix.version }}-dev
+            echo "CC=clang-${{ matrix.version }}" >> $GITHUB_ENV
+            echo "CXX=clang++-${{ matrix.version }}" >> $GITHUB_ENV
+            echo "CXXFLAGS=-stdlib=libc++" >> $GITHUB_ENV
+          fi
+
+          if [[ '${{ matrix.compiler }}' == 'gcc' ]]; then
+            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            sudo apt-get update
+            sudo apt-get install -y gcc-${{ matrix.version }} g++-${{ matrix.version }}
+            echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
+            echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
+          fi
+
+          if [[ '${{ matrix.os }}' == macos-* ]]; then
+              echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.version }}.app" >> $GITHUB_ENV
+          fi
+        fi
+
+    - name: Configure
+      shell: bash
+      run: |
+          cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+
+    - name: Build
+      run: |
+          cmake --build out --target run-tests
+
+  mingw:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure
+      shell: cmd
+      run: |
+          PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
+          cmake -G "MinGW Makefiles" -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+
+    - name: Build
+      shell: cmd
+      run: |
+          PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
+          cmake --build out --target run-tests
+
+  cygwin:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Cygwin
+      uses: egor-tensin/setup-cygwin@v4
+      with:
+        packages: cmake ninja gcc-g++ cygwin-devel
+
+    - name: Configure
+      shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+      run: |
+          cd ${GITHUB_WORKSPACE}
+          cmake -GNinja -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+
+    - name: Build
+      shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+      run: |
+          cd ${GITHUB_WORKSPACE}
+          cmake --build out --target run-tests
+
+  android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [27.2.12479018]
+        api: [21, 30]    
+        arch: [x86_64]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Enable KVM
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+
+    - name: AVD cache
+      uses: actions/cache@v4
+      id: avd-cache
+      with:
+        path: |
+          ~/.android/avd/*
+          ~/.android/adb*
+        key: avd-${{ matrix.version }}-${{ matrix.arch }}-30
+
+    - name: Create AVD and generate snapshot for caching
+      if: steps.avd-cache.outputs.cache-hit != 'true'
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 30
+        arch: ${{matrix.arch}}
+        target: google_apis
+        ndk: ${{ matrix.version }}
+        force-avd-creation: false
+        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        disable-animations: false
+        script: echo "Generated AVD snapshot for caching."
+
+    - name: Run tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 30
+        arch: ${{matrix.arch}}
+        target: google_apis
+        ndk: ${{ matrix.version }}
+        force-avd-creation: false
+        emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        disable-animations: true
+        script: |
+            cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE:FILEPATH=$ANDROID_SDK_ROOT/ndk/${{ matrix.version }}/build/cmake/android.toolchain.cmake -DANDROID_ABI:STRING=${{ matrix.arch }} -DANDROID_PLATFORM:STRING=${{ matrix.api }} -DANDROID_STL:STRING=c++_static
+            cmake --build out --target run-tests
+

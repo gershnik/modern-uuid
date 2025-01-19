@@ -80,7 +80,8 @@ foreach(suffix ${BUILD_SUFFIXES})
     PUBLIC
         modern-uuid-header
     PRIVATE
-        "$<$<PLATFORM_ID:SunOS>:socket>"
+        $<$<PLATFORM_ID:SunOS>:socket>
+        $<$<BOOL:${MINGW}>:iphlpapi.lib>
     )
 
     target_compile_definitions(modern-uuid-${suffix}

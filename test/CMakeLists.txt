@@ -75,13 +75,15 @@ foreach(suffix ${BUILD_SUFFIXES})
 
         if (${suffix} STREQUAL "shared")
             set(LIB_TO_PUSH "$<TARGET_FILE:modern-uuid-${suffix}>")
+        else()
+            set(LIB_TO_PUSH "")
         endif()
 
         add_custom_target(run-test-${suffix}
             DEPENDS test-${suffix}
-            COMMAND echo "Running test-${TEST_SUFFIX}"
+            COMMAND echo "Running test-${suffix}"
             COMMAND ${ADB} shell mkdir -p ${ANDROID_TEST_DIR}
-            COMMAND ${ADB} push test-${suffix} ${LIB_TO_PUSH} ${ANDROID_TEST_DIR}
+            COMMAND ${ADB} push "$<TARGET_FILE:test-${suffix}>" ${LIB_TO_PUSH} ${ANDROID_TEST_DIR}
             COMMAND ${ADB} shell LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH}:${ANDROID_TEST_DIR} ${ANDROID_TEST_DIR}/test-${suffix} -ni
         )
 
