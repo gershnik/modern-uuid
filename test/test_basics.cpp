@@ -8,6 +8,8 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <map>
+#include <unordered_map>
 
 using namespace muuid;
 using namespace std::literals;
@@ -40,6 +42,9 @@ static_assert(std::regular<uuid>);
 template<uuid U1> class some_class {};
 some_class<uuid("bc961bfb-b006-42f4-93ae-206f02658810")> some_object;
 
+std::map<uuid, std::string> m;
+std::unordered_map<uuid, std::string> um;
+
 TEST_CASE("nil") {
 
     constexpr uuid u;
@@ -59,6 +64,7 @@ TEST_CASE("bytes") {
     constexpr uuid u1(buf1);
     constexpr uuid u2{std::array<uint8_t, 16>{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}}};
     uuid u3{std::span<uint8_t, 16>{buf2}};
+    uuid u4{std::span{buf2}.subspan<0, 16>()};
 
     CHECK(u1 == u2);
     CHECK(u1 != uuid());

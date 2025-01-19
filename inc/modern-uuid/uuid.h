@@ -433,10 +433,10 @@ namespace muuid
             return str;
         }
 
-        constexpr size_t hash_code() const noexcept {
+        friend constexpr size_t hash_value(const uuid & val) noexcept {
             static_assert(sizeof(uuid) > sizeof(size_t) && sizeof(uuid) % sizeof(size_t) == 0);
             size_t temp;
-            const uint8_t * data = this->bytes.data();
+            const uint8_t * data = val.bytes.data();
             size_t ret = 0;
             for(unsigned i = 0; i < sizeof(uuid) / sizeof(size_t); ++i) {
                 memcpy(&temp, data, sizeof(size_t));
@@ -467,8 +467,8 @@ namespace muuid
 template<>
 struct std::hash<muuid::uuid> {
 
-    constexpr size_t operator()(muuid::uuid val) const noexcept {
-        return val.hash_code();
+    constexpr size_t operator()(const muuid::uuid & val) const noexcept {
+        return hash_value(val);
     }
 };
 
