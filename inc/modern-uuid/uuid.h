@@ -6,6 +6,7 @@
 
 // Config macros:
 // MUUID_MULTITHREADED - auto-detected. Set to 1 to force multi-threaded build and 0 to force single threaded 1
+// MUUID_SHARED - set to 1 when using/building a shared library version of the library
 // MUUID_BUILDING_MUUID - set 1 if building the library itself. 
 
 #include <cstdint>
