@@ -10,6 +10,7 @@ on:
       - '.gitignore'
       - 'LICENSE'
       - 'CHANGELOG.md'
+      - 'doc/**'
       - '.tools/**'
 
 
