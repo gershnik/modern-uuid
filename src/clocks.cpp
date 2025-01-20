@@ -30,25 +30,21 @@ namespace muuid::impl {
 
         clock_result_v1 get_v1() {
 
-            using hundred_nanoseconds = duration<int64_t, std::ratio<int64_t(1), int64_t(10'000'000)>>;
-
-            system_clock::time_point now;
-            int adjustment;
+            time_point<system_clock, hundred_nanoseconds> adjusted_now;
             uint16_t clock_seq;
             for ( ; ; ) {
-                now = system_clock::now();
+                auto now = system_clock::now();
                 {
                 #if MUUID_MULTITHREADED
                     std::lock_guard guard{m_mutex};
                 #endif
 
-                    if (m_v1.adjust(now, adjustment, clock_seq))
+                    if (m_v1.adjust(now, adjusted_now, clock_seq))
                         break;
                 }
             }
 
-            uint64_t clock = duration_cast<hundred_nanoseconds>(now.time_since_epoch()).count();
-            clock += adjustment;
+            uint64_t clock = adjusted_now.time_since_epoch().count();
             //gregorian offset of Unix epoch
             clock += ((uint64_t(0x01B21DD2)) << 32) + 0x13814000;
 
@@ -57,38 +53,27 @@ namespace muuid::impl {
 
         clock_result_v7 get_v7() {
 
-            system_clock::time_point now;
-            int adjustment;
+            time_point<system_clock, microseconds> adjusted_now;
             uint16_t clock_seq;
             for ( ; ; ) {
-                now = system_clock::now();
+                auto now = system_clock::now();
                 {
                 #if MUUID_MULTITHREADED
                     std::lock_guard guard{m_mutex};
                 #endif
 
-                    if (m_v7.adjust(now, adjustment, clock_seq))
+                    if (m_v7.adjust(now, adjusted_now, clock_seq))
                         break;
                 }
             }
 
-            auto interval = now.time_since_epoch();
+            auto interval = adjusted_now.time_since_epoch();
             auto interval_ms = duration_cast<milliseconds>(interval);
+            
             uint64_t clock = interval_ms.count();
-            clock += adjustment;
-
-            uint16_t extra;
-            if constexpr (milliseconds(1) > system_clock::duration(1)) {
-                const uint64_t ticks_in_ms = uint64_t(duration_cast<system_clock::duration>(milliseconds(1)).count());
-                uint64_t remainder = (interval - duration_cast<system_clock::duration>(interval_ms)).count();
-
-                uint64_t frac = remainder * 4096;
-                extra = uint16_t(frac / ticks_in_ms);
-                if (frac % ticks_in_ms >= ticks_in_ms / 2)
-                    ++extra;
-            } else {
-                extra = 0;
-            }
+            uint64_t remainder = (interval - duration_cast<microseconds>(interval_ms)).count();
+            uint64_t frac = remainder * 4096;
+            uint16_t extra = uint16_t(frac / 1000) + uint16_t(frac % 1000 >= 500);
             return {clock, extra, clock_seq};
         }
 
@@ -104,56 +89,84 @@ namespace muuid::impl {
         }
     #endif
 
+        template<class Duration>
+        static typename Duration::rep get_max_adjustment() {
+            //we cannot rely system_clock::duration type to tell us the actual precision of the
+            //clock. Some implementations lie. For example Emscripten says microseconds but in 
+            //reality usually (always?) has millisecond granularity. Thus we need to discover
+            //the precision at runtime
+            static typename Duration::rep max_adjustment = []() {
+                typename Duration::rep samples[] = {
+                    round<Duration>(system_clock::now()).time_since_epoch().count(),
+                    round<Duration>(system_clock::now()).time_since_epoch().count(),
+                    round<Duration>(system_clock::now()).time_since_epoch().count(),
+                    round<Duration>(system_clock::now()).time_since_epoch().count()
+                };
+                typename Duration::rep ret = 1;
+                for ( ; ; ) {
+                    bool done = true;
+                    for(auto & sample: samples) {
+                        if (sample % 10 != 0) {
+                            done = true;
+                            break;
+                        }
+                        sample /= 10;
+                        if (sample != 0)
+                            done = false;
+                    }
+                    if (done)
+                        break;
+                    ret *= 10;
+                }
+                return ret != 1 ? ret : 0;
+            }();
+            return max_adjustment;
+        }
+
     private:
         template<class UnitDuration, class MaxUnitDuration>
-        struct state {
-            state():
-                m_last_time(round<MaxUnitDuration>(system_clock::now()) - 1s),
-                m_clock_seq([](){
-                    std::uniform_int_distribution<uint16_t> distrib;
-                    return distrib(get_random_generator()) & 0x3FFF;
-                }()),
-                m_adjustment(0)
-            {}
-
-            bool adjust(system_clock::time_point & now, int & adjustment, uint16_t & clock_seq) {
-
-                constexpr int max_adjustment = []() constexpr -> int64_t {
-                    if constexpr (UnitDuration(1) < system_clock::duration(1)) {
-                        return duration_cast<UnitDuration>(system_clock::duration(1)).count();
-                    } else {
-                        return 0;
-                    }
-                }();
-
-                auto rounded_now = round<MaxUnitDuration>(now);
-                
-                if (rounded_now < m_last_time) {
-                    m_clock_seq = (m_clock_seq + 1) & 0x3FFF;
-                    m_adjustment = 0;
-                    m_last_time = rounded_now;
-                } else if (rounded_now == m_last_time) {
-                    if constexpr (max_adjustment > 0) {
-                        if (m_adjustment >= max_adjustment)
-                            return false;
-                        ++m_adjustment;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    m_adjustment = 0;
-                    m_last_time = rounded_now;
-                }
-                adjustment = m_adjustment;
-                clock_seq = m_clock_seq;
-                now = time_point_cast<system_clock::duration>(rounded_now);
-                return true;
+        class state {
+        public:
+            state() {
+                m_last_time = round<MaxUnitDuration>(system_clock::now()) - 1s;
+                auto & gen = get_random_generator();
+                std::uniform_int_distribution<uint16_t> clock_seq_distrib(0, 0x3FFF);
+                m_clock_seq = clock_seq_distrib(gen);
+                m_max_adjustment = get_max_adjustment<MaxUnitDuration>();
+                reset_adjustment();
             }
 
+            bool adjust(system_clock::time_point now, time_point<system_clock, MaxUnitDuration> & adjusted, uint16_t & clock_seq) {
+
+                adjusted = round<MaxUnitDuration>(now);
+                
+                if (adjusted < m_last_time) {
+                    m_clock_seq = (m_clock_seq + 1) & 0x3FFF;
+                    reset_adjustment();
+                    m_last_time = adjusted;
+                } else if (adjusted == m_last_time) {
+                    if (m_adjustment >= m_max_adjustment)
+                        return false;
+                    ++m_adjustment;
+                } else {
+                    reset_adjustment();
+                    m_last_time = adjusted;
+                }
+                adjusted += MaxUnitDuration(m_adjustment);
+                clock_seq = m_clock_seq;
+                return true;
+            }
+        private:
+            void reset_adjustment() {
+                auto & gen = get_random_generator();
+                std::uniform_int_distribution<typename MaxUnitDuration::rep> adjustment_distrib(0, m_max_adjustment);
+                m_adjustment = adjustment_distrib(gen);
+            }
         private:
             time_point<system_clock, MaxUnitDuration> m_last_time;
             uint16_t m_clock_seq;
-            int m_adjustment;
+            typename MaxUnitDuration::rep m_adjustment;
+            typename MaxUnitDuration::rep m_max_adjustment;
         };
 
     private:
