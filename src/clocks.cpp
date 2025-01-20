@@ -158,14 +158,16 @@ namespace muuid::impl {
             }
         private:
             void reset_adjustment() {
-                auto & gen = get_random_generator();
-                std::uniform_int_distribution<typename MaxUnitDuration::rep> adjustment_distrib(0, m_max_adjustment);
-                m_adjustment = adjustment_distrib(gen);
+                if (m_max_adjustment != 0) {
+                    auto & gen = get_random_generator();
+                    std::uniform_int_distribution<typename MaxUnitDuration::rep> adjustment_distrib(0, m_max_adjustment - 1);
+                    m_adjustment = adjustment_distrib(gen);
+                }
             }
         private:
             time_point<system_clock, MaxUnitDuration> m_last_time;
             uint16_t m_clock_seq;
-            typename MaxUnitDuration::rep m_adjustment;
+            typename MaxUnitDuration::rep m_adjustment = 0;
             typename MaxUnitDuration::rep m_max_adjustment;
         };
 
