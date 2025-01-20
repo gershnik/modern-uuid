@@ -98,7 +98,7 @@ namespace muuid::impl {
             static typename Duration::rep max_adjustment = []() {
                 typename Duration::rep samples[3];
                 samples[0] = round<Duration>(system_clock::now()).time_since_epoch().count();
-                for (int i = 1; i < std::size(samples); ++i) {
+                for (size_t i = 1; i < std::size(samples); ++i) {
                     for ( ; ; ) {
                         auto val = round<Duration>(system_clock::now()).time_since_epoch().count();
                         if (val != samples[i - 1]) {
