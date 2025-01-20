@@ -96,12 +96,17 @@ namespace muuid::impl {
             //reality usually (always?) has millisecond granularity. Thus we need to discover
             //the precision at runtime
             static typename Duration::rep max_adjustment = []() {
-                typename Duration::rep samples[] = {
-                    round<Duration>(system_clock::now()).time_since_epoch().count(),
-                    round<Duration>(system_clock::now()).time_since_epoch().count(),
-                    round<Duration>(system_clock::now()).time_since_epoch().count(),
-                    round<Duration>(system_clock::now()).time_since_epoch().count()
-                };
+                typename Duration::rep samples[3];
+                samples[0] = round<Duration>(system_clock::now()).time_since_epoch().count();
+                for (int i = 1; i < std::size(samples); ++i) {
+                    for ( ; ; ) {
+                        auto val = round<Duration>(system_clock::now()).time_since_epoch().count();
+                        if (val != samples[i - 1]) {
+                            samples[i] = val;
+                            break;
+                        }
+                    }
+                }
                 typename Duration::rep ret = 1;
                 for ( ; ; ) {
                     bool done = true;
@@ -139,6 +144,13 @@ namespace muuid::impl {
             bool adjust(system_clock::time_point now, time_point<system_clock, MaxUnitDuration> & adjusted, uint16_t & clock_seq) {
 
                 adjusted = round<MaxUnitDuration>(now);
+                //on a miniscule change that we have misdetected m_max_adjustment let's make sure
+                //that adjusted is rounded on the m_max_adjustment boundary to avoid spillover
+                if (m_max_adjustment != 0) {
+                    auto val = adjusted.time_since_epoch();
+                    val = (val / m_max_adjustment) * m_max_adjustment;
+                    adjusted = time_point<system_clock, MaxUnitDuration>(val);
+                }
                 
                 if (adjusted < m_last_time) {
                     m_clock_seq = (m_clock_seq + 1) & 0x3FFF;
@@ -152,6 +164,7 @@ namespace muuid::impl {
                     reset_adjustment();
                     m_last_time = adjusted;
                 }
+                
                 adjusted += MaxUnitDuration(m_adjustment);
                 clock_seq = m_clock_seq;
                 return true;
