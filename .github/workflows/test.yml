@@ -99,14 +99,13 @@ jobs:
             echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.version }}.app" >> $GITHUB_ENV
         fi
 
-        if [[ '${{ matrix.platform }}' != "" ]]; then
-            echo CMAKE_GENERATOR_PLATFORM=${{ matrix.platform }} >> $GITHUB_ENV
-        fi
-
     - name: Configure
       shell: bash
       run: |
-          cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+          if [[ '${{ matrix.platform }}' != "" ]]; then
+              set EXTRA_FLAGS=-DCMAKE_GENERATOR_PLATFORM=${{ matrix.platform }}
+          fi
+          cmake -S . -B out $EXTRA_FLAGS -DCMAKE_BUILD_TYPE=RelWithDebInfo 
 
     - name: Build
       run: |
