@@ -173,7 +173,7 @@ namespace muuid::impl {
             void reset_adjustment() {
                 if (m_max_adjustment != 0) {
                     auto & gen = get_random_generator();
-                    std::uniform_int_distribution<typename MaxUnitDuration::rep> adjustment_distrib(0, m_max_adjustment - 1);
+                    std::uniform_int_distribution<typename MaxUnitDuration::rep> adjustment_distrib(0, m_max_adjustment - 2);
                     m_adjustment = adjustment_distrib(gen);
                 }
             }
