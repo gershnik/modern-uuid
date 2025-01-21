@@ -51,7 +51,9 @@ jobs:
         - {os: macos-14, version: "15.4" }
         - {os: macos-15, version: "16.2" }
         
-        - os: windows-latest
+        - {os: windows-latest, platform: "x64" }
+        - {os: windows-latest, platform: "Win32" }
+        - {os: windows-latest, platform: "ARM64" }
         
         - {os: ubuntu-20.04, compiler: gcc, version: 10 }
         - {os: ubuntu-22.04, compiler: gcc, version: 11 }
@@ -91,10 +93,14 @@ jobs:
             echo "CC=gcc-${{ matrix.version }}" >> $GITHUB_ENV
             echo "CXX=g++-${{ matrix.version }}" >> $GITHUB_ENV
           fi
+        fi
 
-          if [[ '${{ matrix.os }}' == macos-* ]]; then
-              echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.version }}.app" >> $GITHUB_ENV
-          fi
+        if [[ '${{ matrix.os }}' == macos-* ]]; then
+            echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.version }}.app" >> $GITHUB_ENV
+        fi
+
+        if [[ '${{ matrix.platform }}' != "" ]]; then
+            echo CMAKE_GENERATOR_PLATFORM=${{ matrix.platform }} >> $GITHUB_ENV
         fi
 
     - name: Configure
