@@ -184,7 +184,7 @@ jobs:
       if: steps.avd-cache.outputs.cache-hit != 'true'
       uses: reactivecircus/android-emulator-runner@v2
       with:
-        api-level: 30
+        api-level: ${{ matrix.api }}
         arch: ${{matrix.arch}}
         target: google_apis
         ndk: ${{ matrix.version }}
@@ -196,7 +196,7 @@ jobs:
     - name: Run tests
       uses: reactivecircus/android-emulator-runner@v2
       with:
-        api-level: 30
+        api-level: ${{ matrix.api }}
         arch: ${{matrix.arch}}
         target: google_apis
         ndk: ${{ matrix.version }}
@@ -206,6 +206,7 @@ jobs:
         script: |
             cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE:FILEPATH=$ANDROID_SDK_ROOT/ndk/${{ matrix.version }}/build/cmake/android.toolchain.cmake -DANDROID_ABI:STRING=${{ matrix.arch }} -DANDROID_PLATFORM:STRING=${{ matrix.api }} -DANDROID_STL:STRING=c++_static
             cmake --build out --target run-tests
+            killall -INT crashpad_handler || true
 
   emscripten:
     runs-on: ubuntu-latest
