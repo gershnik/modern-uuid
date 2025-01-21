@@ -523,7 +523,7 @@ namespace muuid
             uuid::format fmt = uuid::lowercase;
 
             template<class ParseContext>
-            constexpr auto parse(ParseContext & ctx) -> ParseContext::iterator
+            constexpr auto parse(ParseContext & ctx) -> typename ParseContext::iterator
             {
                 auto it = ctx.begin();
                 while(it != ctx.end()) {
