@@ -103,13 +103,30 @@ TEST_CASE("strings") {
     CHECK(us == us1);
     CHECK(us2 == us1);
 
-    CHECK(us.to_chars() == std::array<char, 37>{"7d444840-9dc0-11d1-b245-5ffdce74fad2"});
-    CHECK(us.to_chars(uuid::lowercase) == std::array<char, 37>{"7d444840-9dc0-11d1-b245-5ffdce74fad2"});
-    CHECK(us.to_chars(uuid::uppercase) == std::array<char, 37>{"7D444840-9DC0-11D1-B245-5FFDCE74FAD2"});
+    auto match = [](const std::array<char, 36> & lhs, std::string_view rhs) {
+        return std::string_view(lhs.data(), lhs.size()) == rhs;
+    };
 
-    CHECK(us1.to_chars() == std::array<char, 37>{"7d444840-9dc0-11d1-b245-5ffdce74fad2"});
-    CHECK(us1.to_chars(uuid::lowercase) == std::array<char, 37>{"7d444840-9dc0-11d1-b245-5ffdce74fad2"});
-    CHECK(us1.to_chars(uuid::uppercase) == std::array<char, 37>{"7D444840-9DC0-11D1-B245-5FFDCE74FAD2"});
+    CHECK(match(us.to_chars(), "7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+    CHECK(match(us.to_chars(uuid::lowercase), "7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+    CHECK(match(us.to_chars(uuid::uppercase), "7D444840-9DC0-11D1-B245-5FFDCE74FAD2"));
+    std::array<char, 36> buf;
+    us.to_chars(buf);
+    CHECK(buf == us.to_chars());
+    us.to_chars(buf, uuid::lowercase);
+    CHECK(buf == us.to_chars(uuid::lowercase));
+    us.to_chars(buf, uuid::uppercase);
+    CHECK(buf == us.to_chars(uuid::uppercase));
+
+    CHECK(match(uuid{}.to_chars(), "00000000-0000-0000-0000-000000000000"));
+    CHECK(match(uuid{}.to_chars(uuid::lowercase), "00000000-0000-0000-0000-000000000000"));
+    CHECK(match(uuid{}.to_chars(uuid::uppercase), "00000000-0000-0000-0000-000000000000"));
+
+    CHECK(match(uuid::max().to_chars(), "ffffffff-ffff-ffff-ffff-ffffffffffff"));
+    CHECK(match(uuid::max().to_chars(uuid::lowercase), "ffffffff-ffff-ffff-ffff-ffffffffffff"));
+    CHECK(match(uuid::max().to_chars(uuid::uppercase), "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"));
+
+
 
     CHECK(us2.to_string() == "7d444840-9dc0-11d1-b245-5ffdce74fad2");
 }

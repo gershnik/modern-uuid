@@ -436,10 +436,9 @@ namespace muuid
         }
 
         /// Returns a character array with formatted uuid
-        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<char, 37> {
-            std::array<char, 37> ret;
+        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<char, 36> {
+            std::array<char, 36> ret;
             to_chars(ret, fmt);
-            ret[36] = 0;
             return ret;
         }
 
