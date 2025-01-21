@@ -15,31 +15,31 @@ on:
 
 
 jobs:
-  # selfhosted:
-  #   concurrency: ${{ matrix.remote_host }}
-  #   runs-on: [self-hosted, server]
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       remote_host: [freebsd-13.1, freebsd-14, openbsd-7-5, alpine-3, archlinux]
+  selfhosted:
+    concurrency: ${{ matrix.remote_host }}
+    runs-on: [self-hosted, server]
+    strategy:
+      fail-fast: false
+      matrix:
+        remote_host: [freebsd-14, openbsd-7-5, centos-9, netbsd-10, alpine-3, archlinux, omnios]
         
-  #   steps:
-  #   - name: Run remote build
-  #     run: |
-  #       "$RUNNER_TOOLS_PATH"/run-agent gh-${{ matrix.remote_host }} <<'EOF'
-  #       set -e
-  #       rm -rf work/modern-uuid
-  #       if [ ! -d work/modern-uuid ]; then
-  #         git clone https://github.com/gershnik/modern-uuid.git work/modern-uuid
-  #       fi
-  #       cd work/modern-uuid
-  #       git fetch --all
-  #       git fetch -f --prune --tags
-  #       git reset --hard ${{ github.sha }}
-  #       rm -rf out
-  #       cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
-  #       cmake --build out --target run-tests
-  #       EOF
+    steps:
+    - name: Run remote build
+      run: |
+        "$RUNNER_TOOLS_PATH"/run-agent gh-${{ matrix.remote_host }} <<'EOF'
+        set -e
+        rm -rf work/modern-uuid
+        if [ ! -d work/modern-uuid ]; then
+          git clone https://github.com/gershnik/modern-uuid.git work/modern-uuid
+        fi
+        cd work/modern-uuid
+        git fetch --all
+        git fetch -f --prune --tags
+        git reset --hard ${{ github.sha }}
+        rm -rf out
+        cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+        cmake --build out --target run-tests
+        EOF
 
   local:
     runs-on: ${{ matrix.os }}
