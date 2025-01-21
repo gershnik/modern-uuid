@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <cstdio>
 
 #include <concepts>
 #include <compare>
@@ -29,6 +30,18 @@
         #define MUUID_MULTITHREADED 1
     #else
         #define MUUID_MULTITHREADED 0
+    #endif
+#endif
+
+#if !defined(MUUID_USE_EXCEPTIONS)
+    #if defined(__GNUC__) && !defined(__EXCEPTIONS)
+        #define MUUID_USE_EXCEPTIONS 0
+    #elif defined(__clang__) && !defined(__cpp_exceptions)
+        #define MUUID_USE_EXCEPTIONS 0
+    #elif defined(_MSC_VER) && !_HAS_EXCEPTIONS
+        #define MUUID_USE_EXCEPTIONS 0
+    #else
+        #define MUUID_USE_EXCEPTIONS 1
     #endif
 #endif
 
@@ -84,6 +97,16 @@ namespace muuid
         static_assert(byte_like<std::byte>);
 
         void invalid_constexpr_call(const char *);
+
+        #if MUUID_USE_EXCEPTIONS
+            #define MUUID_THROW(x) throw x
+        #else
+            [[noreturn]] inline void fail(const char* message) {
+                fprintf(stderr, "muuid: fatal error: %s", message);
+                abort();
+            }
+            #define MUUID_THROW(x) ::muuid::impl::fail((x).what())
+        #endif
 
         template<std::same_as<size_t> S>
         static constexpr size_t hash_combine(S prev, S next) {
@@ -492,6 +515,40 @@ namespace muuid
         /// Name string is an X.500 DN (in DER or a text output format) 
         static constexpr uuid x500{"6ba7b814-9dad-11d1-80b4-00c04fd430c8"};
     };
+
+    namespace impl {
+        template<class Derived>
+        struct formatter_base
+        {
+            uuid::format fmt = uuid::lowercase;
+
+            template<class ParseContext>
+            constexpr auto parse(ParseContext & ctx) -> ParseContext::iterator
+            {
+                auto it = ctx.begin();
+                while(it != ctx.end()) {
+                    if (*it == 'l') {
+                        this->fmt = uuid::lowercase; ++it;
+                    } else if (*it == 'u') {
+                        this->fmt = uuid::uppercase; ++it;
+                    } else if (*it == '}') {
+                        break;
+                    } else {
+                        static_cast<Derived *>(this)->raise_exception("Invalid format args");
+                    }
+                }
+                return it;
+            }
+
+            template <typename FormatContext>
+            auto format(uuid val, FormatContext & ctx) const -> decltype(ctx.out()) 
+            {
+                std::array<char, 36> buf;
+                val.to_chars(buf, this->fmt);
+                return std::copy(buf.begin(), buf.end(), ctx.out());
+            }
+        };
+    }
 }
 
 /// std::hash specialization for uuid
@@ -508,36 +565,22 @@ struct std::hash<muuid::uuid> {
 
 /// uuid formatter for std::format
 template<>
-struct std::formatter<muuid::uuid>
+struct std::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std::formatter<::muuid::uuid>>
 {
-    using uuid = muuid::uuid;
-
-    uuid::format fmt = uuid::lowercase;
-
-    template<class ParseContext>
-    constexpr auto parse(ParseContext & ctx) -> ParseContext::iterator
-    {
-        auto it = ctx.begin();
-        while(it != ctx.end()) {
-            if (*it == 'l') {
-                this->fmt = uuid::lowercase; ++it;
-            } else if (*it == 'u') {
-                this->fmt = uuid::uppercase; ++it;
-            } else if (*it == '}') {
-                break;
-            } else {
-                throw std::format_error("Invalid format args");
-            }
-        }
-        return it;
+    void raise_exception(const char * message) {
+        MUUID_THROW(std::format_error(message));
     }
+};
 
-    template <typename FormatContext>
-    auto format(uuid val, FormatContext & ctx) const -> decltype(ctx.out()) 
-    {
-        std::array<char, 36> buf;
-        val.to_chars(buf, this->fmt);
-        return std::copy(buf.begin(), buf.end(), ctx.out());
+#endif
+
+#if defined(FMT_VERSION)
+
+template<>
+struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std::formatter<::muuid::uuid>>
+{
+    void raise_exception(const char * message) {
+        FMT_THROW(fmt::format_error(message));
     }
 };
 
