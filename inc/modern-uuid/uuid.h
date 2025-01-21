@@ -125,8 +125,9 @@ namespace muuid
 
     class uuid {
     public:
-        //see https://datatracker.ietf.org/doc/html/rfc4122#section-4.1.1
-        //and https://datatracker.ietf.org/doc/rfc9562/ section 4.1
+        /// UUID variant
+        /// see https://datatracker.ietf.org/doc/html/rfc4122#section-4.1.1
+        /// and https://datatracker.ietf.org/doc/rfc9562/ section 4.1
         enum class variant: uint8_t {
             reserved_ncs        = 0,
             standard            = 1,
@@ -134,8 +135,10 @@ namespace muuid
             reserved_future     = 3
         };
 
-        //see https://datatracker.ietf.org/doc/html/rfc4122#section-4.1.3
-        //and https://datatracker.ietf.org/doc/rfc9562/ section 4.2
+        /// UUID type
+        /// Only valid for variant::standard UUIDs
+        /// see https://datatracker.ietf.org/doc/html/rfc4122#section-4.1.3
+        /// and https://datatracker.ietf.org/doc/rfc9562/ section 4.2
         enum class type : uint8_t {
             none                    = 0,
             time_based              = 1,
@@ -155,6 +158,7 @@ namespace muuid
             reserved15              = 15
         };
 
+        /// Whether to print uuid in lower or upper case
         enum format {
             lowercase,
             uppercase
@@ -215,10 +219,10 @@ namespace muuid
         std::array<uint8_t, 16> bytes{};
 
     public:
-        ///Construct a null uuid
+        ///Constructs a Nil UUID
         constexpr uuid() noexcept = default;
 
-        ///Construct from a string literal
+        ///Constructs uuid from a string literal
         consteval uuid(const char (&src)[37]) noexcept {
             const char * str = src;
             uint8_t * data = this->bytes.data();
@@ -244,11 +248,13 @@ namespace muuid
                 impl::invalid_constexpr_call("invalid uuid string");
         }
 
+        /// Constructs uuid from a span of 16 byte-like objects
         template<impl::byte_like Byte>
         constexpr uuid(std::span<Byte, 16> src) noexcept {
             std::copy(src.begin(), src.end(), this->bytes.data());
         }
 
+        /// Constructs uuid from anything convertible to a span of 16 byte-like objects
         template<class T>
         requires( !impl::is_span<T> && requires(const T & x) { 
             std::span{x}; 
@@ -259,6 +265,7 @@ namespace muuid
             uuid{std::span{src}}
         {}
 
+        /// Constructs uuid from an old-style uuid_parts struct
         constexpr uuid(const uuid_parts & parts) noexcept {
             auto dest = this->bytes.data();
             dest = write_bytes(parts.time_low, dest);
@@ -268,24 +275,29 @@ namespace muuid
             std::copy(std::begin(parts.node), std::end(parts.node), dest);
         }
 
-        MUUID_EXPORTED static auto generate_random() noexcept -> uuid;
-        MUUID_EXPORTED static auto generate_md5(uuid ns, std::string_view name) -> uuid;
-        MUUID_EXPORTED static auto generate_sha1(uuid ns, std::string_view name) -> uuid;
+        /// Generates a version 1 UUID
         MUUID_EXPORTED static auto generate_time_based() -> uuid;
+        /// Generates a version 3 UUID
+        MUUID_EXPORTED static auto generate_md5(uuid ns, std::string_view name) -> uuid;
+        /// Generates a version 4 UUID
+        MUUID_EXPORTED static auto generate_random() noexcept -> uuid;
+        /// Generates a version 5 UUID
+        MUUID_EXPORTED static auto generate_sha1(uuid ns, std::string_view name) -> uuid;
+        /// Generates a version 6 UUID
         MUUID_EXPORTED static auto generate_reordered_time_based() -> uuid;
+        /// Generates a version 7 UUID
         MUUID_EXPORTED static auto generate_unix_time_based() -> uuid;
 
+        /// Returns a Max UUID
         static constexpr uuid max() noexcept 
             { return uuid("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"); }
 
+        /// Resets the object to a Nil UUID
         constexpr void clear() noexcept {
             *this = uuid();
         }
 
-        constexpr auto get_type() const noexcept -> type {
-            return static_cast<type>(this->bytes[6] >> 4);
-        }
-
+        /// Returns the UUID variant
         constexpr auto get_variant() const noexcept -> variant {
             uint8_t val = this->bytes[8];
             if ((val & 0x80) == 0)
@@ -297,9 +309,16 @@ namespace muuid
             return variant::reserved_future;
         }
 
+        /// Returns the UUID type
+        /// Only meaningful if get_variant() returns variant::standard
+        constexpr auto get_type() const noexcept -> type {
+            return static_cast<type>(this->bytes[6] >> 4);
+        }
+
         constexpr friend auto operator==(const uuid & lhs, const uuid & rhs) noexcept -> bool = default;
         constexpr friend auto operator<=>(const uuid & lhs, const uuid & rhs) noexcept -> std::strong_ordering = default;
 
+        /// Converts uuid to an old-style uuid_parts struct
         constexpr auto to_parts() const noexcept -> uuid_parts {
             uuid_parts ret;
             auto ptr = this->bytes.data();
@@ -311,6 +330,7 @@ namespace muuid
             return ret;
         }
 
+        /// Parses uuid from a span of characters
         template<size_t Extent>
         static constexpr std::optional<uuid> from_chars(std::span<const char, Extent> src) noexcept {
             if (src.size() < 36)
@@ -340,6 +360,7 @@ namespace muuid
             return ret;
         }
 
+        /// Parses uuid from anything convertible to a span of characters
         template<class T>
         requires( !impl::is_span<T> && requires(T & x) { 
             std::span{x}; 
@@ -348,6 +369,7 @@ namespace muuid
         static constexpr auto from_chars(const T & src) noexcept
             { return from_chars(std::span{src}); }
 
+        /// Formats uuid into a span of characters
         template<size_t Extent>
         [[nodiscard]]
         constexpr auto to_chars(std::span<char, Extent> dest, format fmt = lowercase) const noexcept ->
@@ -378,6 +400,7 @@ namespace muuid
                 return true;
         }
 
+        /// Formats uuid into anything convertible to a span of characters
         template<class T>
         requires( !impl::is_span<T> && requires(T & x) {
             std::span{x}; 
@@ -389,6 +412,7 @@ namespace muuid
             return to_chars(std::span{dest}, fmt);
         }
 
+        /// Returns a character array with formatted uuid
         constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<char, 37> {
             std::array<char, 37> ret;
             to_chars(ret, fmt);
@@ -396,9 +420,11 @@ namespace muuid
             return ret;
         }
 
+
     #if __cpp_lib_constexpr_string >= 201907L
         constexpr 
     #endif
+        /// Returns a string with formatted uuid
         auto to_string(format fmt = lowercase) const -> std::string
         {
             std::string ret(36, '\0');
@@ -406,6 +432,7 @@ namespace muuid
             return ret;
         }
 
+        /// Prints uuid into an ostream
         friend std::ostream & operator<<(std::ostream & str, const uuid val) {
             const auto flags = str.flags();
             const format fmt = (flags & std::ios_base::uppercase ? uppercase : lowercase);
@@ -415,6 +442,7 @@ namespace muuid
             return str;
         }
 
+        /// Reads uuid from an istream
         friend std::istream & operator>>(std::istream & str, uuid & val) {
             std::array<char, 36> buf;
             auto * strbuf = str.rdbuf();
@@ -433,6 +461,7 @@ namespace muuid
             return str;
         }
 
+        /// Returns hash code for the uuid
         friend constexpr size_t hash_value(const uuid & val) noexcept {
             static_assert(sizeof(uuid) > sizeof(size_t) && sizeof(uuid) % sizeof(size_t) == 0);
             size_t temp;
@@ -449,21 +478,23 @@ namespace muuid
 
     static_assert(sizeof(uuid) == 16);
 
+    /// Well-known namespaces for uuid::generate_md5() and uuid::generate_sha1()
     struct uuid::namespaces {
-        /* Name string is a fully-qualified domain name */
+        /// Name string is a fully-qualified domain name
         static constexpr uuid dns{"6ba7b810-9dad-11d1-80b4-00c04fd430c8"};
 
-        /* Name string is a URL */
+        /// Name string is a URL 
         static constexpr uuid url{"6ba7b811-9dad-11d1-80b4-00c04fd430c8"};
 
-        /* Name string is an ISO OID */
+        /// Name string is an ISO OID 
         static constexpr uuid oid{"6ba7b812-9dad-11d1-80b4-00c04fd430c8"};
 
-        /* Name string is an X.500 DN (in DER or a text output format) */
+        /// Name string is an X.500 DN (in DER or a text output format) 
         static constexpr uuid x500{"6ba7b814-9dad-11d1-80b4-00c04fd430c8"};
     };
 }
 
+/// std::hash specialization for uuid
 template<>
 struct std::hash<muuid::uuid> {
 
@@ -475,6 +506,7 @@ struct std::hash<muuid::uuid> {
 
 #if MUUID_SUPPORTS_STD_FORMAT
 
+/// uuid formatter for std::format
 template<>
 struct std::formatter<muuid::uuid>
 {
