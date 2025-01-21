@@ -159,7 +159,7 @@ jobs:
       fail-fast: false
       matrix:
         version: [27.2.12479018]
-        api: [26, 30]    
+        api: [21, 30]    
         arch: [x86_64]
     steps:
     - name: Checkout
@@ -178,7 +178,7 @@ jobs:
         path: |
           ~/.android/avd/*
           ~/.android/adb*
-        key: avd-${{ matrix.version }}-${{ matrix.arch }}-30
+        key: avd-${{ matrix.version }}-${{ matrix.arch }}-${{ matrix.api }}
 
     - name: Create AVD and generate snapshot for caching
       if: steps.avd-cache.outputs.cache-hit != 'true'
