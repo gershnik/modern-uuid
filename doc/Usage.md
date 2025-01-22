@@ -1,6 +1,5 @@
 
-> [!WARNING]  
-> This document is currently under construction. 
+# Usage Guide
 
 <!-- TOC -->
 
@@ -273,7 +272,55 @@ The `hash_value()` function allows you to easily adapt `uuid` to other hashing s
 
 ### Formatting and I/O
 
+`uuid` objects can be formatted using `std::format` (if your standard library has it) and `fmt::format` (if you include `fmt` headers _before_
+`modern-uuid/uuid.h`). 
+For either two formatting flags are defined: `l` which formats using lowercase (the default) and `u` which formats in uppercase.
+
+```cpp
+constexpr uuid u("F537C67E-09FF-41F9-8EDF-BD78489896F0");
+
+std::string str = std::format("{}", u);
+assert(str == "f537c67e-09ff-41f9-8edf-bd78489896f0");
+
+str = std::format("{:u}", u);
+assert(str == "F537C67E-09FF-41F9-8EDF-BD78489896F0");
+
+str = std::format("{:l}", u);
+assert(str == "f537c67e-09ff-41f9-8edf-bd78489896f0");
+```
+
+`uuid` objects can also be written to and read from iostreams. When reading case is ignored.
+
+```cpp
+std::istringstream istr("bC961bFb-B006-42f4-93ae-206f02658810");
+uuid uuidr;
+istr >> uuidr;
+assert(uuidr = uuid("bc961bfb-b006-42f4-93ae-206f02658810"));
+```
+
+When writing, the standard `std::ios_base::uppercase` flag (which can be set using `std::uppercase`/`std::nouppercase` manipulators) 
+controls the output format.
+
+```cpp
+std::ostringstream ostr;
+ostr << uuid("bC961bFb-B006-42f4-93ae-206f02658810");
+assert(ostr.str() == "bc961bfb-b006-42f4-93ae-206f02658810");
+
+ostr.str("");
+ostr << std::uppercase << uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2");
+assert(ostr.str() == "7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
+```
+
 ### Accessing UUID properties
+
+You can examine `uuid` variant via `get_variant` method. If the variant is `variant::standard` you can use `get_type` method to 
+examine type/version.
+
+```cpp
+uuid u("cc318cec-baf4-4f7a-9272-fc6c47a7eab9");
+assert(u.get_variant() == uuid::variant::standard);
+assert(u.get_type() == uuid::type::time_based);
+```
 
 ### Other features
 
@@ -294,4 +341,13 @@ A `uuid` object can be created from `uuid_parts`:
 ```cpp
 uuid u1(uuid_parts{0xbc961bfb, 0xb006, 0x42f4, 0x93ae, {0x20, 0x6f, 0x02, 0x65, 0x88, 0x10}});
 ```
+
+A non const `uuid` object can be reset to Nil UUID via `clear` method
+
+```cpp
+uuid u("7d444840-9dc0-11d1-b245-5ffdce74fad2");
+u.clear();
+assert(u == uuid());
+```
+
 

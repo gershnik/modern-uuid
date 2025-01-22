@@ -68,27 +68,31 @@ std::strong_ordering res = (u_v6 <=> u_v7);
 //uuid objects can be hashed
 std::unordered_map<uuid, transaction> transaction_map;
 
-//they can be formatted
+//they can be formatted. u and l stand for uppercase and lowercase
 
-//this produces "e53d37db-e4e0-484f-996f-3ab1d4701abc"
 std::string str = std::format("{}", u1);
-//and this "E53D37DB-E4E0-484F-996F-3AB1D4701ABC"
-str = std::format("{:u}", u1);
-//and this "e53d37db-e4e0-484f-996f-3ab1d4701abc" again
-str = std::format("{:l}", u1);
+assert(str == "e53d37db-e4e0-484f-996f-3ab1d4701abc");
 
-//uuids can be read/written from/to iostream (case doesn't matter)
+str = std::format("{:u}", u1);
+assert(str == "E53D37DB-E4E0-484F-996F-3AB1D4701ABC")
+
+str = std::format("{:l}", u1);
+assert(str == "e53d37db-e4e0-484f-996f-3ab1d4701abc")
+
+//uuids can be read/written from/to iostream 
+
+//when reading case doesn't matter
 std::istringstream istr("bc961bfb-b006-42f4-93ae-206f02658810");
 uuid uuidr;
 istr >> uuidr;
 assert(uuidr = uuid("bc961bfb-b006-42f4-93ae-206f02658810"));
 
 std::ostringstream ostr;
-ostr1 << uuid("bc961bfb-b006-42f4-93ae-206f02658810");
+ostr << uuid("bc961bfb-b006-42f4-93ae-206f02658810");
 assert(ostr.str() == "bc961bfb-b006-42f4-93ae-206f02658810");
 ostr.str("");
 
-//printing respects std::uppercase formatter
+//writing respects std::ios_base::uppercase stream flag
 ostr << std::uppercase << uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2");
 assert(ostr.str() == "7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
 
