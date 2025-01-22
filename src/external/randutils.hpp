@@ -141,13 +141,22 @@
     #define RANDUTILS_GENERALIZED_CONSTEXPR
 #endif
 
-#if !defined(__cpp_exceptions) && !defined(__EXCEPTIONS) && !defined(_CPPUNWIND)\
-        || defined(__wasi__)
-    #define RANDUTILS_TRY if constexpr (true)
-    #define RANDUTILS_CATCH(x) if constexpr (false)
+#if defined(__GNUC__) && !defined(__EXCEPTIONS)
+    #define RANDUTILS_EXPECT_EXCEPTIONS 0
+#elif defined(__clang__) && !defined(__cpp_exceptions)
+    #define RANDUTILS_EXPECT_EXCEPTIONS 0
+#elif defined(_MSC_VER) && !defined(_CPPUNWIND)
+    #define RANDUTILS_EXPECT_EXCEPTIONS 0
 #else
+    #define RANDUTILS_EXPECT_EXCEPTIONS 1
+#endif
+
+#if RANDUTILS_EXPECT_EXCEPTIONS
     #define RANDUTILS_TRY try
     #define RANDUTILS_CATCH(x) catch(x)
+#else
+    #define RANDUTILS_TRY if constexpr (true)
+    #define RANDUTILS_CATCH(x) if constexpr (false)
 #endif
 
 
