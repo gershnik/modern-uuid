@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        remote_host: [freebsd-14, openbsd-7-5, centos-9, netbsd-10, alpine-3, archlinux, omnios]
+        remote_host: [freebsd-14, openbsd-7-5, centos-9, netbsd-10, alpine-3, archlinux, omnios, debian-11-armhf]
         
     steps:
     - name: Run remote build
