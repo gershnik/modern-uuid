@@ -62,7 +62,7 @@
 
 //See https://github.com/llvm/llvm-project/issues/77773 for the sad story of how feature test
 //macros are useless with libc++
-#if __cpp_lib_format >= 201907L || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 170000 && __has_include(<format>))
+#if (__cpp_lib_format >= 201907L || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 170000)) && __has_include(<format>)
 
     #define MUUID_SUPPORTS_STD_FORMAT 1
 
@@ -581,7 +581,7 @@ struct std::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std:
 #if defined(FMT_VERSION)
 
 template<>
-struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std::formatter<::muuid::uuid>>
+struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<fmt::formatter<::muuid::uuid>>
 {
     void raise_exception(const char * message) {
         FMT_THROW(fmt::format_error(message));
