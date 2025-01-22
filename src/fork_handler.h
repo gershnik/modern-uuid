@@ -25,33 +25,6 @@
 #include <new>
 
 namespace muuid::impl {
-
-    template<class T>
-    class object_buffer {
-    public:
-        template<std::invocable<void *> Constructor>
-        object_buffer(Constructor && constructor) {
-            std::forward<Constructor>(constructor)(&m_buf[0]);
-        }
-        ~object_buffer() {
-            reinterpret_cast<T *>(&m_buf[0])->~T();
-        }
-        object_buffer(const object_buffer &) = delete;
-        object_buffer operator=(const object_buffer &) = delete;
-
-        template<std::invocable<void *> Constructor>
-        void reset(Constructor && constructor) {
-            reinterpret_cast<T *>(&m_buf[0])->~T();
-            std::forward<Constructor>(constructor)(&m_buf[0]);
-        }
-
-        operator T&() {
-            return *std::launder(reinterpret_cast<T *>(&m_buf[0]));
-        }
-    private:
-        alignas(alignof(T)) static inline uint8_t m_buf[sizeof(T)];
-    };
-
     
 #if MUUID_HANDLE_FORK
 
@@ -59,6 +32,47 @@ namespace muuid::impl {
     concept fork_aware_static = requires(T & obj) {
         obj.prepare_fork_in_parent();
         obj.after_fork_in_parent();
+    };
+
+    template<class T>
+    class object_buffer {
+    public:
+        object_buffer() = default;
+
+        template<std::invocable<void *> Constructor>
+        object_buffer(Constructor && constructor) {
+            //this can throw
+            std::forward<Constructor>(constructor)(&m_buf[0]);
+            m_memory_initialized = true;
+        }
+        ~object_buffer() {
+            if (m_memory_initialized)
+                reinterpret_cast<T *>(&m_buf[0])->~T();
+        }
+        object_buffer(const object_buffer &) = delete;
+        object_buffer operator=(const object_buffer &) = delete;
+
+        template<std::invocable<void *> Constructor>
+        void reset(Constructor && constructor) {
+            if (m_memory_initialized)
+                reinterpret_cast<T *>(&m_buf[0])->~T();
+            
+            m_memory_initialized = false;
+            //this can throw
+            std::forward<Constructor>(constructor)(&m_buf[0]);
+            m_memory_initialized = true;
+        }
+
+        operator bool() const 
+            { return m_memory_initialized; }
+
+        T & operator*() 
+            { return *std::launder(reinterpret_cast<T *>(&m_buf[0])); }
+
+        
+    private:
+        alignas(alignof(T)) uint8_t m_buf[sizeof(T)];
+        bool m_memory_initialized = false;
     };
 
     template<class T, int Disambiguator = 0>
@@ -73,35 +87,33 @@ namespace muuid::impl {
 
         template<std::invocable<void *> Constructor>
         static T & instance_with_constructor(Constructor && constructor) {
+
+            [[maybe_unused]]
+            static int registered = []() {
+                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
+                    std::terminate();
+                return 1;
+            }();
+
         #if MUUID_MULTITHREADED 
             if (!s_inst.m_initialized_in_this_process.test(std::memory_order_acquire)) {
                 std::lock_guard<std::mutex> lock(s_inst.m_mutex);
                 if (!s_inst.m_initialized_in_this_process.test(std::memory_order_relaxed)) {
 
-                    if (s_inst.m_memory_initialized)
-                        reinterpret_cast<T *>(&s_inst.m_buf[0])->~T();
-                    s_inst.m_memory_initialized = false;
+                    s_inst.m_obj.reset(std::forward<Constructor>(constructor));
                     
-                    std::forward<Constructor>(constructor)(&s_inst.m_buf[0]);
-
-                    s_inst.m_memory_initialized = true;
                     s_inst.m_initialized_in_this_process.test_and_set(std::memory_order_release);
                 }
             }
         #else
             if (!s_inst.m_initialized_in_this_process) {
                 
-                if (s_inst.m_memory_initialized)
-                    reinterpret_cast<T *>(&s_inst.m_buf[0])->~T();
-                s_inst.m_memory_initialized = false;
-                
-                std::forward<Constructor>(constructor)(&s_inst.m_buf[0]);
+                s_inst.m_obj.reset(std::forward<Constructor>(constructor));
 
-                s_inst.m_memory_initialized = true;
                 s_inst.m_initialized_in_this_process = true;
             }
         #endif
-            return *std::launder(reinterpret_cast<T *>(&s_inst.m_buf[0]));
+            return *s_inst.m_obj;
         }
     
     private:
@@ -110,15 +122,15 @@ namespace muuid::impl {
                 s_inst.m_mutex.lock();
             #endif
             if constexpr (fork_aware_static<T>) {
-                if (s_inst.m_memory_initialized)
-                    reinterpret_cast<T *>(&s_inst.m_buf[0])->prepare_fork_in_parent();
+                if (s_inst.m_obj)
+                    (*s_inst.m_obj).prepare_fork_in_parent();
             }
         }
 
         static void after_fork_in_parent() {
             if constexpr (fork_aware_static<T>) {
-                if (s_inst.m_memory_initialized)
-                    reinterpret_cast<T *>(&s_inst.m_buf[0])->after_fork_in_parent();
+                if (s_inst.m_obj)
+                    (*s_inst.m_obj).after_fork_in_parent();
             }
             #if MUUID_MULTITHREADED
                 s_inst.m_mutex.unlock();
@@ -139,18 +151,13 @@ namespace muuid::impl {
         }
 
     private:
-        reset_on_fork_singleton() {
-            if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
-                std::terminate();
-        }
-        ~reset_on_fork_singleton() {
-            if (s_inst.m_memory_initialized)
-                reinterpret_cast<T *>(&s_inst.m_buf[0])->~T();
-        }
+        reset_on_fork_singleton() = default;
+        ~reset_on_fork_singleton() = default;
+        reset_on_fork_singleton(const reset_on_fork_singleton &) = delete;
+        reset_on_fork_singleton & operator=(const reset_on_fork_singleton &) = delete;
         
-
-        alignas(alignof(T)) uint8_t m_buf[sizeof(T)];
-        bool m_memory_initialized = false;
+    private:
+        object_buffer<T> m_obj;
         
     #if MUUID_MULTITHREADED
         std::atomic_flag m_initialized_in_this_process = ATOMIC_FLAG_INIT;
@@ -182,14 +189,13 @@ namespace muuid::impl {
                 return 1;
             }();
             
-            thread_local object_buffer<T> buf{std::forward<Constructor>(constructor)};
+            thread_local object_buffer<T> obj{std::forward<Constructor>(constructor)};
 
-            if (s_need_to_reset) {
-                buf.reset(std::forward<Constructor>(constructor));
-            }
+            if (s_need_to_reset)
+                obj.reset(std::forward<Constructor>(constructor));
             
 
-            return buf;
+            return *obj;
         }
     private:
         static void after_fork_in_child() {
@@ -198,12 +204,37 @@ namespace muuid::impl {
             s_need_to_reset = true;
         }
 
+        reset_on_fork_thread_local() = delete;
+        ~reset_on_fork_thread_local() = delete;
+        reset_on_fork_thread_local(const reset_on_fork_thread_local &) = delete;
+        reset_on_fork_thread_local & operator=(const reset_on_fork_thread_local &) = delete;
+
     private:
         static inline volatile sig_atomic_t s_need_to_reset = false;
     };
 
 
 #else //!MUUID_HANDLE_FORK
+
+    template<class T>
+    class object_buffer {
+    public:
+        template<std::invocable<void *> Constructor>
+        object_buffer(Constructor && constructor) {
+            std::forward<Constructor>(constructor)(&m_buf[0]);
+        }
+        ~object_buffer() {
+            reinterpret_cast<T *>(&m_buf[0])->~T();
+        }
+        object_buffer(const object_buffer &) = delete;
+        object_buffer operator=(const object_buffer &) = delete;
+
+        operator T&() {
+            return *std::launder(reinterpret_cast<T *>(&m_buf[0]));
+        }
+    private:
+        alignas(alignof(T)) uint8_t m_buf[sizeof(T)];
+    };
 
     template<class T, int Disambiguator = 0>
     class reset_on_fork_singleton {
@@ -221,6 +252,11 @@ namespace muuid::impl {
             static object_buffer<T> buf{std::forward<Constructor>(constructor)};
             return buf;
         }
+    private:
+        reset_on_fork_singleton() = delete;
+        ~reset_on_fork_singleton() = delete;
+        reset_on_fork_singleton(const reset_on_fork_singleton &) = delete;
+        reset_on_fork_singleton & operator=(const reset_on_fork_singleton &) = delete;
     };
 
     template<class T, int Disambiguator = 0>
@@ -239,6 +275,11 @@ namespace muuid::impl {
             thread_local object_buffer<T> buf{std::forward<Constructor>(constructor)};
             return buf;
         }
+    private:
+        reset_on_fork_thread_local() = delete;
+        ~reset_on_fork_thread_local() = delete;
+        reset_on_fork_thread_local(const reset_on_fork_thread_local &) = delete;
+        reset_on_fork_thread_local & operator=(const reset_on_fork_thread_local &) = delete;
     };
 
 
