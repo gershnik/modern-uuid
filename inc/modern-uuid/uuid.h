@@ -38,7 +38,7 @@
         #define MUUID_USE_EXCEPTIONS 0
     #elif defined(__clang__) && !defined(__cpp_exceptions)
         #define MUUID_USE_EXCEPTIONS 0
-    #elif defined(_MSC_VER) && !_HAS_EXCEPTIONS
+    #elif defined(_MSC_VER) && !_HAS_EXCEPTIONS 
         #define MUUID_USE_EXCEPTIONS 0
     #else
         #define MUUID_USE_EXCEPTIONS 1
@@ -301,11 +301,11 @@ namespace muuid
         /// Generates a version 1 UUID
         MUUID_EXPORTED static auto generate_time_based() -> uuid;
         /// Generates a version 3 UUID
-        MUUID_EXPORTED static auto generate_md5(uuid ns, std::string_view name) -> uuid;
+        MUUID_EXPORTED static auto generate_md5(uuid ns, std::string_view name) noexcept -> uuid;
         /// Generates a version 4 UUID
         MUUID_EXPORTED static auto generate_random() noexcept -> uuid;
         /// Generates a version 5 UUID
-        MUUID_EXPORTED static auto generate_sha1(uuid ns, std::string_view name) -> uuid;
+        MUUID_EXPORTED static auto generate_sha1(uuid ns, std::string_view name) noexcept -> uuid;
         /// Generates a version 6 UUID
         MUUID_EXPORTED static auto generate_reordered_time_based() -> uuid;
         /// Generates a version 7 UUID
@@ -513,6 +513,11 @@ namespace muuid
 
         /// Name string is an X.500 DN (in DER or a text output format) 
         static constexpr uuid x500{"6ba7b814-9dad-11d1-80b4-00c04fd430c8"};
+
+        namespaces() = delete;
+        ~namespaces() = delete;
+        namespaces(const namespaces &) = delete;
+        namespaces & operator=(const namespaces &) = delete;
     };
 
     namespace impl {

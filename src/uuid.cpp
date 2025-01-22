@@ -30,7 +30,7 @@ auto uuid::generate_random() noexcept -> uuid {
     return *ret;
 }
 
-auto uuid::generate_md5(uuid ns, std::string_view name) -> uuid {
+auto uuid::generate_md5(uuid ns, std::string_view name) noexcept -> uuid {
 	
 	static_assert(sizeof(uuid) == MUUID_MD5LENGTH);
     
@@ -46,7 +46,7 @@ auto uuid::generate_md5(uuid ns, std::string_view name) -> uuid {
 	return ret;
 }
 
-auto uuid::generate_sha1(uuid ns, std::string_view name) -> uuid {
+auto uuid::generate_sha1(uuid ns, std::string_view name) noexcept -> uuid {
     
 	static_assert(sizeof(uuid) < MUUID_SHA1LENGTH);
 
