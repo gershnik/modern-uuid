@@ -12,6 +12,7 @@ namespace muuid::impl {
         uint64_t value;
         uint16_t sequence;
     };
+    using clock_result_v6 = clock_result_v1;
 
     struct clock_result_v7 {
         uint64_t value;
@@ -20,6 +21,7 @@ namespace muuid::impl {
     };
 
     clock_result_v1 get_clock_v1();
+    clock_result_v6 get_clock_v6();
     clock_result_v7 get_clock_v7();
 }
 

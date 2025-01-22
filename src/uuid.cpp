@@ -88,7 +88,7 @@ auto uuid::generate_time_based() -> uuid {
 
 auto uuid::generate_reordered_time_based() -> uuid {    
     std::span<const uint8_t, 6> node_id = impl::get_node_id();
-    auto [clock, clock_seq] = impl::get_clock_v1();
+    auto [clock, clock_seq] = impl::get_clock_v6();
 
     clock <<= 4;
     uint32_t clock_high = uint32_t(clock >> 32);
