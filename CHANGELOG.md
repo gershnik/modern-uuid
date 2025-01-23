@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [1.1] - 2025-01-23
+
 ### Fixed
 - `fmt::formatter` no longer relies on `std::formatter` to function
 
@@ -14,3 +16,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Initial version
 
 [1.0]: https://github.com/gershnik/modern-uuid/releases/v1.0
+[1.1]: https://github.com/gershnik/modern-uuid/releases/v1.1
