@@ -46,13 +46,13 @@ add_library(modern-uuid-header INTERFACE EXCLUDE_FROM_ALL)
 # Which is not well supported by some generators (e.g. Xcode)
 list(APPEND INSTALL_LIBS modern-uuid-header)
 
-target_sources(modern-uuid-header 
-INTERFACE
-    $<BUILD_INTERFACE:${INCDIR}/modern-uuid/uuid.h>
-    $<INSTALL_INTERFACE:modern-uuid/uuid.h>
+target_sources(modern-uuid-header
+INTERFACE 
+    FILE_SET HEADERS BASE_DIRS ${INCDIR} FILES
+        ${INCDIR}/modern-uuid/uuid.h
+PRIVATE 
+    ${INCDIR}/modern-uuid/uuid.h
 )
-set_target_properties(modern-uuid-header PROPERTIES PUBLIC_HEADER ${INCDIR}/modern-uuid/uuid.h)
-
 
 if (MUUID_SHARED)
     list(APPEND BUILD_SUFFIXES "shared")
