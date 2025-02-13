@@ -148,11 +148,13 @@ if (MUUID_SHARED)
 
 endif()
 
-if (PROJECT_IS_TOP_LEVEL AND NOT ${MUUID_NO_TESTS})
+if (PROJECT_IS_TOP_LEVEL)
 
     include(cmake/install.cmake)
 
-    add_subdirectory(test)
+    if (NOT MUUID_NO_TESTS)
+        add_subdirectory(test)
+    endif()
 
 endif()
 

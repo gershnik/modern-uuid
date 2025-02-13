@@ -35,7 +35,7 @@ endif()
 
 foreach(suffix ${BUILD_SUFFIXES})
 
-    add_executable(test-${suffix})
+    add_executable(test-${suffix} EXCLUDE_FROM_ALL)
 
     set_target_properties(test-${suffix} PROPERTIES 
         CXX_VISIBILITY_PRESET hidden
