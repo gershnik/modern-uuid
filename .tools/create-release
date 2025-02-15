@@ -12,12 +12,12 @@ ROOT = MYPATH.parent
 
 NEW_VER = sys.argv[1]
 
-unreleased_link_pattern = re.compile(r"^\[Unreleased\]: (.*)$", re.DOTALL)
+unreleased_pattern = re.compile(r"^## Unreleased.*$", re.DOTALL)
 lines = []
 with open(ROOT / "CHANGELOG.md", "rt", encoding="utf-8") as change_log:
     for line in change_log.readlines():
         # Move Unreleased section to new version
-        if re.fullmatch(r"^## Unreleased.*$", line, re.DOTALL):
+        if unreleased_pattern.fullmatch(line):
             lines.append(line)
             lines.append("\n")
             lines.append(
