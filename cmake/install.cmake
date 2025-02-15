@@ -7,7 +7,7 @@ include(CMakePackageConfigHelpers)
 install(
     TARGETS ${INSTALL_LIBS}
     EXPORT modern-uuid
-    FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/modern-uuid
 )
 
 install(
