@@ -9,9 +9,14 @@
 namespace muuid::impl {
 
     std::mt19937 & get_random_generator() {
-        return reset_on_fork_singleton<std::mt19937>::instance_with_constructor([](void * addr) {
-            new (addr) std::mt19937{randutils::auto_seed_128{}.base()};
-        });
+
+        struct generator : std::mt19937 {
+            generator():
+                std::mt19937(randutils::auto_seed_128{}.base())
+            {}
+        };
+
+        return reset_on_fork_singleton<generator>::instance();
     }
 
 }

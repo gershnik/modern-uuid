@@ -78,29 +78,18 @@ namespace muuid::impl {
     template<class T, int Disambiguator = 0>
     class reset_on_fork_singleton {
     public:
-        template<class... Args>
-        static T & instance(Args &&... args) {
-            return instance_with_constructor([&](void * addr) {
-                new (addr) T{std::forward<Args>(args)...};
-            });
-        }
+        static T & instance() {
 
-        template<std::invocable<void *> Constructor>
-        static T & instance_with_constructor(Constructor && constructor) {
-
-            [[maybe_unused]]
-            static int registered = []() {
-                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
-                    std::terminate();
-                return 1;
-            }();
+            register_atfork();
 
         #if MUUID_MULTITHREADED 
             if (!s_inst.m_initialized_in_this_process.test(std::memory_order_acquire)) {
                 std::lock_guard<std::mutex> lock(s_inst.m_mutex);
                 if (!s_inst.m_initialized_in_this_process.test(std::memory_order_relaxed)) {
 
-                    s_inst.m_obj.reset(std::forward<Constructor>(constructor));
+                    s_inst.m_obj.reset([](void * addr) {
+                        new (addr) T;
+                    });
                     
                     s_inst.m_initialized_in_this_process.test_and_set(std::memory_order_release);
                 }
@@ -108,7 +97,9 @@ namespace muuid::impl {
         #else
             if (!s_inst.m_initialized_in_this_process) {
                 
-                s_inst.m_obj.reset(std::forward<Constructor>(constructor));
+                s_inst.m_obj.reset([](void * addr) {
+                    new (addr) T;
+                });
 
                 s_inst.m_initialized_in_this_process = true;
             }
@@ -117,6 +108,15 @@ namespace muuid::impl {
         }
     
     private:
+        static void register_atfork() {
+            [[maybe_unused]]
+            static int registered = []() {
+                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
+                    std::terminate();
+                return 1;
+            }();
+        }
+        
         static void prepare_fork_in_parent() {
             #if MUUID_MULTITHREADED
                 s_inst.m_mutex.lock();
@@ -171,86 +171,63 @@ namespace muuid::impl {
 
     template<class T, int Disambiguator = 0>
     class reset_on_fork_thread_local {
+    private:
+        using sig_atomic_counter = std::make_unsigned_t<sig_atomic_t>;
     public:
-        template<class... Args>
-        static T & instance(Args &&... args) {
-            return instance_with_constructor([&](void * addr) {
-                new (addr) T{std::forward<Args>(args)...};
-            });
+        static T & instance() {
+
+            register_atfork();
+
+            if (tl_inst.m_generation != s_generation) {
+                tl_inst.m_obj.reset([](void * addr) {
+                    new (addr) T;
+                });
+                tl_inst.m_generation = s_generation;
+            }
+            
+            return *tl_inst.m_obj;
         }
-
-        template<std::invocable<void *> Constructor>
-        static T & instance_with_constructor(Constructor && constructor) {
-
+    private:
+        static void register_atfork()
+        {
             [[maybe_unused]]
             static int registered = []() {
                 if (pthread_atfork(nullptr, nullptr, after_fork_in_child) != 0)
                     std::terminate();
                 return 1;
             }();
-            
-            thread_local object_buffer<T> obj{std::forward<Constructor>(constructor)};
-
-            if (s_need_to_reset)
-                obj.reset(std::forward<Constructor>(constructor));
-            
-
-            return *obj;
         }
-    private:
         static void after_fork_in_child() {
             //NOTE 1: only signal safe functions can be called here!
             //NOTE 2: only one thread is running here
-            s_need_to_reset = true;
+            s_generation = s_generation + 1;
         }
 
-        reset_on_fork_thread_local() = delete;
-        ~reset_on_fork_thread_local() = delete;
+        reset_on_fork_thread_local():
+            m_generation(s_generation - 1)
+        {}
+        ~reset_on_fork_thread_local() = default;
         reset_on_fork_thread_local(const reset_on_fork_thread_local &) = delete;
         reset_on_fork_thread_local & operator=(const reset_on_fork_thread_local &) = delete;
 
     private:
-        static inline volatile sig_atomic_t s_need_to_reset = false;
+        sig_atomic_counter m_generation;
+        object_buffer<T> m_obj;
+        
+        static inline volatile sig_atomic_counter s_generation = 0;
+        static thread_local inline reset_on_fork_thread_local tl_inst{};
     };
 
 
 #else //!MUUID_HANDLE_FORK
 
-    template<class T>
-    class object_buffer {
-    public:
-        template<std::invocable<void *> Constructor>
-        object_buffer(Constructor && constructor) {
-            std::forward<Constructor>(constructor)(&m_buf[0]);
-        }
-        ~object_buffer() {
-            reinterpret_cast<T *>(&m_buf[0])->~T();
-        }
-        object_buffer(const object_buffer &) = delete;
-        object_buffer operator=(const object_buffer &) = delete;
-
-        operator T&() {
-            return *std::launder(reinterpret_cast<T *>(&m_buf[0]));
-        }
-    private:
-        alignas(alignof(T)) uint8_t m_buf[sizeof(T)];
-    };
-
     template<class T, int Disambiguator = 0>
     class reset_on_fork_singleton {
     public:
-        template<class... Args>
-        static T & instance(Args &&... args) {
-            return instance_with_constructor([&](void * addr) {
-                new (addr) T{std::forward<Args>(args)...};
-            });
-        }
-
-        template<std::invocable<void *> Constructor>
-        static T & instance_with_constructor(Constructor && constructor) {
+        static T & instance() {
             
-            static object_buffer<T> buf{std::forward<Constructor>(constructor)};
-            return buf;
+            static T obj;
+            return obj;
         }
     private:
         reset_on_fork_singleton() = delete;
@@ -262,18 +239,10 @@ namespace muuid::impl {
     template<class T, int Disambiguator = 0>
     class reset_on_fork_thread_local {
     public:
-        template<class... Args>
-        static T & instance(Args &&... args) {
-            return instance_with_constructor([&](void * addr) {
-                new (addr) T{std::forward<Args>(args)...};
-            });
-        }
+        static T & instance() {
 
-        template<std::invocable<void *> Constructor>
-        static T & instance_with_constructor(Constructor && constructor) {
-
-            thread_local object_buffer<T> buf{std::forward<Constructor>(constructor)};
-            return buf;
+            thread_local T obj;
+            return obj;
         }
     private:
         reset_on_fork_thread_local() = delete;
