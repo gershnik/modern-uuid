@@ -5,6 +5,10 @@
 
 #include <modern-uuid/uuid.h>
 
+#if !MUUID_MULTITHREADED
+    #error Tests currently require threading support
+#endif
+
 #include <filesystem>
 #include <thread>
 #include <cassert>
@@ -159,145 +163,172 @@ public:
 
     per_thread & get_for_current_thread() override 
         { return *new per_thread(m_path); }
+
+    void add_ref() noexcept override 
+        { ++m_ref_count; }
+    void sub_ref() noexcept override 
+        { --m_ref_count; }
+
+    int ref_count() const 
+        { return m_ref_count; }
 private:
     std::filesystem::path m_path;
+#if MUUID_MULTITHREADED
+    std::atomic<int> m_ref_count = 0;
+#else
+    int m_ref_count = 0;
+#endif
 };
+
+auto path = std::filesystem::path("pers.bin");
+file_clock_persistence pers(path);
 
 TEST_SUITE("persistence") {
 
 TEST_CASE("clock time_based") {
 
-    struct restore_pers {
-        ~restore_pers() {
-            set_time_based_persistence(nullptr);
-        }
-    } restore_pers;
+    {
+        struct restore_pers {
+            ~restore_pers() {
+                set_time_based_persistence(nullptr);
+            }
+        } restore_pers;
 
-    auto path = std::filesystem::path("pers.bin");
-    remove(path);
-    file_clock_persistence pers(path);
+        remove(path);
+        set_time_based_persistence(&pers);
 
-    set_time_based_persistence(&pers);
+        CHECK(pers.ref_count() != 0);
 
-    uuid u1 = uuid::generate_time_based();
-    uuid u2;
+        uuid u1 = uuid::generate_time_based();
+        uuid u2;
 
-    std::thread([&]() {
-        u2 = uuid::generate_time_based();
-    }).join();
+        std::thread([&]() {
+            u2 = uuid::generate_time_based();
+        }).join();
 
-    auto parts1 = u1.to_parts();
-    auto parts2 = u2.to_parts();
+        auto parts1 = u1.to_parts();
+        auto parts2 = u2.to_parts();
 
-    CHECK(parts1.clock_seq == parts2.clock_seq);
-    CHECK(parts1.time_hi_and_version == parts2.time_hi_and_version);
-    CHECK(parts1.time_mid == parts2.time_mid);
-    CHECK(parts1.time_low < parts2.time_low);
+        CHECK(parts1.clock_seq == parts2.clock_seq);
+        CHECK(parts1.time_hi_and_version == parts2.time_hi_and_version);
+        CHECK(parts1.time_mid == parts2.time_mid);
+        CHECK(parts1.time_low < parts2.time_low);
 
-    set_time_based_persistence(nullptr);
+        set_time_based_persistence(nullptr);
 
-    std::thread([&]() {
-        u2 = uuid::generate_time_based();
-    }).join();
+        std::thread([&]() {
+            u2 = uuid::generate_time_based();
+        }).join();
 
-    parts2 = u2.to_parts();
-    CHECK(parts1.clock_seq != parts2.clock_seq);
+        parts2 = u2.to_parts();
+        CHECK(parts1.clock_seq != parts2.clock_seq);
 
-    set_time_based_persistence(&pers);
-    std::thread([&]() {
-        u2 = uuid::generate_time_based();
-    }).join();
+        set_time_based_persistence(&pers);
+        std::thread([&]() {
+            u2 = uuid::generate_time_based();
+        }).join();
 
-    parts2 = u2.to_parts();
-    CHECK(parts1.clock_seq == parts2.clock_seq);
+        parts2 = u2.to_parts();
+        CHECK(parts1.clock_seq == parts2.clock_seq);
+    }
+    uuid::generate_time_based();
+    CHECK(pers.ref_count() == 0);
 }
 
 TEST_CASE("clock reordered_time_based") {
 
-    struct restore_pers {
-        ~restore_pers() {
-            set_reordered_time_based_persistence(nullptr);
-        }
-    } restore_pers;
+    {
+        struct restore_pers {
+            ~restore_pers() {
+                set_reordered_time_based_persistence(nullptr);
+            }
+        } restore_pers;
 
-    auto path = std::filesystem::path("pers.bin");
-    remove(path);
-    file_clock_persistence pers(path);
+        remove(path);
+        
+        set_reordered_time_based_persistence(&pers);
 
-    set_reordered_time_based_persistence(&pers);
+        CHECK(pers.ref_count() != 0);
 
-    uuid u1 = uuid::generate_reordered_time_based();
-    uuid u2;
+        uuid u1 = uuid::generate_reordered_time_based();
+        uuid u2;
 
-    std::thread([&]() {
-        u2 = uuid::generate_reordered_time_based();
-    }).join();
+        std::thread([&]() {
+            u2 = uuid::generate_reordered_time_based();
+        }).join();
 
-    auto parts1 = u1.to_parts();
-    auto parts2 = u2.to_parts();
+        auto parts1 = u1.to_parts();
+        auto parts2 = u2.to_parts();
 
-    CHECK(parts1.clock_seq == parts2.clock_seq);
-    
-    set_reordered_time_based_persistence(nullptr);
+        CHECK(parts1.clock_seq == parts2.clock_seq);
+        
+        set_reordered_time_based_persistence(nullptr);
 
-    std::thread([&]() {
-        u2 = uuid::generate_reordered_time_based();
-    }).join();
+        std::thread([&]() {
+            u2 = uuid::generate_reordered_time_based();
+        }).join();
 
-    parts2 = u2.to_parts();
-    CHECK(parts1.clock_seq != parts2.clock_seq);
+        parts2 = u2.to_parts();
+        CHECK(parts1.clock_seq != parts2.clock_seq);
 
-    set_reordered_time_based_persistence(&pers);
-    std::thread([&]() {
-        u2 = uuid::generate_reordered_time_based();
-    }).join();
+        set_reordered_time_based_persistence(&pers);
+        std::thread([&]() {
+            u2 = uuid::generate_reordered_time_based();
+        }).join();
 
-    parts2 = u2.to_parts();
-    CHECK(parts1.clock_seq == parts2.clock_seq);
+        parts2 = u2.to_parts();
+        CHECK(parts1.clock_seq == parts2.clock_seq);
+    }
+    uuid::generate_reordered_time_based();
+    CHECK(pers.ref_count() == 0);
 }
 
 TEST_CASE("clock unix_time_based") {
 
-    struct restore_pers {
-        ~restore_pers() {
-            set_unix_time_based_persistence(nullptr);
-        }
-    } restore_pers;
+    {
+        struct restore_pers {
+            ~restore_pers() {
+                set_unix_time_based_persistence(nullptr);
+            }
+        } restore_pers;
 
-    auto path = std::filesystem::path("pers.bin");
-    remove(path);
-    file_clock_persistence pers(path);
+        remove(path);
+        
+        set_unix_time_based_persistence(&pers);
 
-    set_unix_time_based_persistence(&pers);
+        CHECK(pers.ref_count() != 0);
 
-    uuid u1 = uuid::generate_unix_time_based();
-    uuid u2;
+        uuid u1 = uuid::generate_unix_time_based();
+        uuid u2;
 
-    std::thread([&]() {
-        u2 = uuid::generate_unix_time_based();
-    }).join();
+        std::thread([&]() {
+            u2 = uuid::generate_unix_time_based();
+        }).join();
 
-    auto parts1 = u1.to_parts();
-    auto parts2 = u2.to_parts();
+        auto parts1 = u1.to_parts();
+        auto parts2 = u2.to_parts();
 
-    CHECK(parts1.clock_seq == parts2.clock_seq);
-    
-    set_unix_time_based_persistence(nullptr);
+        CHECK(parts1.clock_seq == parts2.clock_seq);
+        
+        set_unix_time_based_persistence(nullptr);
 
-    std::thread([&]() {
-        u2 = uuid::generate_unix_time_based();
-    }).join();
+        std::thread([&]() {
+            u2 = uuid::generate_unix_time_based();
+        }).join();
 
-    parts2 = u2.to_parts();
-    CHECK(parts1.clock_seq != parts2.clock_seq);
+        parts2 = u2.to_parts();
+        CHECK(parts1.clock_seq != parts2.clock_seq);
 
-    set_unix_time_based_persistence(&pers);
-    std::thread([&]() {
-        u2 = uuid::generate_unix_time_based();
-    }).join();
+        set_unix_time_based_persistence(&pers);
+        std::thread([&]() {
+            u2 = uuid::generate_unix_time_based();
+        }).join();
 
-    parts2 = u2.to_parts();
-    CHECK(parts1.clock_seq == parts2.clock_seq);
+        parts2 = u2.to_parts();
+        CHECK(parts1.clock_seq == parts2.clock_seq);
+    }
+    uuid::generate_unix_time_based();
+    CHECK(pers.ref_count() == 0);
 }
 
 TEST_CASE("node time_based") {

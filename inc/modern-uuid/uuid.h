@@ -5,8 +5,15 @@
 #define HEADER_MODERN_UUID_UUID_H_INCLUDED
 
 // Config macros:
+//
+// The following macros must be defined identically when using and building this library:
+//
 // MUUID_MULTITHREADED - auto-detected. Set to 1 to force multi-threaded build and 0 to force single threaded 1
+// MUUID_USE_EXCEPTIONS - auto-detected. Set to 1 to force usage of exceptions and 0 to force not using them
 // MUUID_SHARED - set to 1 when using/building a shared library version of the library
+//
+// The following macro should be set when building the library itself but not when using it:
+//
 // MUUID_BUILDING_MUUID - set 1 if building the library itself. 
 
 #include <cstdint>
@@ -25,12 +32,16 @@
 #include <ostream>
 
 #if !defined(MUUID_MULTITHREADED)
-    #if (defined(__STDCPP_THREADS__) || defined(__MT__) || defined(_MT) || defined(_REENTRANT) \
-        || defined(_PTHREADS) || defined(__APPLE__) || defined(__DragonFly__))
-        
-        #define MUUID_MULTITHREADED 1
-    #else
+    #if defined(_MSC_VER) && !defined(_MT)
         #define MUUID_MULTITHREADED 0
+    #elif defined(_LIBCPP_VERSION) && (defined(_LIBCPP_HAS_NO_THREADS) || defined(_LIBCPP_HAS_THREADS) && !_LIBCPP_HAS_THREADS)
+        #define MUUID_MULTITHREADED 0
+    #elif defined(__GLIBCXX__) && !_GLIBCXX_HAS_GTHREADS
+        #define MUUID_MULTITHREADED 0
+    #elif !__has_include(<thread>) || !__has_include(<mutex>) || !__has_include(<atomic>)
+        #define MUUID_MULTITHREADED 0
+    #else
+        #define MUUID_MULTITHREADED 1
     #endif
 #endif
 
@@ -595,35 +606,81 @@ struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<fmt:
 
 namespace muuid {
 
+    /// How to generate node id for uuid::generate_time_based() and uuid::generate_reordered_time_based()
     enum class node_id {
         detect_system,
         generate_random
     };
+    /**
+     * Sets how to generate node id for uuid::generate_time_based() and uuid::generate_reordered_time_based()
+     * 
+     * This call affects all subsequent calls to those functions
+     * 
+     * @returns the generated node id. You can save it somewhere and then use the other overload of
+     * set_node_id on subsequent runs to ensure one fixed node_id
+     */
     MUUID_EXPORTED auto set_node_id(node_id type) -> std::span<const uint8_t, 6>;
+    /** 
+     * Sets a specific node id to use  for uuid::generate_time_based() and uuid::generate_reordered_time_based()
+     * 
+     * This call affects all subsequent calls to those functions
+     */
     MUUID_EXPORTED void set_node_id(std::span<const uint8_t, 6> id);
 
+    /// Callback interface to handle persistence of clock data for all time based UUID generation
     class clock_persistence {
     public:
+        /// Clock persistence data
         struct data {
             using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
             
+            /**
+             * The last known clock reading.
+             *  
+             * You can also use this value to optimize writing to persistent storage
+             */
             time_point_t when; 
+            /// Opaque value. Save/restore it but do not otherwise depend on its value
             uint16_t seq;
+            /// Opaque value. Save/restore it but do not otherwise depend on its value
             int32_t adjustment;
         };
 
-        //all methods of this class are only accessed from a signle thread
+        /**
+         * Per thread persistance callback.
+         * 
+         * All methods of this class are only accessed from a signle thread
+         */
         class per_thread {
         public:
+            /**
+             * Called when this object is no longer used. 
+             * 
+             * It is safe to dispose of it (e.g. do `delete this` for example) when this is called
+             */
             virtual void close() noexcept = 0;
     
+            /// Lock access to persistent data against other threads/processes
             virtual void lock() = 0;
+            /// Unlock access to persistent data against other threads/processes
             virtual void unlock() = 0;
     
-            //load and store are only called inside the lock
-            //load is called once after this object is returned from get_for_current_thread
-            //store may be called mutliple times
+            /**
+             * Load persistent data if any
+             * 
+             * This is called once after this object is returned from get_for_current_thread().
+             * The call happens insided a lock() call.
+             * 
+             * @returns `true` if data was loaded, false otherwise
+             */
             virtual bool load(data & d) = 0;
+            
+            /**
+             * Save persistent data if desired
+             * 
+             * This can be called multiple times (whenever UUID using the clock is generated).
+             * The call happens insided a lock() call.
+             */
             virtual void store(const data & d) = 0;
         protected:
             per_thread() noexcept = default;
@@ -632,7 +689,29 @@ namespace muuid {
             per_thread & operator=(const per_thread &) noexcept = default;
         };
     public:
+        /**
+         * Return per_thread object for the calling thread.
+         * 
+         * This could be either a newly allocated object or some resused one
+         * depending on your implementation.
+         * 
+         * The return time is reference rather than pointer because you are not
+         * allowed to return nullptr.
+         */
         virtual per_thread & get_for_current_thread() = 0;
+
+        /**
+         * Increment the reference count for this interface.
+         * 
+         * The object must remain alive as long as reference count is greater than 0
+         */
+        virtual void add_ref() noexcept = 0;
+        /**
+         * Decrement the reference count for this interface.
+         * 
+         * The object must remain alive as long as reference count is greater than 0
+         */
+        virtual void sub_ref() noexcept = 0;
     protected:
         clock_persistence() noexcept = default;
         ~clock_persistence() noexcept = default;
@@ -640,8 +719,23 @@ namespace muuid {
         clock_persistence & operator=(const clock_persistence &) noexcept = default;
     };
 
+    /**
+     * Set the clock_persistence instance for uuid::generate_time_based()
+     * 
+     * Pass `nullptr` to remove.
+     */
     MUUID_EXPORTED void set_time_based_persistence(clock_persistence * persistence);
+    /**
+     * Set the clock_persistence instance for uuid::generate_reordered_time_based()
+     * 
+     * Pass `nullptr` to remove.
+     */
     MUUID_EXPORTED void set_reordered_time_based_persistence(clock_persistence * persistence);
+    /**
+     * Set the clock_persistence instance for uuid::generate_unix_time_based()
+     * 
+     * Pass `nullptr` to remove.
+     */
     MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence * persistence);
 }
 

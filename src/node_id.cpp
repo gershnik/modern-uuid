@@ -203,8 +203,8 @@ static std::mutex & get_node_id_mutex() {
 
 #else
 
-static null_mutex & get_node_id_mutex() {
-    static null_mutex ret;
+static impl::null_mutex & get_node_id_mutex() {
+    static impl::null_mutex ret;
     return ret;
 }
 

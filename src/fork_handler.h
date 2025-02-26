@@ -6,6 +6,8 @@
 
 #include <modern-uuid/uuid.h>
 
+#include "threading.h"
+
 #if __has_include(<unistd.h>)
     #include <unistd.h>
     #include <pthread.h>
@@ -17,14 +19,12 @@
     #define MUUID_HANDLE_FORK 0
 #endif
 
-#if MUUID_MULTITHREADED
-    #include <atomic>
-    #include <mutex>
-#endif
-
 #include <new>
 
 namespace muuid::impl {
+
+    template<class T>
+    class singleton_holder;
     
 #if MUUID_HANDLE_FORK
 
@@ -35,31 +35,23 @@ namespace muuid::impl {
     };
 
     template<class T>
-    class object_buffer {
+    class singleton_holder {
     public:
-        object_buffer() = default;
-
-        template<std::invocable<void *> Constructor>
-        object_buffer(Constructor && constructor) {
-            //this can throw
-            std::forward<Constructor>(constructor)(&m_buf[0]);
-            m_memory_initialized = true;
-        }
-        ~object_buffer() {
+        singleton_holder() = default;
+        ~singleton_holder() {
             if (m_memory_initialized)
                 reinterpret_cast<T *>(&m_buf[0])->~T();
         }
-        object_buffer(const object_buffer &) = delete;
-        object_buffer operator=(const object_buffer &) = delete;
+        singleton_holder(const singleton_holder &) = delete;
+        singleton_holder operator=(const singleton_holder &) = delete;
 
-        template<std::invocable<void *> Constructor>
-        void reset(Constructor && constructor) {
+        void reset() {
             if (m_memory_initialized)
                 reinterpret_cast<T *>(&m_buf[0])->~T();
             
             m_memory_initialized = false;
             //this can throw
-            std::forward<Constructor>(constructor)(&m_buf[0]);
+            new (&m_buf[0]) T;
             m_memory_initialized = true;
         }
 
@@ -87,9 +79,7 @@ namespace muuid::impl {
                 std::lock_guard<std::mutex> lock(s_inst.m_mutex);
                 if (!s_inst.m_initialized_in_this_process.test(std::memory_order_relaxed)) {
 
-                    s_inst.m_obj.reset([](void * addr) {
-                        new (addr) T;
-                    });
+                    s_inst.m_obj.reset();
                     
                     s_inst.m_initialized_in_this_process.test_and_set(std::memory_order_release);
                 }
@@ -97,9 +87,7 @@ namespace muuid::impl {
         #else
             if (!s_inst.m_initialized_in_this_process) {
                 
-                s_inst.m_obj.reset([](void * addr) {
-                    new (addr) T;
-                });
+                s_inst.m_obj.reset();
 
                 s_inst.m_initialized_in_this_process = true;
             }
@@ -157,10 +145,10 @@ namespace muuid::impl {
         reset_on_fork_singleton & operator=(const reset_on_fork_singleton &) = delete;
         
     private:
-        object_buffer<T> m_obj;
+        singleton_holder<T> m_obj;
         
     #if MUUID_MULTITHREADED
-        std::atomic_flag m_initialized_in_this_process = ATOMIC_FLAG_INIT;
+        volatile atomic_flag m_initialized_in_this_process;
         std::mutex m_mutex{};
     #else
         volatile sig_atomic_t m_initialized_in_this_process = false;
@@ -179,9 +167,7 @@ namespace muuid::impl {
             register_atfork();
 
             if (tl_inst.m_generation != s_generation) {
-                tl_inst.m_obj.reset([](void * addr) {
-                    new (addr) T;
-                });
+                tl_inst.m_obj.reset();
                 tl_inst.m_generation = s_generation;
             }
             
@@ -192,10 +178,22 @@ namespace muuid::impl {
         {
             [[maybe_unused]]
             static int registered = []() {
-                if (pthread_atfork(nullptr, nullptr, after_fork_in_child) != 0)
+                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
                     std::terminate();
                 return 1;
             }();
+        }
+        static void prepare_fork_in_parent() {
+            if constexpr (fork_aware_static<T>) {
+                if (tl_inst.m_obj)
+                    (*tl_inst.m_obj).prepare_fork_in_parent();
+            }
+        }
+        static void after_fork_in_parent() {
+            if constexpr (fork_aware_static<T>) {
+                if (tl_inst.m_obj)
+                    (*tl_inst.m_obj).after_fork_in_parent();
+            }
         }
         static void after_fork_in_child() {
             //NOTE 1: only signal safe functions can be called here!
@@ -212,7 +210,7 @@ namespace muuid::impl {
 
     private:
         sig_atomic_counter m_generation;
-        object_buffer<T> m_obj;
+        singleton_holder<T> m_obj;
         
         static inline volatile sig_atomic_counter s_generation = 0;
         static thread_local inline reset_on_fork_thread_local tl_inst{};

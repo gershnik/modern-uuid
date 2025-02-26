@@ -152,7 +152,8 @@ Note that you need to have your compiler to use at least C++20 mode in order for
 
 ## Configuration options
 
-Whichever method you use you can set the following macros (either on command line or _before_ including any library headers) to control the library behavior:
+Whichever method you use you can set the following macros to control the library behavior. These must be set identically when using and building the library.
 
-* `MUUID_SHARED` - set it to 1 if using a shared version of the library.
-* `MUUID_MULTITHREADED` - set it to 1 or 0 to control support for multiple threads. Normally threading support is detected automatically but setting this macro manually allows you to override if automatic detection fails or produces wrong results in your environment.
+* `MUUID_SHARED` - set it to 1 if using/building a shared version of the library.
+* `MUUID_MULTITHREADED` - set it to 1 or 0 to control support for multiple threads. Normally threading support is detected automatically but setting this macro manually allows you to override automatic detection.
+* `MUUID_USE_EXCEPTIONS` - set it to 1 or 0 to control usage of exceptions. Normally exception support is detected automatically but setting this manually allows you to override automatic detection.
