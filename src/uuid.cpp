@@ -121,15 +121,4 @@ auto uuid::generate_unix_time_based() -> uuid {
     return uuid(parts);
 }
 
-void muuid::set_time_based_persistence(clock_persistence_factory * f) {
-    impl::g_clock_persistence_v1.set(f);
-}
-
-void muuid::set_reordered_time_based_persistence(clock_persistence_factory * f) {
-    impl::g_clock_persistence_v6.set(f);
-}
-
-void muuid::set_unix_time_based_persistence(clock_persistence_factory * f) {
-    impl::g_clock_persistence_v7.set(f);
-}
 

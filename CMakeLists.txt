@@ -115,6 +115,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         ${SRCDIR}/node_id.cpp
         ${SRCDIR}/random_generator.h
         ${SRCDIR}/random_generator.cpp
+        ${SRCDIR}/threading.h
         ${SRCDIR}/uuid.cpp
     )
 

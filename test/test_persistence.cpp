@@ -1,7 +1,7 @@
 // Copyright (c) 2024, Eugene Gershnik
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include <doctest/doctest.h>
+#include "test_util.h"
 
 #include <modern-uuid/uuid.h>
 
@@ -39,11 +39,11 @@
 
 using namespace muuid;
 
-class file_persistence_factory final : public clock_persistence_factory {
+class file_clock_persistence final : public clock_persistence {
 private:
-    class file_persistence final : public clock_persistence {
+    class per_thread final : public clock_persistence::per_thread {
     public:
-        file_persistence(const std::filesystem::path & path) {
+        per_thread(const std::filesystem::path & path) {
         #ifdef USE_POSIX_PERSISTENCE
             auto fd = ::open(path.c_str(), O_RDWR|O_CREAT|O_CLOEXEC, S_IRUSR|S_IWUSR);
         #else 
@@ -62,7 +62,7 @@ private:
 
             m_desc = fd;
         }
-        ~file_persistence() {
+        ~per_thread() {
             if (m_desc != -1)
                 sys_close(m_desc);
         }
@@ -155,29 +155,29 @@ private:
     };
 
 public:
-    file_persistence_factory(const std::filesystem::path & path): m_path(path) {}
+    file_clock_persistence(const std::filesystem::path & path): m_path(path) {}
 
-    clock_persistence & get() override 
-        { return *new file_persistence(m_path); }
+    per_thread & get_for_current_thread() override 
+        { return *new per_thread(m_path); }
 private:
     std::filesystem::path m_path;
 };
 
 TEST_SUITE("persistence") {
 
-TEST_CASE("basics time_based") {
+TEST_CASE("clock time_based") {
 
     struct restore_pers {
         ~restore_pers() {
-            muuid::set_time_based_persistence(nullptr);
+            set_time_based_persistence(nullptr);
         }
     } restore_pers;
 
     auto path = std::filesystem::path("pers.bin");
     remove(path);
-    file_persistence_factory pers(path);
+    file_clock_persistence pers(path);
 
-    muuid::set_time_based_persistence(&pers);
+    set_time_based_persistence(&pers);
 
     uuid u1 = uuid::generate_time_based();
     uuid u2;
@@ -194,7 +194,7 @@ TEST_CASE("basics time_based") {
     CHECK(parts1.time_mid == parts2.time_mid);
     CHECK(parts1.time_low < parts2.time_low);
 
-    muuid::set_time_based_persistence(nullptr);
+    set_time_based_persistence(nullptr);
 
     std::thread([&]() {
         u2 = uuid::generate_time_based();
@@ -203,7 +203,7 @@ TEST_CASE("basics time_based") {
     parts2 = u2.to_parts();
     CHECK(parts1.clock_seq != parts2.clock_seq);
 
-    muuid::set_time_based_persistence(&pers);
+    set_time_based_persistence(&pers);
     std::thread([&]() {
         u2 = uuid::generate_time_based();
     }).join();
@@ -212,19 +212,19 @@ TEST_CASE("basics time_based") {
     CHECK(parts1.clock_seq == parts2.clock_seq);
 }
 
-TEST_CASE("basics reordered_time_based") {
+TEST_CASE("clock reordered_time_based") {
 
     struct restore_pers {
         ~restore_pers() {
-            muuid::set_reordered_time_based_persistence(nullptr);
+            set_reordered_time_based_persistence(nullptr);
         }
     } restore_pers;
 
     auto path = std::filesystem::path("pers.bin");
     remove(path);
-    file_persistence_factory pers(path);
+    file_clock_persistence pers(path);
 
-    muuid::set_reordered_time_based_persistence(&pers);
+    set_reordered_time_based_persistence(&pers);
 
     uuid u1 = uuid::generate_reordered_time_based();
     uuid u2;
@@ -238,7 +238,7 @@ TEST_CASE("basics reordered_time_based") {
 
     CHECK(parts1.clock_seq == parts2.clock_seq);
     
-    muuid::set_reordered_time_based_persistence(nullptr);
+    set_reordered_time_based_persistence(nullptr);
 
     std::thread([&]() {
         u2 = uuid::generate_reordered_time_based();
@@ -247,7 +247,7 @@ TEST_CASE("basics reordered_time_based") {
     parts2 = u2.to_parts();
     CHECK(parts1.clock_seq != parts2.clock_seq);
 
-    muuid::set_reordered_time_based_persistence(&pers);
+    set_reordered_time_based_persistence(&pers);
     std::thread([&]() {
         u2 = uuid::generate_reordered_time_based();
     }).join();
@@ -256,19 +256,19 @@ TEST_CASE("basics reordered_time_based") {
     CHECK(parts1.clock_seq == parts2.clock_seq);
 }
 
-TEST_CASE("basics unix_time_based") {
+TEST_CASE("clock unix_time_based") {
 
     struct restore_pers {
         ~restore_pers() {
-            muuid::set_unix_time_based_persistence(nullptr);
+            set_unix_time_based_persistence(nullptr);
         }
     } restore_pers;
 
     auto path = std::filesystem::path("pers.bin");
     remove(path);
-    file_persistence_factory pers(path);
+    file_clock_persistence pers(path);
 
-    muuid::set_unix_time_based_persistence(&pers);
+    set_unix_time_based_persistence(&pers);
 
     uuid u1 = uuid::generate_unix_time_based();
     uuid u2;
@@ -282,7 +282,7 @@ TEST_CASE("basics unix_time_based") {
 
     CHECK(parts1.clock_seq == parts2.clock_seq);
     
-    muuid::set_unix_time_based_persistence(nullptr);
+    set_unix_time_based_persistence(nullptr);
 
     std::thread([&]() {
         u2 = uuid::generate_unix_time_based();
@@ -291,13 +291,93 @@ TEST_CASE("basics unix_time_based") {
     parts2 = u2.to_parts();
     CHECK(parts1.clock_seq != parts2.clock_seq);
 
-    muuid::set_unix_time_based_persistence(&pers);
+    set_unix_time_based_persistence(&pers);
     std::thread([&]() {
         u2 = uuid::generate_unix_time_based();
     }).join();
 
     parts2 = u2.to_parts();
     CHECK(parts1.clock_seq == parts2.clock_seq);
+}
+
+TEST_CASE("node time_based") {
+
+    struct restore {
+        ~restore() {
+            set_node_id(node_id::detect_system);
+        }
+    } restore;
+
+    uuid u1 = uuid::generate_time_based();
+    auto parts1 = u1.to_parts();
+    
+    auto calculated = set_node_id(node_id::generate_random);
+    
+    uuid u2 = uuid::generate_time_based();
+    auto parts2 = u2.to_parts();
+
+    CHECK_UNEQUAL_SEQ(parts1.node, parts2.node);
+    CHECK_EQUAL_SEQ(parts2.node, calculated);
+
+    uuid u3 = uuid::generate_time_based();
+    auto parts3 = u3.to_parts();
+
+    CHECK_EQUAL_SEQ(parts2.node, parts3.node);
+    
+    calculated = set_node_id(node_id::detect_system);
+
+    u3 = uuid::generate_time_based();
+    parts3 = u3.to_parts();
+
+    CHECK_EQUAL_SEQ(parts3.node, calculated);
+
+    uint8_t dummy[6] = {1, 2, 3, 4, 5, 6};
+    set_node_id(dummy);
+
+    u3 = uuid::generate_time_based();
+    parts3 = u3.to_parts();
+
+    CHECK_EQUAL_SEQ(parts3.node, dummy);
+}
+
+TEST_CASE("node reordered_time_based") {
+
+    struct restore {
+        ~restore() {
+            set_node_id(node_id::detect_system);
+        }
+    } restore;
+
+    uuid u1 = uuid::generate_reordered_time_based();
+    auto parts1 = u1.to_parts();
+    
+    auto calculated = set_node_id(node_id::generate_random);
+    
+    uuid u2 = uuid::generate_reordered_time_based();
+    auto parts2 = u2.to_parts();
+
+    CHECK_UNEQUAL_SEQ(parts1.node, parts2.node);
+    CHECK_EQUAL_SEQ(parts2.node, calculated);
+
+    uuid u3 = uuid::generate_reordered_time_based();
+    auto parts3 = u3.to_parts();
+
+    CHECK_EQUAL_SEQ(parts2.node, parts3.node);
+    
+    calculated = set_node_id(node_id::detect_system);
+
+    u3 = uuid::generate_reordered_time_based();
+    parts3 = u3.to_parts();
+
+    CHECK_EQUAL_SEQ(parts3.node, calculated);
+
+    uint8_t dummy[6] = {1, 2, 3, 4, 5, 6};
+    set_node_id(dummy);
+
+    u3 = uuid::generate_reordered_time_based();
+    parts3 = u3.to_parts();
+
+    CHECK_EQUAL_SEQ(parts3.node, dummy);
 }
 
 }

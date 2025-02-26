@@ -594,7 +594,14 @@ struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<fmt:
 #endif
 
 namespace muuid {
-    //all methods of this class are only accessed from a signle thread
+
+    enum class node_id {
+        detect_system,
+        generate_random
+    };
+    MUUID_EXPORTED auto set_node_id(node_id type) -> std::span<const uint8_t, 6>;
+    MUUID_EXPORTED void set_node_id(std::span<const uint8_t, 6> id);
+
     class clock_persistence {
     public:
         struct data {
@@ -604,17 +611,28 @@ namespace muuid {
             uint16_t seq;
             int32_t adjustment;
         };
+
+        //all methods of this class are only accessed from a signle thread
+        class per_thread {
+        public:
+            virtual void close() noexcept = 0;
+    
+            virtual void lock() = 0;
+            virtual void unlock() = 0;
+    
+            //load and store are only called inside the lock
+            //load is called once after this object is returned from get_for_current_thread
+            //store may be called mutliple times
+            virtual bool load(data & d) = 0;
+            virtual void store(const data & d) = 0;
+        protected:
+            per_thread() noexcept = default;
+            ~per_thread() noexcept = default;
+            per_thread(const per_thread &) noexcept = default;
+            per_thread & operator=(const per_thread &) noexcept = default;
+        };
     public:
-        virtual void close() noexcept = 0;
-
-        virtual void lock() = 0;
-        virtual void unlock() = 0;
-
-        //load and store are only called inside the lock
-        //load is called once after this object is returned from a factory 
-        //store is called mutliple times
-        virtual bool load(data & d) = 0;
-        virtual void store(const data & d) = 0;
+        virtual per_thread & get_for_current_thread() = 0;
     protected:
         clock_persistence() noexcept = default;
         ~clock_persistence() noexcept = default;
@@ -622,19 +640,9 @@ namespace muuid {
         clock_persistence & operator=(const clock_persistence &) noexcept = default;
     };
 
-    class clock_persistence_factory {
-    public:
-        virtual clock_persistence & get() = 0;
-    protected:
-        clock_persistence_factory() noexcept = default;
-        ~clock_persistence_factory() noexcept = default;
-        clock_persistence_factory(const clock_persistence_factory &) noexcept = default;
-        clock_persistence_factory & operator=(const clock_persistence_factory &) noexcept = default;
-    };
-
-    MUUID_EXPORTED void set_time_based_persistence(clock_persistence_factory * f);
-    MUUID_EXPORTED void set_reordered_time_based_persistence(clock_persistence_factory * f);
-    MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence_factory * f);
+    MUUID_EXPORTED void set_time_based_persistence(clock_persistence * persistence);
+    MUUID_EXPORTED void set_reordered_time_based_persistence(clock_persistence * persistence);
+    MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence * persistence);
 }
 
 #endif

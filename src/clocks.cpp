@@ -6,6 +6,7 @@
 #include "clocks.h"
 #include "random_generator.h"
 #include "fork_handler.h"
+#include "threading.h"
 
 #include <cstring>
 #include <cassert>
@@ -13,23 +14,16 @@
 
 using namespace std::chrono;
 using namespace std::literals;
+using namespace muuid;
+using namespace muuid::impl;
 
 using hundred_nanoseconds = duration<int64_t, std::ratio<int64_t(1), int64_t(10'000'000)>>;
 
-static constexpr bool g_synchronize_monotonic = 
-    #if MUUID_MULTITHREADED
-        true;
-    #else
-        false;
-    #endif
+static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v1{};
+static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v6{};
+static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v7{};
 
-namespace muuid::impl {
-    
-
-    atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v1{};
-    atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v6{};
-    atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v7{};
-
+namespace {
     
     template<class Duration>
     static typename Duration::rep get_max_adjustment() {
@@ -122,27 +116,27 @@ namespace muuid::impl {
     public:
         persistence_holder() noexcept = default;
         ~persistence_holder() noexcept {
-            if (m_persistence)
-                m_persistence->close();
+            if (m_per_thread)
+                m_per_thread->close();
         }
         persistence_holder(const persistence_holder &) noexcept = delete;
         persistence_holder & operator=(const persistence_holder &) noexcept = delete;
 
-        bool set_factory(clock_persistence_factory & factory) {
-            if (m_factory == &factory)
+        bool set(clock_persistence & persistence) {
+            if (m_persistence == &persistence)
                 return false;
-            if (m_persistence) {
-                m_persistence->close();
-                m_persistence = nullptr;
+            if (m_per_thread) {
+                m_per_thread->close();
+                m_per_thread = nullptr;
             }
-            m_factory = &factory;
-            if (m_factory)
-                m_persistence = &m_factory->get();
+            m_persistence = &persistence;
+            if (m_persistence)
+                m_per_thread = &m_persistence->get_for_current_thread();
             return true;
         }
 
-        void lock() { m_persistence->lock(); }
-        void unlock() { m_persistence->unlock(); }
+        void lock() { m_per_thread->lock(); }
+        void unlock() { m_per_thread->unlock(); }
 
         template<class Duration>
         void save(time_point<system_clock, Duration> time, 
@@ -151,7 +145,7 @@ namespace muuid::impl {
 
             assert(adjustment <= std::numeric_limits<int32_t>::max());
             clock_persistence::data data = { time_point_cast<nanoseconds>(time), clock_seq, int32_t(adjustment)};
-            m_persistence->store(data);
+            m_per_thread->store(data);
         }
 
         template<class Duration>
@@ -160,7 +154,7 @@ namespace muuid::impl {
                   typename Duration::rep & adjustment) {
 
             clock_persistence::data data;
-            if (!m_persistence->load(data))
+            if (!m_per_thread->load(data))
                 return false;
             
             time = std::chrono::time_point_cast<Duration>(data.when);
@@ -169,8 +163,8 @@ namespace muuid::impl {
             return true;
         }
     private:
-        clock_persistence_factory * m_factory = nullptr;
         clock_persistence * m_persistence = nullptr;
+        clock_persistence::per_thread * m_per_thread = nullptr;
     };
 
     template<class UnitDuration, class MaxUnitDuration, clock_state_synchronization Synchronization>
@@ -189,9 +183,9 @@ namespace muuid::impl {
             { return reset_on_fork_thread_local<clock_state>::instance(); }
 
         template<int PersistanceId>
-        static clock_state & instance(clock_persistence_factory & f) requires(Synchronization == clock_state_synchronization::persistent) { 
+        static clock_state & instance(clock_persistence & pers) requires(Synchronization == clock_state_synchronization::persistent) { 
             clock_state & ret = reset_on_fork_thread_local<clock_state, PersistanceId>::instance(); 
-            ret.set_persistence(f);
+            ret.set_persistence(pers);
             return ret;
         }
 
@@ -221,9 +215,9 @@ namespace muuid::impl {
             reset_adjustment();
         }
 
-        void set_persistence(clock_persistence_factory & factory) requires(Synchronization == clock_state_synchronization::persistent) {
+        void set_persistence(clock_persistence & pers) requires(Synchronization == clock_state_synchronization::persistent) {
             
-            if (m_persistance.set_factory(factory)) {
+            if (m_persistance.set(pers)) {
                 std::lock_guard guard{m_persistance};
 
                 if (!m_persistance.load(m_last_time, m_clock_seq, m_adjustment))
@@ -323,42 +317,55 @@ namespace muuid::impl {
         return {clock, extra, clock_seq};
     }
 
+}
 
-    clock_result_v1 get_clock_v1() {
+clock_result_v1 muuid::impl::get_clock_v1() {
 
-        auto * pers = g_clock_persistence_v1.get();
+    auto * pers = g_clock_persistence_v1.get();
 
-        if (pers) {
-            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::persistent>::instance<1>(*pers);
-            return get_clock(state);
-        } else {
-            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::per_thread>::instance();
-            return get_clock(state);
-        }
-    }
-
-    clock_result_v6 get_clock_v6() {
-        auto * pers = g_clock_persistence_v6.get();
-
-        if (pers) {
-            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::persistent>::instance<6>(*pers);
-            return get_clock(state);
-        } else {
-            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, g_monotonic_synchronization>::instance();
-            return get_clock(state);
-        }
-    }
-
-    clock_result_v7 get_clock_v7() {
-
-        auto * pers = g_clock_persistence_v7.get();
-
-        if (pers) {
-            auto & state = clock_state<milliseconds, microseconds, clock_state_synchronization::persistent>::instance<7>(*pers);
-            return get_unix_clock(state);
-        } else {
-            auto & state = clock_state<milliseconds, microseconds, g_monotonic_synchronization>::instance();
-            return get_unix_clock(state);
-        }        
+    if (pers) {
+        auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::persistent>::instance<1>(*pers);
+        return get_clock(state);
+    } else {
+        auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::per_thread>::instance();
+        return get_clock(state);
     }
 }
+
+clock_result_v6 muuid::impl::get_clock_v6() {
+    auto * pers = g_clock_persistence_v6.get();
+
+    if (pers) {
+        auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::persistent>::instance<6>(*pers);
+        return get_clock(state);
+    } else {
+        auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, g_monotonic_synchronization>::instance();
+        return get_clock(state);
+    }
+}
+
+clock_result_v7 muuid::impl::get_clock_v7() {
+
+    auto * pers = g_clock_persistence_v7.get();
+
+    if (pers) {
+        auto & state = clock_state<milliseconds, microseconds, clock_state_synchronization::persistent>::instance<7>(*pers);
+        return get_unix_clock(state);
+    } else {
+        auto & state = clock_state<milliseconds, microseconds, g_monotonic_synchronization>::instance();
+        return get_unix_clock(state);
+    }        
+}
+
+void muuid::set_time_based_persistence(clock_persistence * pers) {
+    g_clock_persistence_v1.set(pers);
+}
+
+void muuid::set_reordered_time_based_persistence(clock_persistence * pers) {
+    g_clock_persistence_v6.set(pers);
+}
+
+void muuid::set_unix_time_based_persistence(clock_persistence * pers) {
+    g_clock_persistence_v7.set(pers);
+}
+

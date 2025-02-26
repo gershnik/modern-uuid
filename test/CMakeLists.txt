@@ -78,6 +78,8 @@ foreach(suffix ${BUILD_SUFFIXES})
 
     target_sources(test-${suffix}
     PRIVATE
+        test_util.h
+
         main.cpp
         test_basics.cpp
         test_fork.cpp
