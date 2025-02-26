@@ -49,11 +49,17 @@ foreach(suffix ${BUILD_SUFFIXES})
     target_link_libraries(test-${suffix}
     PRIVATE
         modern-uuid::modern-uuid-${suffix}
+        $<$<AND:$<NOT:$<BOOL:${WIN32}>>,$<NOT:$<BOOL:${ANDROID}>>>:pthread>
     )
 
     target_include_directories(test-${suffix}
     PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/downloaded
+    )
+
+    target_compile_definitions(test-${suffix}
+    PRIVATE
+        $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>
     )
 
     target_compile_options(test-${suffix}
@@ -62,6 +68,12 @@ foreach(suffix ${BUILD_SUFFIXES})
         $<$<CXX_COMPILER_ID:Clang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
         $<$<CXX_COMPILER_ID:AppleClang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
         $<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic>
+        $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING;-pthread>
+    )
+
+    target_link_options(test-${suffix}
+    PRIVATE
+        $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING;-pthread;-sPTHREAD_POOL_SIZE=3>
     )
 
     target_sources(test-${suffix}
@@ -69,6 +81,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         main.cpp
         test_basics.cpp
         test_fork.cpp
+        test_persistence.cpp
     )
 
     if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
@@ -84,7 +97,7 @@ foreach(suffix ${BUILD_SUFFIXES})
             COMMAND echo "Running test-${suffix}"
             COMMAND ${ADB} shell mkdir -p ${ANDROID_TEST_DIR}
             COMMAND ${ADB} push "$<TARGET_FILE:test-${suffix}>" ${LIB_TO_PUSH} ${ANDROID_TEST_DIR}
-            COMMAND ${ADB} shell LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH}:${ANDROID_TEST_DIR} ${ANDROID_TEST_DIR}/test-${suffix} -ni
+            COMMAND ${ADB} shell cd ${ANDROID_TEST_DIR} \"&&\" LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH}:${ANDROID_TEST_DIR} ./test-${suffix} -ni
         )
 
     elseif (DEFINED EMSCRIPTEN)

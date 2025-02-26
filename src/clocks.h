@@ -6,6 +6,10 @@
 
 #include <cstdint>
 
+#if MUUID_MULTITHREADED
+    #include <atomic>
+#endif
+
 namespace muuid::impl {
 
     struct clock_result_v1 {
@@ -23,6 +27,38 @@ namespace muuid::impl {
     clock_result_v1 get_clock_v1();
     clock_result_v6 get_clock_v6();
     clock_result_v7 get_clock_v7();
+
+    #if MUUID_MULTITHREADED
+        
+        template<class T>
+        class atomic_if_multithreaded {
+        public:
+            atomic_if_multithreaded(): m_value{T{}} {}
+            atomic_if_multithreaded(T value): m_value{value} {}
+            T get() { return this->m_value.load(std::memory_order_acquire); }
+            void set(T val) { this->m_value.store(val, std::memory_order_release); }
+        private:
+            std::atomic<T> m_value;
+        };
+
+    #else
+
+        template<class T>
+        class atomic_if_multithreaded {
+        public:
+            atomic_if_multithreaded(): m_value{T{}} {}
+            atomic_if_multithreaded(T value): m_value{value} {}
+            T get() { return this->m_value; }
+            void set(T val) { this->m_value = val; }
+        private:
+            T m_value;
+        };
+
+    #endif
+
+    extern atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v1;
+    extern atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v6;
+    extern atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v7;
 }
 
 #endif

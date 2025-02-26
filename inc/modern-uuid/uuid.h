@@ -20,6 +20,7 @@
 #include <string_view>
 #include <optional>
 #include <limits>
+#include <chrono>
 #include <istream>
 #include <ostream>
 
@@ -52,8 +53,10 @@
         #else
             #define MUUID_EXPORTED __declspec(dllimport)
         #endif
+    #elif defined(__GNUC__)
+        #define MUUID_EXPORTED [[gnu::visibility("default")]]
     #else
-        #define MUUID_EXPORTED __attribute__((visibility("default")))
+        #define MUUID_EXPORTED
     #endif
 #else
     #define MUUID_EXPORTED
@@ -589,5 +592,49 @@ struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<fmt:
 };
 
 #endif
+
+namespace muuid {
+    //all methods of this class are only accessed from a signle thread
+    class clock_persistence {
+    public:
+        struct data {
+            using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
+            
+            time_point_t when; 
+            uint16_t seq;
+            int32_t adjustment;
+        };
+    public:
+        virtual void close() noexcept = 0;
+
+        virtual void lock() = 0;
+        virtual void unlock() = 0;
+
+        //load and store are only called inside the lock
+        //load is called once after this object is returned from a factory 
+        //store is called mutliple times
+        virtual bool load(data & d) = 0;
+        virtual void store(const data & d) = 0;
+    protected:
+        clock_persistence() noexcept = default;
+        ~clock_persistence() noexcept = default;
+        clock_persistence(const clock_persistence &) noexcept = default;
+        clock_persistence & operator=(const clock_persistence &) noexcept = default;
+    };
+
+    class clock_persistence_factory {
+    public:
+        virtual clock_persistence & get() = 0;
+    protected:
+        clock_persistence_factory() noexcept = default;
+        ~clock_persistence_factory() noexcept = default;
+        clock_persistence_factory(const clock_persistence_factory &) noexcept = default;
+        clock_persistence_factory & operator=(const clock_persistence_factory &) noexcept = default;
+    };
+
+    MUUID_EXPORTED void set_time_based_persistence(clock_persistence_factory * f);
+    MUUID_EXPORTED void set_reordered_time_based_persistence(clock_persistence_factory * f);
+    MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence_factory * f);
+}
 
 #endif

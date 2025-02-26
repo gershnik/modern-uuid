@@ -89,6 +89,11 @@ foreach(suffix ${BUILD_SUFFIXES})
         MUUID_BUILDING_MUUID=1
     )
 
+    target_compile_options(modern-uuid-${suffix}
+    PRIVATE
+        $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING;-pthread>
+    )
+
     target_include_directories(modern-uuid-${suffix}
     PUBLIC
         $<BUILD_INTERFACE:${INCDIR}>

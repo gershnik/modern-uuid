@@ -7,7 +7,8 @@
 #include "random_generator.h"
 #include "fork_handler.h"
 
-#include <chrono>
+#include <cstring>
+#include <cassert>
 #include <mutex>
 
 using namespace std::chrono;
@@ -22,22 +23,14 @@ static constexpr bool g_synchronize_monotonic =
         false;
     #endif
 
-namespace {
-    struct null_mutex {
-        void lock() {}
-        bool try_lock() { return true; }
-        void unlock() {}
-    };
-
-    #if MUUID_MULTITHREADED
-        using mutex = std::mutex;
-    #else
-        using mutex = null_mutex;
-    #endif
-}
-
 namespace muuid::impl {
+    
 
+    atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v1{};
+    atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v6{};
+    atomic_if_multithreaded<clock_persistence_factory *> g_clock_persistence_v7{};
+
+    
     template<class Duration>
     static typename Duration::rep get_max_adjustment() {
         //we cannot rely system_clock::duration type to tell us the actual precision of the
@@ -77,20 +70,177 @@ namespace muuid::impl {
         return max_adjustment;
     }
 
-    template<class UnitDuration, class MaxUnitDuration, bool Synchronized>
-    class clock_state {
-        friend std::conditional_t<Synchronized, reset_on_fork_singleton<clock_state>, reset_on_fork_thread_local<clock_state>>;
+    enum class clock_state_synchronization {
+        synchronized,
+        per_thread,
+        persistent
+    };
+
+    static constexpr clock_state_synchronization g_monotonic_synchronization = 
+    #if MUUID_MULTITHREADED
+        clock_state_synchronization::synchronized;
+    #else
+        clock_state_synchronization::per_thread;
+    #endif
+
+    template<clock_state_synchronization Synchronization>
+    class persistence_holder {
     public:
-        static clock_state & instance() {
-            if constexpr (Synchronized)
-                return reset_on_fork_singleton<clock_state>::instance();
-            else
-                return reset_on_fork_thread_local<clock_state>::instance();
+        void lock() {}
+        void unlock() {}
+
+        template<class Duration>
+        void save(time_point<system_clock, Duration> time, 
+                  uint16_t m_clock_seq, 
+                  typename Duration::rep adjustment)
+        {}
+    };
+
+    #if MUUID_MULTITHREADED
+
+        template<>
+        class persistence_holder<clock_state_synchronization::synchronized> {
+        public:
+            void lock() { m_mutex.lock(); }
+            void unlock() { m_mutex.unlock(); }
+
+            template<class Duration>
+            void save(time_point<system_clock, Duration> time, 
+                      uint16_t m_clock_seq, 
+                      typename Duration::rep adjustment)
+            {}
+        private:
+            std::mutex m_mutex;
+        };
+
+    #endif
+
+    template<>
+    class persistence_holder<clock_state_synchronization::persistent> {
+    private:
+        static constexpr uint8_t version = 1;
+    public:
+        persistence_holder() noexcept = default;
+        ~persistence_holder() noexcept {
+            if (m_persistence)
+                m_persistence->close();
+        }
+        persistence_holder(const persistence_holder &) noexcept = delete;
+        persistence_holder & operator=(const persistence_holder &) noexcept = delete;
+
+        bool set_factory(clock_persistence_factory & factory) {
+            if (m_factory == &factory)
+                return false;
+            if (m_persistence) {
+                m_persistence->close();
+                m_persistence = nullptr;
+            }
+            m_factory = &factory;
+            if (m_factory)
+                m_persistence = &m_factory->get();
+            return true;
+        }
+
+        void lock() { m_persistence->lock(); }
+        void unlock() { m_persistence->unlock(); }
+
+        template<class Duration>
+        void save(time_point<system_clock, Duration> time, 
+                  uint16_t clock_seq,
+                  typename Duration::rep adjustment) {
+
+            assert(adjustment <= std::numeric_limits<int32_t>::max());
+            clock_persistence::data data = { time_point_cast<nanoseconds>(time), clock_seq, int32_t(adjustment)};
+            m_persistence->store(data);
+        }
+
+        template<class Duration>
+        bool load(time_point<system_clock, Duration> & time, 
+                  uint16_t & clock_seq, 
+                  typename Duration::rep & adjustment) {
+
+            clock_persistence::data data;
+            if (!m_persistence->load(data))
+                return false;
+            
+            time = std::chrono::time_point_cast<Duration>(data.when);
+            clock_seq = data.seq;
+            adjustment = data.adjustment;
+            return true;
+        }
+    private:
+        clock_persistence_factory * m_factory = nullptr;
+        clock_persistence * m_persistence = nullptr;
+    };
+
+    template<class UnitDuration, class MaxUnitDuration, clock_state_synchronization Synchronization>
+    class clock_state {
+        friend reset_on_fork_singleton<clock_state>; 
+        friend reset_on_fork_thread_local<clock_state>;
+        friend reset_on_fork_thread_local<clock_state, 1>;
+        friend reset_on_fork_thread_local<clock_state, 6>;
+        friend reset_on_fork_thread_local<clock_state, 7>;
+                            
+    public:
+        static clock_state & instance() requires(Synchronization == clock_state_synchronization::synchronized) 
+            { return reset_on_fork_singleton<clock_state>::instance(); }
+
+        static clock_state & instance() requires(Synchronization == clock_state_synchronization::per_thread) 
+            { return reset_on_fork_thread_local<clock_state>::instance(); }
+
+        template<int PersistanceId>
+        static clock_state & instance(clock_persistence_factory & f) requires(Synchronization == clock_state_synchronization::persistent) { 
+            clock_state & ret = reset_on_fork_thread_local<clock_state, PersistanceId>::instance(); 
+            ret.set_persistence(f);
+            return ret;
+        }
+
+        void get(time_point<system_clock, MaxUnitDuration> & adjusted_now, uint16_t & clock_seq) {
+            for ( ; ; ) {
+                auto now = system_clock::now();
+                {
+                    if (this->adjust(now, adjusted_now, clock_seq))
+                        break;
+                }
+            }
+        }
+
+    private:
+        clock_state():
+            m_max_adjustment(get_max_adjustment<MaxUnitDuration>()) 
+        {
+            if constexpr (Synchronization != clock_state_synchronization::persistent)
+                this->init_new();
+        }
+
+        void init_new() {
+            m_last_time = round<MaxUnitDuration>(system_clock::now()) - 1s;
+            auto & gen = get_random_generator();
+            std::uniform_int_distribution<uint16_t> clock_seq_distrib(0, 0x3FFF);
+            m_clock_seq = clock_seq_distrib(gen);
+            reset_adjustment();
+        }
+
+        void set_persistence(clock_persistence_factory & factory) requires(Synchronization == clock_state_synchronization::persistent) {
+            
+            if (m_persistance.set_factory(factory)) {
+                std::lock_guard guard{m_persistance};
+
+                if (!m_persistance.load(m_last_time, m_clock_seq, m_adjustment))
+                {
+                    this->init_new();
+                    m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
+                } else {
+                    m_clock_seq &= 0x3FFF;
+                    if (m_adjustment < 0)
+                        m_adjustment = 0;
+                }
+            }
         }
 
         bool adjust(system_clock::time_point now, time_point<system_clock, MaxUnitDuration> & adjusted, uint16_t & clock_seq) {
 
-            std::lock_guard guard{m_mutex};
+            std::lock_guard guard{m_persistance};
 
             adjusted = round<MaxUnitDuration>(now);
             //on a miniscule change that we have misdetected m_max_adjustment let's make sure
@@ -106,26 +256,20 @@ namespace muuid::impl {
                 reset_adjustment();
                 m_last_time = adjusted;
             } else if (adjusted == m_last_time) {
-                if (m_adjustment >= m_max_adjustment)
+                if (m_adjustment >= m_max_adjustment) {
+                    m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
                     return false;
+                }
                 ++m_adjustment;
             } else {
                 reset_adjustment();
                 m_last_time = adjusted;
             }
             
+            m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
             adjusted += MaxUnitDuration(m_adjustment);
             clock_seq = m_clock_seq;
             return true;
-        }
-    private:
-        clock_state() {
-            m_last_time = round<MaxUnitDuration>(system_clock::now()) - 1s;
-            auto & gen = get_random_generator();
-            std::uniform_int_distribution<uint16_t> clock_seq_distrib(0, 0x3FFF);
-            m_clock_seq = clock_seq_distrib(gen);
-            m_max_adjustment = get_max_adjustment<MaxUnitDuration>();
-            reset_adjustment();
         }
 
         void reset_adjustment() {
@@ -136,34 +280,25 @@ namespace muuid::impl {
             }
         }
 
-        void prepare_fork_in_parent() requires(Synchronized) {
-            m_mutex.lock();
+        void prepare_fork_in_parent() requires(Synchronization != clock_state_synchronization::per_thread) {
+            m_persistance.lock();
         }
-        void after_fork_in_parent() requires(Synchronized) {
-            m_mutex.unlock();
+        void after_fork_in_parent() requires(Synchronization != clock_state_synchronization::per_thread) {
+            m_persistance.unlock();
         }
     private:
         time_point<system_clock, MaxUnitDuration> m_last_time;
         uint16_t m_clock_seq;
         typename MaxUnitDuration::rep m_adjustment = 0;
         typename MaxUnitDuration::rep m_max_adjustment;
-        std::conditional_t<Synchronized, mutex, null_mutex> m_mutex;
+        [[no_unique_address]] persistence_holder<Synchronization> m_persistance;
     };
 
-
-    clock_result_v1 get_clock_v1() {
-
-        auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, false>::instance();
-
+    template<clock_state_synchronization Synchronization>
+    clock_result_v1 get_clock(clock_state<hundred_nanoseconds, hundred_nanoseconds, Synchronization> & state) {
         time_point<system_clock, hundred_nanoseconds> adjusted_now;
         uint16_t clock_seq;
-        for ( ; ; ) {
-            auto now = system_clock::now();
-            {
-                if (state.adjust(now, adjusted_now, clock_seq))
-                    break;
-            }
-        }
+        state.get(adjusted_now, clock_seq);
 
         uint64_t clock = adjusted_now.time_since_epoch().count();
         //gregorian offset of Unix epoch
@@ -172,39 +307,11 @@ namespace muuid::impl {
         return {clock, clock_seq};
     }
 
-    clock_result_v6 get_clock_v6() {
-
-        auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, g_synchronize_monotonic>::instance();
-
-        time_point<system_clock, hundred_nanoseconds> adjusted_now;
-        uint16_t clock_seq;
-        for ( ; ; ) {
-            auto now = system_clock::now();
-            {
-                if (state.adjust(now, adjusted_now, clock_seq))
-                    break;
-            }
-        }
-
-        uint64_t clock = adjusted_now.time_since_epoch().count();
-        //gregorian offset of Unix epoch
-        clock += ((uint64_t(0x01B21DD2)) << 32) + 0x13814000;
-
-        return {clock, clock_seq};
-    }
-
-    clock_result_v7 get_clock_v7() {
-        auto & state = clock_state<milliseconds, microseconds, g_synchronize_monotonic>::instance();
-
+    template<clock_state_synchronization Synchronization>
+    clock_result_v7 get_unix_clock(clock_state<milliseconds, microseconds, Synchronization> & state) {
         time_point<system_clock, microseconds> adjusted_now;
         uint16_t clock_seq;
-        for ( ; ; ) {
-            auto now = system_clock::now();
-            {
-                if (state.adjust(now, adjusted_now, clock_seq))
-                    break;
-            }
-        }
+        state.get(adjusted_now, clock_seq);
 
         auto interval = adjusted_now.time_since_epoch();
         auto interval_ms = duration_cast<milliseconds>(interval);
@@ -214,5 +321,44 @@ namespace muuid::impl {
         uint64_t frac = remainder * 4096;
         uint16_t extra = uint16_t(frac / 1000) + uint16_t(frac % 1000 >= 500);
         return {clock, extra, clock_seq};
+    }
+
+
+    clock_result_v1 get_clock_v1() {
+
+        auto * pers = g_clock_persistence_v1.get();
+
+        if (pers) {
+            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::persistent>::instance<1>(*pers);
+            return get_clock(state);
+        } else {
+            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::per_thread>::instance();
+            return get_clock(state);
+        }
+    }
+
+    clock_result_v6 get_clock_v6() {
+        auto * pers = g_clock_persistence_v6.get();
+
+        if (pers) {
+            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, clock_state_synchronization::persistent>::instance<6>(*pers);
+            return get_clock(state);
+        } else {
+            auto & state = clock_state<hundred_nanoseconds, hundred_nanoseconds, g_monotonic_synchronization>::instance();
+            return get_clock(state);
+        }
+    }
+
+    clock_result_v7 get_clock_v7() {
+
+        auto * pers = g_clock_persistence_v7.get();
+
+        if (pers) {
+            auto & state = clock_state<milliseconds, microseconds, clock_state_synchronization::persistent>::instance<7>(*pers);
+            return get_unix_clock(state);
+        } else {
+            auto & state = clock_state<milliseconds, microseconds, g_monotonic_synchronization>::instance();
+            return get_unix_clock(state);
+        }        
     }
 }
