@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## Added
 - Ability to supply clock persistence and/or cross process coordination for time based (v1, v6 and v7) UUID generation
 - Ability to control node id (e.g. Mac address) for time_based and reordered_time_based UUID generation
+- Conversions to/from Apple's CFUUID/CFUUIDBytes
+- Conversions to/from Windows GUID
 
 ## Fixed
 - Incorrect behavior of per-thread singletons in case of nested process forks
