@@ -42,9 +42,28 @@ TEST_CASE("apple") {
     CFRelease(uuidobj1);
     CFRelease(strobj);
     CFRelease(uuidobj);
-#else
-    MESSAGE("skipping - not an Apple platform");
 #endif
+}
+
+TEST_CASE("windows") {
+
+#ifdef _WIN32
+
+    GUID guid = { /* 0d1be41b-f035-4f89-b404-bc0641afae59 */
+        0x0d1be41b,
+        0xf035,
+        0x4f89,
+        {0xb4, 0x04, 0xbc, 0x06, 0x41, 0xaf, 0xae, 0x59}
+    };
+
+    const uuid u = guid;
+
+    CHECK(u.to_string() == "0d1be41b-f035-4f89-b404-bc0641afae59");
+
+    GUID guid1 = u.to_GUID();
+    CHECK(IsEqualGUID(guid, guid1));
+#endif
+
 }
 
 }

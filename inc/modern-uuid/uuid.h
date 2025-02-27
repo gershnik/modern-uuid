@@ -90,6 +90,10 @@
     #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#if defined(_WIN32)
+    #include <guiddef.h>
+#endif
+
 namespace muuid
 {
     namespace impl {
@@ -328,6 +332,17 @@ namespace muuid
         {}
     #endif
 
+    #ifdef _WIN32
+        /// Constructs uuid from Windows GUID
+        constexpr uuid(const GUID & guid) noexcept {
+            auto dest = this->bytes.data();
+            dest = write_bytes(guid.Data1, dest);
+            dest = write_bytes(guid.Data2, dest);
+            dest = write_bytes(guid.Data3, dest);
+            std::copy(std::begin(guid.Data4), std::end(guid.Data4), dest);
+        }
+    #endif
+
         /// Generates a version 1 UUID
         MUUID_EXPORTED static auto generate_time_based() -> uuid;
         /// Generates a version 3 UUID
@@ -397,6 +412,19 @@ namespace muuid
         auto to_CFUUID(CFAllocatorRef alloc=nullptr) const noexcept -> CFUUIDRef {
             static_assert(sizeof(this->bytes) == sizeof(CFUUIDBytes));
             return CFUUIDCreateFromUUIDBytes(alloc, *(CFUUIDBytes *)this->bytes.data());
+        }
+    #endif
+
+    #ifdef _WIN32
+        /// Converts uuid to Windows GUID
+        constexpr auto to_GUID() const noexcept -> GUID {
+            GUID ret;
+            auto ptr = this->bytes.data();
+            ptr = read_bytes(ptr, ret.Data1);
+            ptr = read_bytes(ptr, ret.Data2);
+            ptr = read_bytes(ptr, ret.Data3);
+            std::copy(ptr, ptr + 8, ret.Data4);
+            return ret;
         }
     #endif
 
