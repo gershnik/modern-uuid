@@ -128,7 +128,7 @@ Quickest CMake method is given below. For more details and other method see [Int
 include(FetchContent)
 FetchContent_Declare(modern-uuid
     GIT_REPOSITORY git@github.com:gershnik/modern-uuid.git
-    GIT_TAG        <desired tag like v0.1 or a sha>
+    GIT_TAG        <desired tag like v1.2 or a sha>
     GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(modern-uuid)
@@ -138,13 +138,6 @@ PRIVATE
   modern-uuid::modern-uuid
 )
 ```
-
-## Future work
-
-The following functionality is currently not implemented but may be added in future releases
-
-* Helpers for easy conversion of various platform specific UUID representations (such as Windows `struct GUID`,
-  Apple's `struct CFUUIDBytes` etc.) to `muuid::uuid`
 
 
 ## Implementation details
