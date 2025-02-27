@@ -86,6 +86,10 @@
     #include <format>
 #endif
 
+#if defined(__APPLE__)
+    #include <CoreFoundation/CoreFoundation.h>
+#endif
+
 namespace muuid
 {
     namespace impl {
@@ -312,6 +316,18 @@ namespace muuid
             std::copy(std::begin(parts.node), std::end(parts.node), dest);
         }
 
+    #ifdef __APPLE__
+        /// Constructs uuid from Apple's CFUUIDBytes
+        constexpr uuid(const CFUUIDBytes & bytes) noexcept {
+            static_assert(sizeof(this->bytes) == sizeof(bytes));
+            std::copy(&bytes.byte0, &bytes.byte0 + sizeof(this->bytes), this->bytes.data());
+        }
+
+        /// Constructs uuid from Apple's CFUUIDRef
+        uuid(CFUUIDRef obj) noexcept: uuid(CFUUIDGetUUIDBytes(obj)) 
+        {}
+    #endif
+
         /// Generates a version 1 UUID
         MUUID_EXPORTED static auto generate_time_based() -> uuid;
         /// Generates a version 3 UUID
@@ -366,6 +382,23 @@ namespace muuid
             std::copy(ptr, ptr + 6, ret.node);
             return ret;
         }
+
+    #ifdef __APPLE__
+        /// Converts uuid to Apple's CFUUIDBytes
+        constexpr auto to_CFUUIDBytes() const noexcept -> CFUUIDBytes {
+            static_assert(sizeof(this->bytes) == sizeof(bytes));
+
+            CFUUIDBytes ret;
+            std::copy(this->bytes.begin(), this->bytes.end(), &ret.byte0);
+            return ret;
+        }
+
+        /// Converts uuid to Apple's CFUUIDRef
+        auto to_CFUUID(CFAllocatorRef alloc=nullptr) const noexcept -> CFUUIDRef {
+            static_assert(sizeof(this->bytes) == sizeof(CFUUIDBytes));
+            return CFUUIDCreateFromUUIDBytes(alloc, *(CFUUIDBytes *)this->bytes.data());
+        }
+    #endif
 
         /// Parses uuid from a span of characters
         template<size_t Extent>

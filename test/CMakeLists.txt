@@ -49,6 +49,7 @@ foreach(suffix ${BUILD_SUFFIXES})
     target_link_libraries(test-${suffix}
     PRIVATE
         modern-uuid::modern-uuid-${suffix}
+        "$<$<PLATFORM_ID:Darwin>:-framework CoreFoundation>"
         $<$<AND:$<NOT:$<BOOL:${WIN32}>>,$<NOT:$<BOOL:${ANDROID}>>>:pthread>
     )
 
@@ -84,6 +85,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         test_basics.cpp
         test_fork.cpp
         test_persistence.cpp
+        test_system.cpp
     )
 
     if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
