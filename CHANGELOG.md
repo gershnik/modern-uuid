@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [1.3] - 2025-02-27
+
 ## Added
 - Ability to supply clock persistence and/or cross process coordination for time based (v1, v6 and v7) UUID generation
 - Ability to control node id (e.g. Mac address) for time_based and reordered_time_based UUID generation
@@ -37,3 +39,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [1.0]: https://github.com/gershnik/modern-uuid/releases/v1.0
 [1.1]: https://github.com/gershnik/modern-uuid/releases/v1.1
 [1.2]: https://github.com/gershnik/modern-uuid/releases/v1.2
+[1.3]: https://github.com/gershnik/modern-uuid/releases/v1.3
