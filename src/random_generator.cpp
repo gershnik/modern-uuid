@@ -16,7 +16,7 @@ namespace muuid::impl {
             {}
         };
 
-        return reset_on_fork_singleton<generator>::instance();
+        return reset_on_fork_thread_local<generator>::instance();
     }
 
 }
