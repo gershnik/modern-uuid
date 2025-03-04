@@ -224,7 +224,7 @@ namespace {
             auto & gen = get_random_generator();
             std::uniform_int_distribution<uint16_t> clock_seq_distrib(0, 0x3FFF);
             this->m_clock_seq = clock_seq_distrib(gen);
-            reset_adjustment();
+            this->m_adjustment = 0;
         }
 
         void set_persistence(clock_persistence * pers) {
@@ -259,7 +259,7 @@ namespace {
             
             if (adjusted < this->m_last_time) {
                 this->m_clock_seq = (this->m_clock_seq + 1) & 0x3FFF;
-                reset_adjustment();
+                this->m_adjustment = 0;
                 this->m_last_time = adjusted;
             } else if (adjusted == this->m_last_time) {
                 if (this->m_adjustment >= this->m_max_adjustment) {
@@ -268,7 +268,7 @@ namespace {
                 }
                 ++this->m_adjustment;
             } else {
-                reset_adjustment();
+                this->m_adjustment = 0;
                 this->m_last_time = adjusted;
             }
             
@@ -276,14 +276,6 @@ namespace {
             adjusted += MaxUnitDuration(this->m_adjustment);
             clock_seq = this->m_clock_seq;
             return true;
-        }
-
-        void reset_adjustment() {
-            if (this->m_max_adjustment != 0) {
-                auto & gen = get_random_generator();
-                std::uniform_int_distribution<typename MaxUnitDuration::rep> adjustment_distrib(0, this->m_max_adjustment - 2);
-                this->m_adjustment = adjustment_distrib(gen);
-            }
         }
 
         void prepare_fork_in_parent() {
