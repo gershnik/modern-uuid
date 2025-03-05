@@ -308,7 +308,10 @@ TEST_CASE("clock unix_time_based") {
         auto parts1 = u1.to_parts();
         auto parts2 = u2.to_parts();
 
-        CHECK(parts1.clock_seq == parts2.clock_seq);
+        if (parts1.time_hi_and_version != parts2.time_hi_and_version)
+            CHECK(parts1.clock_seq == parts2.clock_seq);
+        else
+            CHECK(parts1.clock_seq != parts2.clock_seq);
         
         set_unix_time_based_persistence(nullptr);
 
