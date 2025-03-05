@@ -308,7 +308,9 @@ TEST_CASE("clock unix_time_based") {
         auto parts1 = u1.to_parts();
         auto parts2 = u2.to_parts();
 
-        if (parts1.time_hi_and_version != parts2.time_hi_and_version)
+        CAPTURE(u1);
+        CAPTURE(u2);
+        if (parts1.time_hi_and_version != parts2.time_hi_and_version || parts1.time_mid != parts2.time_mid)
             CHECK(parts1.clock_seq == parts2.clock_seq);
         else
             CHECK(parts1.clock_seq != parts2.clock_seq);
@@ -328,7 +330,10 @@ TEST_CASE("clock unix_time_based") {
         }).join();
 
         parts2 = u2.to_parts();
-        CHECK(parts1.clock_seq == parts2.clock_seq);
+        if (parts1.time_hi_and_version != parts2.time_hi_and_version || parts1.time_mid != parts2.time_mid)
+            CHECK(parts1.clock_seq == parts2.clock_seq);
+        else
+            CHECK(parts1.clock_seq != parts2.clock_seq);
     }
     uuid::generate_unix_time_based();
     CHECK(pers.ref_count() == 0);
