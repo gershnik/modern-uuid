@@ -23,6 +23,31 @@ static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v1{};
 static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v6{};
 static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v7{};
 
+template<class T>
+static T detect_roundness_to_pow10_impl(T val) {
+    T ret = 1;
+    while (val != 0) {
+        if (val % 10 != 0)
+            break;
+        val /= 10;
+        ret *= 10;
+    }
+    return ret;
+}
+
+template<class T>
+static T detect_roundness_to_pow10(T val) {
+    //WASM passes time reading through some floating point shenanigans and they 
+    //can be 1 off the real value (e.g. 999 for 1000)
+    //We will take the maximum from val, val - 1 and val + 1
+    //This should be harmless for normal integer readings
+    T ret = detect_roundness_to_pow10_impl(val);
+    if (val > 0)
+        ret = std::max(ret, detect_roundness_to_pow10_impl(val - 1));
+    ret = std::max(ret, detect_roundness_to_pow10_impl(val + 1));
+    return ret;
+}
+
 template<class Duration>
 static typename Duration::rep get_max_adjustment() {
     //we cannot rely system_clock::duration type to tell us the actual precision of the
@@ -30,34 +55,25 @@ static typename Duration::rep get_max_adjustment() {
     //reality usually (always?) has millisecond granularity. Thus we need to discover
     //the precision at runtime
     static typename Duration::rep max_adjustment = []() {
-        typename Duration::rep samples[3];
-        samples[0] = round<Duration>(system_clock::now()).time_since_epoch().count();
-        for (size_t i = 1; i < std::size(samples); ++i) {
+        system_clock::duration::rep diffs[3];
+        system_clock::duration::rep base = system_clock::now().time_since_epoch().count();
+        for (size_t i = 0; i < std::size(diffs); ++i) {
             for ( ; ; ) {
-                auto val = round<Duration>(system_clock::now()).time_since_epoch().count();
-                if (val != samples[i - 1]) {
-                    samples[i] = val;
+                auto val = system_clock::now().time_since_epoch().count();
+                if (val != base) {
+                    diffs[i] = val - base;
+                    base = val;
                     break;
                 }
             }
         }
-        typename Duration::rep ret = 1;
-        for ( ; ; ) {
-            bool done = true;
-            for(auto & sample: samples) {
-                if (sample % 10 != 0) {
-                    done = true;
-                    break;
-                }
-                sample /= 10;
-                if (sample != 0)
-                    done = false;
-            }
-            if (done)
-                break;
-            ret *= 10;
-        }
-        return ret != 1 ? ret : 0;
+        system_clock::duration::rep pows[std::size(diffs)];
+        std::transform(std::begin(diffs), std::end(diffs), std::begin(pows), [](auto diff) {
+            return detect_roundness_to_pow10(diff);
+        });
+        auto ret = *std::min_element(std::begin(pows), std::end(pows));
+        typename Duration::rep x = round<Duration>(system_clock::duration(ret)).count();
+        return x > 1 ? x : 0;
     }();
     return max_adjustment;
 }
