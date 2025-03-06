@@ -11,6 +11,7 @@
 #include <cstring>
 #include <cassert>
 #include <mutex>
+#include <algorithm>
 
 using namespace std::chrono;
 using namespace std::literals;
@@ -24,7 +25,7 @@ static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v6{};
 static atomic_if_multithreaded<clock_persistence *> g_clock_persistence_v7{};
 
 template<class T>
-static T detect_roundness_to_pow10_impl(T val) {
+static inline T detect_roundness_to_pow10_impl(T val) {
     T ret = 1;
     while (val != 0) {
         if (val % 10 != 0)
@@ -36,7 +37,7 @@ static T detect_roundness_to_pow10_impl(T val) {
 }
 
 template<class T>
-static T detect_roundness_to_pow10(T val) {
+static inline T detect_roundness_to_pow10(T val) {
     //WASM passes time reading through some floating point shenanigans and they 
     //can be 1 off the real value (e.g. 999 for 1000)
     //We will take the maximum from val, val - 1 and val + 1
@@ -48,13 +49,12 @@ static T detect_roundness_to_pow10(T val) {
     return ret;
 }
 
-template<class Duration>
-static typename Duration::rep get_max_adjustment() {
+static system_clock::duration get_clock_tick() {
     //we cannot rely system_clock::duration type to tell us the actual precision of the
     //clock. Some implementations lie. For example Emscripten says microseconds but in 
     //reality usually (always?) has millisecond granularity. Thus we need to discover
     //the precision at runtime
-    static typename Duration::rep max_adjustment = []() {
+    static system_clock::duration max_adjustment = []() {
         system_clock::duration::rep diffs[3];
         system_clock::duration::rep base = system_clock::now().time_since_epoch().count();
         for (size_t i = 0; i < std::size(diffs); ++i) {
@@ -72,10 +72,18 @@ static typename Duration::rep get_max_adjustment() {
             return detect_roundness_to_pow10(diff);
         });
         auto ret = *std::min_element(std::begin(pows), std::end(pows));
-        typename Duration::rep x = round<Duration>(system_clock::duration(ret)).count();
-        return x > 1 ? x : 0;
+        return system_clock::duration(ret);
     }();
     return max_adjustment;
+}
+
+static inline system_clock::time_point next_distinct_now(system_clock::time_point prev) {
+    for ( ; ; ) {
+        auto now = system_clock::now();
+        if (now != prev) {
+            return now;
+        }
+    }
 }
 
 namespace {
@@ -208,7 +216,7 @@ namespace {
 
     protected:
         clock_state_base():
-            m_max_adjustment(get_max_adjustment<max_unit_duration>()) 
+            m_max_adjustment(clock_state_base::get_max_adjustment()) 
         {}
 
         ~clock_state_base() {
@@ -241,6 +249,13 @@ namespace {
             this->m_persistance.unlock();
             this->m_locked_for_fork = false;
         }
+
+    private:
+        static typename max_unit_duration::rep get_max_adjustment() {
+            auto val = get_clock_tick();
+            typename max_unit_duration::rep ret = round<max_unit_duration>(system_clock::duration(val)).count();
+            return ret > 1 ? ret : 0;
+        }
     protected:
         time_point<system_clock, max_unit_duration> m_last_time;
         uint16_t m_clock_seq;
@@ -265,18 +280,12 @@ namespace {
         }
         
         void get(time_point<system_clock, max_unit_duration> & adjusted_now, uint16_t & clock_seq) {
-            auto now = system_clock::now();
-            for ( ; ; ) {
+            std::lock_guard guard{m_persistance};
+            for (auto now = system_clock::now(); ; now = next_distinct_now(now)) {
                 if (adjust(now, adjusted_now, clock_seq))
                     break;
-                for ( ; ; ) {
-                    auto next = system_clock::now();
-                    if (next != now) {
-                        now = next;
-                        break;
-                    }
-                }
             }
+            m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
         }
 
     private:
@@ -292,8 +301,6 @@ namespace {
         }
 
         bool adjust(system_clock::time_point now, time_point<system_clock, max_unit_duration> & adjusted, uint16_t & clock_seq) {
-
-            std::lock_guard guard{m_persistance};
 
             adjusted = round<max_unit_duration>(now);
             //on a miniscule change that we have misdetected m_max_adjustment let's make sure
@@ -317,7 +324,6 @@ namespace {
                 m_last_time = adjusted;
             }
             
-            m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
             adjusted += max_unit_duration(m_adjustment);
             clock_seq = m_clock_seq;
             return true;
@@ -337,19 +343,14 @@ namespace {
         
         void get(time_point<system_clock, max_unit_duration> & adjusted_now, uint16_t & clock_seq) {
 
+            std::lock_guard guard{m_persistance};
             auto now = system_clock::now();
-            for (bool after_wait = false; ; after_wait = true) {
-                
-                if (adjust(now, adjusted_now, clock_seq, after_wait))
-                    break;
-                for ( ; ; ) {
-                    auto next = system_clock::now();
-                    if (next != now) {
-                        now = next;
-                        break;
-                    }
-                }
+            if (!adjust(now, adjusted_now, clock_seq, false)) {
+                do {
+                    now = next_distinct_now(now);
+                } while (!adjust(now, adjusted_now, clock_seq, true));
             }
+            m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
         }
 
     private:
@@ -367,7 +368,7 @@ namespace {
         bool adjust(system_clock::time_point now, time_point<system_clock, max_unit_duration> & adjusted, uint16_t & clock_seq,
                     bool after_wait) {
 
-            std::lock_guard guard{m_persistance};
+            
 
             adjusted = round<max_unit_duration>(now);
             //on a miniscule change that we have misdetected m_max_adjustment let's make sure
@@ -383,10 +384,8 @@ namespace {
                 m_adjustment = 0;
                 m_last_time = adjusted;
                 uint16_t new_clock_seq = (m_clock_seq + 1) & 0x3FFF;
-                if (new_clock_seq == 0) {
-                    m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
+                if (new_clock_seq == 0)
                     return false;
-                }
                 m_clock_seq = new_clock_seq;
             } else if (adjusted == m_last_time) {
                 if (m_adjustment >= m_max_adjustment) {
@@ -407,7 +406,6 @@ namespace {
                 }
             }
             
-            m_persistance.save(m_last_time, m_clock_seq, m_adjustment);
             adjusted += max_unit_duration(m_adjustment);
             clock_seq = m_clock_seq;
             return true;
