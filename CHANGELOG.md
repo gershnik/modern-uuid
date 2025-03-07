@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [1.4] - 2025-03-07
+
 ## Added
 - Significant performance improvements for time based UUID generation
 - Significant performance improvements for random (v4) UUID generation
@@ -51,3 +53,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [1.1]: https://github.com/gershnik/modern-uuid/releases/v1.1
 [1.2]: https://github.com/gershnik/modern-uuid/releases/v1.2
 [1.3]: https://github.com/gershnik/modern-uuid/releases/v1.3
+[1.4]: https://github.com/gershnik/modern-uuid/releases/v1.4
