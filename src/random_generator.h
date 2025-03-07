@@ -5,10 +5,14 @@
 #define HEADER_MODERN_UUID_RANDOM_GENERATOR_H_INCLUDED
 
 #include <random>
+#include "external/chacha20.hpp"
+
 
 namespace muuid::impl {
 
-    std::mt19937 & get_random_generator();
+    using prng = chacha20_12;
+
+    prng & get_random_generator();
 }
 
 #endif

@@ -8,11 +8,11 @@
 
 namespace muuid::impl {
 
-    std::mt19937 & get_random_generator() {
+    prng & get_random_generator() {
 
-        struct generator : std::mt19937 {
+        struct generator : prng {
             generator():
-                std::mt19937(randutils::auto_seed_128{}.base())
+                prng(randutils::auto_seed_128{}.base())
             {}
         };
 

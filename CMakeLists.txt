@@ -107,6 +107,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         ${SRCDIR}/external/sha1.h
         ${SRCDIR}/external/sha1.c
         ${SRCDIR}/external/randutils.hpp
+        ${SRCDIR}/external/chacha20.hpp
 
         ${SRCDIR}/clocks.h
         ${SRCDIR}/clocks.cpp
