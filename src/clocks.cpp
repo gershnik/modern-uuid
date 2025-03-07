@@ -226,7 +226,7 @@ namespace {
 
         void set_persistence(clock_persistence * pers) {
             
-            if (this->m_persistance.set(pers)) {
+            if (this->m_persistance.set(pers) || !m_initialized) {
                 std::lock_guard guard{this->m_persistance};
 
                 if (!m_persistance.load(this->m_last_time, this->m_clock_seq, this->m_adjustment))
@@ -238,6 +238,8 @@ namespace {
                     if (this->m_adjustment < 0)
                         this->m_adjustment = 0;
                 }
+
+                m_initialized = true;
             }
         }
 
@@ -262,6 +264,7 @@ namespace {
         typename max_unit_duration::rep m_adjustment = 0;
         typename max_unit_duration::rep m_max_adjustment;
         persistence_holder m_persistance;
+        bool m_initialized = false;
         bool m_locked_for_fork = false;
     };
 
