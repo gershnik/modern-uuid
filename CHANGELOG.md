@@ -7,8 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Added
 - Significant performance improvements for time based UUID generation
+- Significant performance improvements for random (v4) UUID generation
+
+## Changed
+- The random number generator using in the library is now cryptographically secure ChaCha20 instead of mt19937
 
 ## Fixed
+- Clock sequence of v1 UUIDs always starting from 0
 - Possible race condition in internal random generator usage
 
 ## [1.3] - 2025-02-27
