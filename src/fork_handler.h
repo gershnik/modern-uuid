@@ -72,7 +72,12 @@ namespace muuid::impl {
     public:
         static T & instance() {
 
-            register_atfork();
+            [[maybe_unused]]
+            static int registered = []() {
+                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
+                    std::terminate();
+                return 1;
+            }();
 
         #if MUUID_MULTITHREADED 
             if (!s_inst.m_initialized_in_this_process.test(std::memory_order_acquire)) {
@@ -96,15 +101,6 @@ namespace muuid::impl {
         }
     
     private:
-        static void register_atfork() {
-            [[maybe_unused]]
-            static int registered = []() {
-                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
-                    std::terminate();
-                return 1;
-            }();
-        }
-        
         static void prepare_fork_in_parent() {
             #if MUUID_MULTITHREADED
                 s_inst.m_mutex.lock();
@@ -164,7 +160,12 @@ namespace muuid::impl {
     public:
         static T & instance() {
 
-            register_atfork();
+            [[maybe_unused]]
+            static int registered = []() {
+                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
+                    std::terminate();
+                return 1;
+            }();
 
             if (tl_inst.m_generation != s_generation) {
                 tl_inst.m_obj.reset();
@@ -174,15 +175,6 @@ namespace muuid::impl {
             return *tl_inst.m_obj;
         }
     private:
-        static void register_atfork()
-        {
-            [[maybe_unused]]
-            static int registered = []() {
-                if (pthread_atfork(prepare_fork_in_parent, after_fork_in_parent, after_fork_in_child) != 0)
-                    std::terminate();
-                return 1;
-            }();
-        }
         static void prepare_fork_in_parent() {
             if constexpr (fork_aware_static<T>) {
                 if (tl_inst.m_obj)

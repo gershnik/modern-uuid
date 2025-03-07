@@ -18,10 +18,9 @@ auto uuid::generate_random() noexcept -> uuid {
     auto & gen = impl::get_random_generator();
     std::uniform_int_distribution<uint32_t> distrib;
 
-    std::array<uint32_t, 4> buf;
-    for(auto & b: buf) {
-        b = distrib(gen);
-    }
+    uint32_t buf[] = {
+        distrib(gen), distrib(gen), distrib(gen), distrib(gen)
+    };
     uuid * ret = reinterpret_cast<uuid *>(&buf);
     
     ret->bytes[8] = (ret->bytes[8] & 0x3F) | 0x80;
