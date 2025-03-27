@@ -3,23 +3,27 @@
 
 <!-- TOC -->
 
-- [Basics](#basics)
-    - [Headers and namespaces](#headers-and-namespaces)
-    - [Exceptions and errors](#exceptions-and-errors)
-    - [Thread safety](#thread-safety)
-    - [Multiprocess safety](#multiprocess-safety)
-- [Usage](#usage)
-    - [uuid class](#uuid-class)
-    - [Literals](#literals)
-    - [Constructing from raw bytes](#constructing-from-raw-bytes)
-    - [Accessing raw bytes](#accessing-raw-bytes)
-    - [Generation](#generation)
-        - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
-    - [Conversions from/to strings](#conversions-fromto-strings)
-    - [Comparisons and hashing](#comparisons-and-hashing)
-    - [Formatting and I/O](#formatting-and-io)
-    - [Accessing UUID properties](#accessing-uuid-properties)
-    - [Other features](#other-features)
+- [Usage Guide](#usage-guide)
+    - [Basics](#basics)
+        - [Headers and namespaces](#headers-and-namespaces)
+        - [Exceptions and errors](#exceptions-and-errors)
+        - [Thread safety](#thread-safety)
+        - [Multiprocess safety](#multiprocess-safety)
+    - [Usage](#usage)
+        - [uuid class](#uuid-class)
+        - [Literals](#literals)
+        - [Constructing from raw bytes](#constructing-from-raw-bytes)
+        - [Accessing raw bytes](#accessing-raw-bytes)
+        - [Generation](#generation)
+            - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
+        - [Conversions from/to strings](#conversions-fromto-strings)
+        - [Comparisons and hashing](#comparisons-and-hashing)
+        - [Formatting and I/O](#formatting-and-io)
+        - [Accessing UUID properties](#accessing-uuid-properties)
+        - [Other features](#other-features)
+    - [Advanced](#advanced)
+        - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
+        - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
 
 <!-- /TOC -->
 
@@ -176,11 +180,14 @@ underlying arithmetic operations on `std::chrono::time_point` and `std::chrono::
 As far as I know no `std::chrono` implementation actually does throw anything, so for all practical purposes generation of time-based UUIDs is also `noexcept`. 
 
 > [!NOTE]
-> The `generate_time_based()` and `generate_reordered_time_based()` will use one of the system MAC addresses, if available. Otherwise they
-> will fall back on a randomly generated 6 bytes. If you want to avoid MAC address usage at all consider using UUID version 7 via 
-> `uuid::generate_unix_time_based()` as recommended by RFC 9562. 
+> `generate_time_based()` will use one of the system MAC addresses, if available. Otherwise it
+> will fall back on a randomly generated 6 bytes. If you want to avoid MAC address usage at all 
+> consider using UUID versions 6 or 7 via 
+> `generate_reordered_time_based()`/`uuid::generate_unix_time_based()` as recommended by RFC 9562. 
 
 More details about various implementation details of UUID generation can be found in [Implementation Details](../README.md#implementation-details) section of the README.
+
+Many aspects of UUID generation can be further controlled as explained in the [Advanced](#advanced) section.
 
 #### What about UUID versions 2 and 8?
 
@@ -349,5 +356,124 @@ uuid u("7d444840-9dc0-11d1-b245-5ffdce74fad2");
 u.clear();
 assert(u == uuid());
 ```
+
+## Advanced
+
+### Controlling MAC address use for UUID version 1
+
+By default when generating UUIDs version 1 via `generate_time_based()` method this library uses one of the system's network cards MAC addresses,
+if available, to provide "spatial uniqueness" as specified by the RFC. If MAC address cannot be detected a random value will be used instead.
+
+In some cases, such as when generated UUID can be seen by a hostile party, MAC address usage might be undesirable because of the information 
+leakage and privacy concerns. 
+
+`modern-uuid` allows you to customize what data to use for the relevant UUID bits (known as the `node_id` field) via `set_node_id()` 
+overloaded function family. 
+
+You can use it to force random `node_id`:
+
+```cpp
+//this will generate a random node_id and use it in all subsequent generate_time_based() calls
+//the generated value is returned in case you want to save it for later use
+std::span<const uint8_t, 6> node_id = set_node_id(node_id::generate_random);
+```
+
+The generated random value is returned to you so you can save it to use again in later invocations of your program.
+You can use a given `std::span<const uint8_t, 6>` as the `node_id` via:
+
+```cpp
+std::span<const uint8_t, 6> node_id = ...;
+//this will use the passed value in all subsequent generate_time_based() calls
+set_node_id(node_id);
+```
+
+Finally, you can specify the default behavior and obtain the detected `node_id` via:
+
+```cpp
+//this will attempt to detect a MAC address (falling back on generating a random value)
+//for node_id and use it in all subsequent generate_time_based() calls
+//the generated value is returned in case you want to save it for later use
+std::span<const uint8_t, 6> node_id = set_node_id(node_id::detect_system);
+```
+
+### Persisting/synchronizing the clock state
+
+For time-based UUID generation, it is often important to persist the last used clock state and/or synchronize its usage between
+different threads or processes. It can be especially important for UUID version 1 to fully ensure uniqueness and handle potential
+clock going backwards. It can also be important for UUID version 6 and 7 to ensure strict monotonicity between different threads
+and/or processes.
+
+To handle this `modern-uuid` specifies `clock_persistence` callback interface. You can implement this interface in your code and
+pass it to the library to be used for time based UUID generation.
+
+The `clock_persistence` interface itself contains only 3 methods:
+
+```cpp
+virtual void add_ref() noexcept = 0;
+virtual void sub_ref() noexcept = 0;
+virtual per_thread & get_for_current_thread() = 0;
+```
+
+The first 2 methods are the classical reference counting. Implement them as you need (e.g. for a static object they would be no-op) 
+to ensure that your `clock_persistence` stays alive while it is being used by the library. 
+
+The third method, `get_for_current_thread()` returns the _actual_ callback interface **for the thread that calls it**. The
+`clock_persistence::per_thread` interface contains the following methods:
+
+```cpp
+virtual void close() noexcept = 0;
+virtual void lock() = 0;
+virtual void unlock() = 0;
+virtual bool load(data & d) = 0;
+virtual void store(const data & d) = 0;
+```
+
+The `close()` method is called when it is safe to destroy the `per_thread` instance. Note that `per_thread` is not reference
+counted. This is by design since the library doesn't share its ownership. Its usage is bracketed between `get_for_current_thread()`
+and `close()` calls.
+
+The `lock()`/`unlock()` pair are called to lock access to persistent data against other threads or processes. Note that you can use these
+methods to simply lock a mutex without having any persistent data - this will simply provide synchronization without persistence.
+
+Finally the `load()`/`store()` are called to load the initial persistent data (it is called only once) and store and changes to it
+(this is called every time data changes). All calls to `load()`/`store()` will be within `lock()`/`unlock()` bracket.
+
+The `load()` method should return `false` if the persistent data is not available. 
+
+The `clock_persistence::data` struct for `load()`/`store()` looks like this:
+
+```cpp
+struct data {
+    using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
+    
+    time_point_t when; 
+    uint16_t seq;
+    int32_t adjustment;
+};
+```
+
+The `seq` and `adjustment` fields are opaque values. If you persist data, save and restore them but do not otherwise depend
+on their content. 
+
+The `when` field is the last generation timestamp. You also need to save and restore it (if you persist data) but you can also examine
+its value. This can be useful in optimizing access to persistent storage. You can actually save the data to storage only infrequently with the 
+`when` field set to a future time. If your process is reloaded and the future time is read on load all UUID generators will handle this safely and correctly.
+
+
+Once you implement `clock_persistence` and `clock_persistence::per_thread` you can assign a `clock_persistence` instance to a given generator via:
+
+```cpp
+void set_time_based_persistence(clock_persistence * persistence);
+void set_reordered_time_based_persistence(clock_persistence * persistence);
+void set_unix_time_based_persistence(clock_persistence * persistence);
+```
+
+The new instance will be used for all generations of the given type subsequent to these calls. Pass `nullptr` to remove the custom 
+`clock_persistence`. 
+
+> [!WARN]
+> Do not use the **same** `clock_persistence` for different UUID types! The content and meaning of the `data` is different for each
+> and mixing them will produce very bad results.
+
 
 

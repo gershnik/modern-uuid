@@ -667,13 +667,13 @@ struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<fmt:
 
 namespace muuid {
 
-    /// How to generate node id for uuid::generate_time_based() and uuid::generate_reordered_time_based()
+    /// How to generate node id for uuid::generate_time_based()
     enum class node_id {
         detect_system,
         generate_random
     };
     /**
-     * Sets how to generate node id for uuid::generate_time_based() and uuid::generate_reordered_time_based()
+     * Sets how to generate node id for uuid::generate_time_based()
      * 
      * This call affects all subsequent calls to those functions
      * 
@@ -682,7 +682,7 @@ namespace muuid {
      */
     MUUID_EXPORTED auto set_node_id(node_id type) -> std::span<const uint8_t, 6>;
     /** 
-     * Sets a specific node id to use  for uuid::generate_time_based() and uuid::generate_reordered_time_based()
+     * Sets a specific node id to use for uuid::generate_time_based()
      * 
      * This call affects all subsequent calls to those functions
      */
@@ -730,7 +730,7 @@ namespace muuid {
              * Load persistent data if any
              * 
              * This is called once after this object is returned from get_for_current_thread().
-             * The call happens insided a lock() call.
+             * The call happens inside a lock() call.
              * 
              * @returns `true` if data was loaded, false otherwise
              */
@@ -740,7 +740,7 @@ namespace muuid {
              * Save persistent data if desired
              * 
              * This can be called multiple times (whenever UUID using the clock is generated).
-             * The call happens insided a lock() call.
+             * The call happens inside a lock() call.
              */
             virtual void store(const data & d) = 0;
         protected:
