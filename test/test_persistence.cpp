@@ -379,44 +379,4 @@ TEST_CASE("node time_based") {
     CHECK_EQUAL_SEQ(parts3.node, dummy);
 }
 
-TEST_CASE("node reordered_time_based") {
-
-    struct restore {
-        ~restore() {
-            set_node_id(node_id::detect_system);
-        }
-    } restore;
-
-    uuid u1 = uuid::generate_reordered_time_based();
-    auto parts1 = u1.to_parts();
-    
-    auto calculated = set_node_id(node_id::generate_random);
-    
-    uuid u2 = uuid::generate_reordered_time_based();
-    auto parts2 = u2.to_parts();
-
-    CHECK_UNEQUAL_SEQ(parts1.node, parts2.node);
-    CHECK_EQUAL_SEQ(parts2.node, calculated);
-
-    uuid u3 = uuid::generate_reordered_time_based();
-    auto parts3 = u3.to_parts();
-
-    CHECK_EQUAL_SEQ(parts2.node, parts3.node);
-    
-    calculated = set_node_id(node_id::detect_system);
-
-    u3 = uuid::generate_reordered_time_based();
-    parts3 = u3.to_parts();
-
-    CHECK_EQUAL_SEQ(parts3.node, calculated);
-
-    uint8_t dummy[6] = {1, 2, 3, 4, 5, 6};
-    set_node_id(dummy);
-
-    u3 = uuid::generate_reordered_time_based();
-    parts3 = u3.to_parts();
-
-    CHECK_EQUAL_SEQ(parts3.node, dummy);
-}
-
 }

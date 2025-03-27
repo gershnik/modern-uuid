@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## Changed
+- v6 generation now follows "SHOULD" rather than "MAY" approach of RFC 9562. The `node_id` field
+  is filled with random data and `clock_seq` is used to handle monotonicity within the same clock tick.
+  This results in significant performance gains
+- v6 and v7 generation is no longer synchronized between different threads by default. 
+
 ## [1.4] - 2025-03-07
 
 ## Added

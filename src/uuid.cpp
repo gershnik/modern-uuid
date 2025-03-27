@@ -86,7 +86,6 @@ auto uuid::generate_time_based() -> uuid {
 }
 
 auto uuid::generate_reordered_time_based() -> uuid {    
-    std::span<const uint8_t, 6> node_id = impl::get_node_id();
     auto [clock, clock_seq] = impl::get_clock_v6();
 
     clock <<= 4;
@@ -98,7 +97,11 @@ auto uuid::generate_reordered_time_based() -> uuid {
     parts.time_mid = uint16_t(clock_low >> 16);
     parts.time_hi_and_version = ((clock_low >> 4) & 0x0FFF) | 0x6000;
     parts.clock_seq = clock_seq | 0x8000;
-    memcpy(parts.node, node_id.data(), node_id.size());
+    
+    auto & gen = impl::get_random_generator();
+    std::uniform_int_distribution<unsigned> distrib(0, 255);
+    for (auto & b: parts.node)
+        b = uint8_t(distrib(gen));
 
     return uuid(parts);
 }
