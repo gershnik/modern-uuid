@@ -291,7 +291,7 @@ namespace {
                                                           UnitDuration, MaxUnitDuration> {
         friend clock_state_base<monotonic_clock_state, UnitDuration, MaxUnitDuration>;
         friend muuid::impl::singleton_holder<monotonic_clock_state>;
-        friend muuid::impl::reset_on_fork_thread_local<monotonic_clock_state, 7>;
+        friend muuid::impl::reset_on_fork_thread_local<monotonic_clock_state, 6>;
         friend muuid::impl::reset_on_fork_thread_local<monotonic_clock_state, 7>;                    
     public:
         template<int PersistanceId>
