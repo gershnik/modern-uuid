@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [1.5] - 2025-03-27
+
 ## Changed
 - v6 generation now follows "SHOULD" rather than "MAY" approach of RFC 9562. The `node_id` field
   is filled with random data and `clock_seq` is used to handle monotonicity within the same clock tick.
@@ -60,3 +62,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [1.2]: https://github.com/gershnik/modern-uuid/releases/v1.2
 [1.3]: https://github.com/gershnik/modern-uuid/releases/v1.3
 [1.4]: https://github.com/gershnik/modern-uuid/releases/v1.4
+[1.5]: https://github.com/gershnik/modern-uuid/releases/v1.5
