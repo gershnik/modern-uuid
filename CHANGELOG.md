@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## Added
+- New `MUUID_USE_FMT` macro. Set to 1 to force usage of `fmt` library. When set the compilation 
+  will error out if `fmt` is not present. 
+
+## Changed
+- Detection of `fmt` library presence is now more robust. 
+
 ## [1.5] - 2025-03-27
 
 ## Changed
