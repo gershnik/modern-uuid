@@ -84,7 +84,7 @@
 
 #if defined(FMT_VERSION) && FMT_VERSION >= 60000 && defined(FMT_THROW)
 
-    #define MUUID_SUPPORTS_FMT_FROMAT 1
+    #define MUUID_SUPPORTS_FMT_FORMAT 1
 
 #endif
 
@@ -665,7 +665,7 @@ struct std::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std:
 
 #endif
 
-#if MUUID_SUPPORTS_FMT_FROMAT
+#if MUUID_SUPPORTS_FMT_FORMAT
 
 /// uuid formatter for fmt::format
 template<>

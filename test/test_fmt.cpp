@@ -9,7 +9,7 @@
 using namespace muuid;
 using namespace std::literals;
 
-static_assert(MUUID_SUPPORTS_STD_FORMAT);
+static_assert(MUUID_SUPPORTS_FMT_FORMAT);
 
 TEST_SUITE("fmt") {
 
