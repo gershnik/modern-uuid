@@ -157,3 +157,4 @@ Whichever method you use you can set the following macros to control the library
 * `MUUID_SHARED` - set it to 1 if using/building a shared version of the library.
 * `MUUID_MULTITHREADED` - set it to 1 or 0 to control support for multiple threads. Normally threading support is detected automatically but setting this macro manually allows you to override automatic detection.
 * `MUUID_USE_EXCEPTIONS` - set it to 1 or 0 to control usage of exceptions. Normally exception support is detected automatically but setting this manually allows you to override automatic detection.
+* `MUUID_USE_FMT` - set it to 1 to force support for `fmt` library. You must include `<fmt/format.h>` prior to `uuid.h` - otherwise the compilation will fail. (For backward compatibility, if this flag is not set, support for `fmt` will be automatically enabled if `<fmt/format.h>` was included prior to `uuid.h` and disabled otherwise.)

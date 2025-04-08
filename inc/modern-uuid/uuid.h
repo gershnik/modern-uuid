@@ -82,6 +82,18 @@
 
 #endif
 
+#if defined(FMT_VERSION) && FMT_VERSION >= 60000 && defined(FMT_THROW)
+
+    #define MUUID_SUPPORTS_FMT_FROMAT 1
+
+#endif
+
+#if MUUID_USE_FMT && !MUUID_SUPPORTS_FMT_FROMAT
+
+    #error "MUUID_USE_FMT is requested but fmt library (of version >= 5.0) is not detected. Did you forget to include <fmt/format.h> before this header?"
+
+#endif
+
 #if MUUID_SUPPORTS_STD_FORMAT
     #include <format>
 #endif
@@ -653,8 +665,9 @@ struct std::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std:
 
 #endif
 
-#if defined(FMT_VERSION)
+#if MUUID_SUPPORTS_FMT_FROMAT
 
+/// uuid formatter for fmt::format
 template<>
 struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<fmt::formatter<::muuid::uuid>>
 {

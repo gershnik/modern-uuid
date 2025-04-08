@@ -19,6 +19,16 @@ FetchContent_Declare(doctest
 
 list(APPEND DECLARED_DEPENDENCIES doctest)
 
+set(FMT_INSTALL OFF)
+
+FetchContent_Declare(fmt
+    GIT_REPOSITORY  https://github.com/fmtlib/fmt
+    GIT_TAG         11.1.4
+    GIT_SHALLOW     TRUE
+    GIT_SUBMODULES_RECURSE FALSE
+)
+list(APPEND DECLARED_DEPENDENCIES fmt)
+
 FetchContent_MakeAvailable(${DECLARED_DEPENDENCIES})
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
@@ -49,6 +59,7 @@ foreach(suffix ${BUILD_SUFFIXES})
     target_link_libraries(test-${suffix}
     PRIVATE
         modern-uuid::modern-uuid-${suffix}
+        fmt::fmt
         "$<$<PLATFORM_ID:Darwin>:-framework CoreFoundation>"
         $<$<AND:$<NOT:$<BOOL:${WIN32}>>,$<NOT:$<BOOL:${ANDROID}>>>:pthread>
     )
@@ -83,6 +94,7 @@ foreach(suffix ${BUILD_SUFFIXES})
 
         main.cpp
         test_basics.cpp
+        test_fmt.cpp
         test_fork.cpp
         test_persistence.cpp
         test_system.cpp
