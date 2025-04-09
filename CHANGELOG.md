@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [1.6] - 2025-04-09
+
 ## Added
 - New `MUUID_USE_FMT` macro. Set to 1 to force usage of `fmt` library. When set the compilation 
   will error out if `fmt` is not present. 
@@ -70,3 +72,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [1.3]: https://github.com/gershnik/modern-uuid/releases/v1.3
 [1.4]: https://github.com/gershnik/modern-uuid/releases/v1.4
 [1.5]: https://github.com/gershnik/modern-uuid/releases/v1.5
+[1.6]: https://github.com/gershnik/modern-uuid/releases/v1.6
