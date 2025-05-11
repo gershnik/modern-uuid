@@ -111,6 +111,36 @@ jobs:
       run: |
           cmake --build out --target run-tests
 
+  container:
+    runs-on: ubuntu-latest
+    name: ${{ matrix.name }}
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix: 
+        include:
+        - {container: gcc:15.1, module: true, name: 'GCC 15'}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: System Setup
+      shell: bash
+      run: |
+        apt-get update 
+        apt-get install -y ninja-build cmake
+        
+    - name: Configure
+      shell: bash
+      run: |
+        cmake -S . -B out $EXTRA_FLAGS -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+  
+    - name: Build and Test
+      shell: bash
+      run: |
+        cmake --build out --target run-tests
+
   mingw:
     runs-on: windows-latest
     
@@ -211,16 +241,23 @@ jobs:
 
   emscripten:
     runs-on: ubuntu-latest
+    container: emscripten/emsdk
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set Up Emscripten
-      uses: mymindstorm/setup-emsdk@v14
-      with:
-        version: 3.1.70
-        actions-cache-folder: 'emsdk-cache'
+    - name: Install pre-requisites
+      run: |
+        apt-get update
+        apt-get install -y ninja-build
+        
+        export CMAKE_VERSION=3.27.1
+        wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh \
+          -q -O /tmp/cmake-install.sh \
+        && chmod u+x /tmp/cmake-install.sh \
+        && /tmp/cmake-install.sh --skip-license --prefix=/usr \
+        rm -f /tmp/cmake-install.sh
 
     - name: Configure
       shell: bash
