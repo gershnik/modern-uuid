@@ -20,6 +20,7 @@
 #endif
 
 #include <new>
+#include <exception>
 
 namespace muuid::impl {
 
