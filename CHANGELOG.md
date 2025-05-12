@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [1.7] - 2025-05-11
 
 ### Fixed
-- Added missing included reported by Clang in C++23 mode
+- Added missing includes reported by Clang in C++23 mode
 
 ## [1.6] - 2025-04-09
 
