@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [1.7] - 2025-05-11
+
 ### Fixed
 - Added missing included reported by Clang in C++23 mode
 
@@ -76,3 +78,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [1.4]: https://github.com/gershnik/modern-uuid/releases/v1.4
 [1.5]: https://github.com/gershnik/modern-uuid/releases/v1.5
 [1.6]: https://github.com/gershnik/modern-uuid/releases/v1.6
+[1.7]: https://github.com/gershnik/modern-uuid/releases/v1.7
