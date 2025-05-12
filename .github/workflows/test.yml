@@ -185,7 +185,7 @@ jobs:
       run: |
           export EXTRA_FLAGS="-DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }} -DCMAKE_CXX_STANDARD_REQUIRED=ON"
           if [[ '${{ matrix.platform }}' != "" ]]; then
-              export EXTRA_FLAGS="$EXTRA_FLAGS -DCMAKE_GENERATOR_PLATFORM=${{ matrix.platform }}""
+              export EXTRA_FLAGS="$EXTRA_FLAGS -DCMAKE_GENERATOR_PLATFORM=${{ matrix.platform }}"
           fi
           cmake -S . -B out $EXTRA_FLAGS -DCMAKE_BUILD_TYPE=RelWithDebInfo 
 
