@@ -134,7 +134,7 @@ jobs:
     - name: Configure
       shell: bash
       run: |
-        cmake -S . -B out $EXTRA_FLAGS -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+        cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
   
     - name: Build and Test
       shell: bash
@@ -241,7 +241,7 @@ jobs:
 
   emscripten:
     runs-on: ubuntu-latest
-    container: emscripten/emsdk
+    container: emscripten/emsdk:3.1.70
 
     steps:
     - name: Checkout
