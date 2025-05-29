@@ -110,7 +110,7 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
         ifc.ifc_buf = buf.data();
         if (ioctl(sd, SIOCGIFCONF, &ifc) < 0)
             return false;
-        if (int(buf.size()) - ifc.ifc_len > sizeof(struct ifreq))
+        if (int(buf.size()) - ifc.ifc_len > int(sizeof(struct ifreq)))
             break;
         buf.resize(buf.size() + 1024);
     }
