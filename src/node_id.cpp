@@ -36,7 +36,9 @@
     #include <winsock2.h>
     #include <iphlpapi.h>
 
-    #pragma comment(lib, "iphlpapi.lib")
+    #ifndef __MINGW32__
+        #pragma comment(lib, "iphlpapi.lib")
+    #endif
 #endif
 
 #include <cstring>
