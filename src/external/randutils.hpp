@@ -446,7 +446,7 @@ class auto_seeded : public SeedSeq {
     template <typename T>
     static uint32_t crushto32(T value)
     {
-        if (sizeof(T) <= 4)
+        if constexpr (sizeof(T) <= 4)
             return uint32_t(value);
         else {
             uint64_t result = uint64_t(value);
@@ -480,7 +480,7 @@ class auto_seeded : public SeedSeq {
         static uint32_t random_int = []() noexcept {
             RANDUTILS_TRY {
                 return std::random_device{}();
-            } RANDUTILS_CATCH (std::exception & ex) {
+            } RANDUTILS_CATCH (std::exception & ) {
                 return 0u;
             }
         }();

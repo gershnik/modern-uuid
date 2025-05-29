@@ -91,6 +91,10 @@ foreach(suffix ${BUILD_SUFFIXES})
 
     target_compile_options(modern-uuid-${suffix}
     PRIVATE
+        $<$<CXX_COMPILER_ID:MSVC>:/utf-8;/W4;/WX>
+        $<$<CXX_COMPILER_ID:Clang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
+        $<$<CXX_COMPILER_ID:AppleClang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
+        $<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic>
         $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING;-pthread>
     )
 

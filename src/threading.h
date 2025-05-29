@@ -49,9 +49,9 @@ namespace muuid::impl {
                     { return m_impl.test_and_set(order); }
                 bool test_and_set(std::memory_order order=std::memory_order_seq_cst) noexcept
                     { return m_impl.test_and_set(order); }
-                void clear(std::memory_order order=std::memory_order_seq_cst) volatile noexcept
+                void clear([[maybe_unused]] std::memory_order order=std::memory_order_seq_cst) volatile noexcept
                     { m_impl.clear(); }
-                void clear(std::memory_order order=std::memory_order_seq_cst) noexcept
+                void clear([[maybe_unused]] std::memory_order order=std::memory_order_seq_cst) noexcept
                     { m_impl.clear(); }
             private:
                 std::atomic_flag m_impl = ATOMIC_FLAG_INIT;
