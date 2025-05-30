@@ -26,7 +26,7 @@
     #define sys_ftruncate ::ftruncate
     #define posix_category system_category
 #elif defined(_WIN32) 
-    #include <windows.h>
+    #include <Windows.h>
     #include <io.h>
     #include <fcntl.h>
     #include <sys/stat.h>

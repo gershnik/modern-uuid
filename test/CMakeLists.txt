@@ -79,11 +79,22 @@ foreach(suffix ${BUILD_SUFFIXES})
     target_compile_options(test-${suffix}
     PRIVATE
         $<$<CXX_COMPILER_ID:MSVC>:/utf-8;/W4;/WX>
-        $<$<CXX_COMPILER_ID:Clang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
         $<$<CXX_COMPILER_ID:AppleClang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
         $<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic;-Wno-psabi>
         $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING;-pthread>
     )
+
+    if ("${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC")
+        target_compile_options(test-${suffix}
+        PRIVATE
+            $<$<CXX_COMPILER_ID:Clang>:/W4;/WX>
+        )
+    else()
+        target_compile_options(test-${suffix}
+        PRIVATE
+            $<$<CXX_COMPILER_ID:Clang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
+        )
+    endif()
 
     target_link_options(test-${suffix}
     PRIVATE

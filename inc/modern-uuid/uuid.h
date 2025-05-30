@@ -658,7 +658,7 @@ struct std::hash<muuid::uuid> {
 template<>
 struct std::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std::formatter<::muuid::uuid>>
 {
-    void raise_exception(const char * message) {
+    [[noreturn]] void raise_exception(const char * message) {
         MUUID_THROW(std::format_error(message));
     }
 };
