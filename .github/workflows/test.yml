@@ -103,6 +103,7 @@ jobs:
           for cxx_standard in cxx_standards:
             for platform in win_paltforms:
               hosts.append({'os': 'windows-latest', 'platform': platform, 'cxx_standard': cxx_standard, 'jobname': f'Windows - {platform} - C++{cxx_standard}'})
+              hosts.append({'os': 'windows-latest', 'platform': platform, 'compiler': 'clang-cl', 'cxx_standard': cxx_standard, 'jobname': f'Windows - clang - {platform} - C++{cxx_standard}'})
           
           #gcc hosts
           for gcc, runon in gcc_map.items():
@@ -178,6 +179,13 @@ jobs:
 
         if [[ '${{ matrix.os }}' == macos-* ]]; then
             echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.version }}.app" >> $GITHUB_ENV
+        fi
+
+        if [[ '${{ matrix.os }}' == windows-* ]]; then
+            if [[ '${{ matrix.compiler }}' != '' ]]; then
+                echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
+                echo "CXX=${{ matrix.compiler }}" >> $GITHUB_ENV
+            fi
         fi
 
     - name: Configure
