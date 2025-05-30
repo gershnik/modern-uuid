@@ -1,6 +1,8 @@
 // Copyright (c) 2024, Eugene Gershnik
 // SPDX-License-Identifier: BSD-3-Clause
 
+#define BIONIC_IOCTL_NO_SIGNEDNESS_OVERLOAD
+
 #include <modern-uuid/uuid.h>
 
 #include "node_id.h"
