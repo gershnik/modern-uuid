@@ -81,7 +81,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         $<$<CXX_COMPILER_ID:MSVC>:/utf-8;/W4;/WX>
         $<$<CXX_COMPILER_ID:Clang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
         $<$<CXX_COMPILER_ID:AppleClang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
-        $<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic>
+        $<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic;-Wno-psabi>
         $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING;-pthread>
     )
 

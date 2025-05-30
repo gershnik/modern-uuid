@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Fixed
+- Addressed false positive compiler warnings in code that could appear in certain CMake build confiurations.
+
 ## [1.7] - 2025-05-11
 
 ### Fixed
