@@ -90,6 +90,13 @@ using namespace muuid;
         else
             return req.ifr_addr;
     }
+
+    template<class R, class FD, class T>
+    auto ioctl_type_helper(R (*)(FD, T, ...)) {
+        return T{};
+    }
+
+    using ioctl_type = decltype(ioctl_type_helper(ioctl));
 #endif
 
 static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
@@ -110,14 +117,14 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
     for ( ; ; ) {
         ifc.ifc_len = int(buf.size());
         ifc.ifc_buf = buf.data();
-        if (ioctl(sd, SIOCGIFCONF, &ifc) < 0)
+        if (ioctl(sd, static_cast<ioctl_type>(SIOCGIFCONF), &ifc) < 0)
             return false;
         if (int(buf.size()) - ifc.ifc_len > int(sizeof(struct ifreq)))
             break;
         buf.resize(buf.size() + 1024);
     }
 	
-    if (ioctl(sd, SIOCGIFCONF, &ifc) < 0)
+    if (ioctl(sd, static_cast<ioctl_type>(SIOCGIFCONF), &ifc) < 0)
 		return false;
     
     struct ifreq * ifrp;
@@ -129,11 +136,11 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
 
         uint8_t * res = nullptr;
 #if defined(SIOCGIFHWADDR)
-        if (ioctl(sd, SIOCGIFHWADDR, &ifr) < 0)
+        if (ioctl(sd, static_cast<ioctl_type>(SIOCGIFHWADDR), &ifr) < 0)
 			continue;
         res = (uint8_t *)&ifreq_hwaddr(ifr).sa_data;
 #elif defined(SIOCGENADDR)
-        if (ioctl(sd, SIOCGENADDR, &ifr) < 0)
+        if (ioctl(sd, static_cast<ioctl_type>(SIOCGENADDR), &ifr) < 0)
 			continue;
 		res = (uint8_t *) ifr.ifr_enaddr;
 #elif defined(HAVE_NET_IF_DL_H)
