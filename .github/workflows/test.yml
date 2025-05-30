@@ -185,6 +185,7 @@ jobs:
             if [[ '${{ matrix.compiler }}' != '' ]]; then
                 echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
                 echo "CXX=${{ matrix.compiler }}" >> $GITHUB_ENV
+                echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
             fi
         fi
 
