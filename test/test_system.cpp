@@ -62,8 +62,29 @@ TEST_CASE("windows") {
 
     GUID guid1 = u.to_GUID();
     CHECK(IsEqualGUID(guid, guid1));
+
+#if defined(_MSC_VER) || defined(__clang__)
+
+    class __declspec(uuid("06f9ea87-da78-47aa-8a21-682260ed8b65")) foo;
+
+    constexpr auto uuid_of_foo = uuidof<foo>;
+
+    CHECK(uuid_of_foo.to_string() == "06f9ea87-da78-47aa-8a21-682260ed8b65");
+
+#endif
 #endif
 
 }
+
+}
+
+namespace {
+    class foo;
+}
+MUUID_ASSIGN_UUID(foo, "6cd966c0-1a04-486d-b642-7fda4cdcf1a4");
+
+TEST_CASE("portable_uuidof") {
+    constexpr auto uuid_of_foo = uuidof<foo>;
+    CHECK(uuid_of_foo.to_string() == "6cd966c0-1a04-486d-b642-7fda4cdcf1a4");
 
 }
