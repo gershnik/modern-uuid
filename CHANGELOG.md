@@ -5,8 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+### Added
+- `uuidof<T>` that wraps `__uuidof` on Windows and can also be used portably
+
 ### Fixed
-- Addressed false positive compiler warnings in code that could appear in certain CMake build confiurations.
+- Addressed false positive compiler warnings in code that could appear in certain CMake build configurations.
+- `clang-cl` is now fully supported by CMake build and does not generate deluge of warnings
 
 ## [1.7] - 2025-05-11
 

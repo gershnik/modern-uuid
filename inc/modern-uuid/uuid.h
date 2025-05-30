@@ -819,6 +819,12 @@ namespace muuid {
 #if defined(_MSC_VER) || (defined(_WIN32) && defined(__clang__))
 
     namespace muuid {
+        /**
+         * Obtain UUID associated with type
+         * 
+         * By default uses __uuidof operator. Can be overriden via
+         * MUUID_ASSIGN_UUID macro
+         */
         template<class T>
         constexpr uuid uuidof = __uuidof(T);
     }
@@ -826,17 +832,25 @@ namespace muuid {
 #else
 
     namespace muuid {
+        /**
+        * Obtain UUID associated with type
+        * 
+        * UUIDs should be assigned via
+        * MUUID_ASSIGN_UUID macro
+        */
         template<class T>
         constexpr uuid uuidof;
     }
         
 #endif
 
+/**
+ * Assign UUID to a type
+ * 
+ * This must be used in global namespace scope
+ */
 #define MUUID_ASSIGN_UUID(type, str) \
-    namespace muuid { \
-        template<> \
-        constexpr uuid uuidof<type> = uuid{str}; \
-    }
+    template<> constexpr muuid::uuid muuid::uuidof<type>{str}
 
 
 #endif
