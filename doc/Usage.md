@@ -19,6 +19,10 @@
         - [Conversions from/to strings](#conversions-fromto-strings)
         - [Comparisons and hashing](#comparisons-and-hashing)
         - [Formatting and I/O](#formatting-and-io)
+        - [Interoperability](#interoperability)
+            - [macOS](#macos)
+            - [Windows](#windows)
+            - [__uuidof](#__uuidof)
         - [Accessing UUID properties](#accessing-uuid-properties)
         - [Other features](#other-features)
     - [Advanced](#advanced)
@@ -35,7 +39,34 @@ There is a single include file in this library
 #include <modern-uuid/uuid.h>
 ```
 
-Everything in the library is under `namespace muuid`. A declaration:
+<!-- TOC -->
+
+- [Usage Guide](#usage-guide)
+    - [Basics](#basics)
+        - [Headers and namespaces](#headers-and-namespaces)
+        - [Exceptions and errors](#exceptions-and-errors)
+        - [Thread safety](#thread-safety)
+        - [Multiprocess safety](#multiprocess-safety)
+    - [Usage](#usage)
+        - [uuid class](#uuid-class)
+        - [Literals](#literals)
+        - [Constructing from raw bytes](#constructing-from-raw-bytes)
+        - [Accessing raw bytes](#accessing-raw-bytes)
+        - [Generation](#generation)
+            - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
+        - [Conversions from/to strings](#conversions-fromto-strings)
+        - [Comparisons and hashing](#comparisons-and-hashing)
+        - [Formatting and I/O](#formatting-and-io)
+        - [Interoperability](#interoperability)
+            - [macOS](#macos)
+            - [Windows](#windows)
+        - [Accessing UUID properties](#accessing-uuid-properties)
+        - [Other features](#other-features)
+    - [Advanced](#advanced)
+        - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
+        - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
+
+<!-- /TOC -->Everything in the library is under `namespace muuid`. A declaration:
 ```cpp
 using namespace muuid;
 ```
@@ -317,6 +348,85 @@ ostr.str("");
 ostr << std::uppercase << uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2");
 assert(ostr.str() == "7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
 ```
+
+### Interoperability 
+
+On some operating systems there are various system defined UUID types that are commonly used in many system APIs.
+For ease of interoperability `modern-uuid` provides easy conversions to/from these types. 
+
+#### macOS
+
+`uuid` can be constructed from `CFUUIDBytes` and `CFUUIDRef` as well as `to_CFUUIDBytes` and `to_CFUUID` methods.
+
+```cpp
+CFUUIDRef uuidobj = CFUUIDCreate(nullptr);
+auto bytes = CFUUIDGetUUIDBytes(uuidobj);
+
+const uuid u_from_obj(uuidobj);
+const uuid u_from_bytes(bytes);
+
+assert(u_from_obj == u_from_bytes);
+
+CFUUIDRef uuidobj1 = u_from_obj.to_CFUUID();
+assert(CFEqual(uuidobj, uuidobj1));
+
+auto bytes1 = u_from_obj.to_CFUUIDBytes();
+CHECK(memcmp(&bytes, &bytes1, sizeof(CFUUIDBytes)) == 0);
+
+```
+
+#### Windows
+
+`uuid` can be constructed from `GUID` structure (and its many aliases like `UUID`, `CLSID` etc.) and provides `to_GUID` method.
+
+```cpp
+GUID guid = { /* 0d1be41b-f035-4f89-b404-bc0641afae59 */
+    0x0d1be41b,
+    0xf035,
+    0x4f89,
+    {0xb4, 0x04, 0xbc, 0x06, 0x41, 0xaf, 0xae, 0x59}
+};
+
+constexpr uuid u = guid;
+
+assert(u.to_string() == "0d1be41b-f035-4f89-b404-bc0641afae59");
+
+GUID guid1 = u.to_GUID();
+assert(IsEqualGUID(guid, guid1));
+```
+
+#### __uuidof 
+
+On Windows MSVC and clang compilers provide a common extension: `__uuidof` that allows you to obtain UUID previously
+associated with a type via `__declpec(uuid())`.
+
+While you can certainly do `uuid(__uuidof(T))`, which is a constexpr, typing it is tedious so this library provides
+a shorthand: `uuidof<T>` which is equivalent to the above.
+
+```cpp
+class __declspec(uuid("06f9ea87-da78-47aa-8a21-682260ed8b65")) foo;
+
+constexpr auto uuid_of_foo = uuidof<foo>;
+
+assert(uuid_of_foo.to_string() == "06f9ea87-da78-47aa-8a21-682260ed8b65");
+```
+
+For convenience and convenience this mechanism is also supported on other compilers and platforms that do not have
+`__declspec(uuid)` mechanism. To use it portably you simply need to manually specialize `uuidof` for the desired type. 
+You can do it either directly or using a provided macro `MUUID_ASSIGN_UUID`.
+
+```cpp
+class foo;
+// this is equivalent to
+// template<> constexpr muuid::uuid muuid::uuidof<foo>{"6cd966c0-1a04-486d-b642-7fda4cdcf1a4"}
+// and must be in global namespace scope 
+MUUID_ASSIGN_UUID(foo, "6cd966c0-1a04-486d-b642-7fda4cdcf1a4");
+
+constexpr auto uuid_of_foo = uuidof<foo>;
+
+assert(uuid_of_foo.to_string() == "6cd966c0-1a04-486d-b642-7fda4cdcf1a4");
+```
+
 
 ### Accessing UUID properties
 
