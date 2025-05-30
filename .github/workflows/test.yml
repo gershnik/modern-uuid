@@ -66,7 +66,7 @@ jobs:
           }
 
           win_paltforms = ["x64", "Win32"]
-          win_clang_archs = ["amd64", "amd64_x86"]
+          win_clang_archs = ["x64", "x86"]
 
           gcc_map = {
             11: 'ubuntu-latest', 
@@ -187,24 +187,24 @@ jobs:
 
         if [[ '${{ matrix.os }}' == windows-* ]]; then
             if [[ '${{ matrix.compiler }}' != '' ]]; then
-                echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
-                echo "CXX=${{ matrix.compiler }}" >> $GITHUB_ENV
+                if [[ '${{ matrix.arch }}' == "x64" ]]; then
+                    VCPREFIX="C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\Llvm\\x64\\bin"
+                else
+                    VCPREFIX="C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\Llvm\\bin"
+                fi
+                echo "CC=$VCPREFIX\\${{ matrix.compiler }}" >> $GITHUB_ENV
+                echo "CXX=$VCPREFIX\\${{ matrix.compiler }}" >> $GITHUB_ENV
                 echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
-            elif [[ '${{ matrix.platform }}' != "" ]]; then
-                echo "CMAKE_GENERATOR_PLATFORM=${{ matrix.platform }}" >> $GITHUB_ENV
             fi
         fi
-
-    - name: Configure Windows
-      if: startsWith(matrix.os, 'windows-')
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: ${{ matrix.arch }}
 
     - name: Configure
       shell: bash
       run: |
           export EXTRA_FLAGS="-DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }} -DCMAKE_CXX_STANDARD_REQUIRED=ON"
+          if [[ '${{ matrix.platform }}' != "" ]]; then
+              export EXTRA_FLAGS="$EXTRA_FLAGS -DCMAKE_GENERATOR_PLATFORM=${{ matrix.platform }}"
+          fi
           cmake -S . -B out $EXTRA_FLAGS -DCMAKE_BUILD_TYPE=RelWithDebInfo 
 
     - name: Build
