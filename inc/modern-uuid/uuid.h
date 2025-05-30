@@ -813,4 +813,30 @@ namespace muuid {
     MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence * persistence);
 }
 
+
+
+
+#if defined(_MSC_VER) || (defined(_WIN32) && defined(__clang__))
+
+    namespace muuid {
+        template<class T>
+        constexpr uuid uuidof = __uuidof(T);
+    }
+
+#else
+
+    namespace muuid {
+        template<class T>
+        constexpr uuid uuidof;
+    }
+        
+#endif
+
+#define MUUID_ASSIGN_UUID(type, str) \
+    namespace muuid { \
+        template<> \
+        constexpr uuid uuidof<type> = uuid{str}; \
+    }
+
+
 #endif
