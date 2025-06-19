@@ -41,6 +41,10 @@ static_assert(std::regular<uuid>);
 
 template<uuid U1> class some_class {};
 some_class<uuid("bc961bfb-b006-42f4-93ae-206f02658810")> some_object;
+some_class<uuid(L"bc961bfb-b006-42f4-93ae-206f02658810")> some_objectw;
+some_class<uuid(u"bc961bfb-b006-42f4-93ae-206f02658810")> some_object16;
+some_class<uuid(U"bc961bfb-b006-42f4-93ae-206f02658810")> some_object32;
+some_class<uuid(u8"bc961bfb-b006-42f4-93ae-206f02658810")> some_object8;
 
 std::map<uuid, std::string> m;
 std::unordered_map<uuid, std::string> um;
@@ -77,9 +81,18 @@ TEST_CASE("bytes") {
 
 TEST_CASE("literals") {
     constexpr uuid us("7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    constexpr uuid usw(L"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    constexpr uuid us16(u"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    constexpr uuid us32(U"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    constexpr uuid us8(u8"7d444840-9dc0-11d1-b245-5ffdce74fad2");
 
     constexpr std::array<uint8_t, 16> expected = {0x7d,0x44,0x48, 0x40, 0x9d, 0xc0, 0x11, 0xd1, 0xb2, 0x45, 0x5f, 0xfd, 0xce, 0x74, 0xfa, 0xd2};
+    
     CHECK(us.bytes == expected);
+    CHECK(usw.bytes == expected);
+    CHECK(us16.bytes == expected);
+    CHECK(us32.bytes == expected);
+    CHECK(us8.bytes == expected);
 }
 
 TEST_CASE("hash") {
@@ -131,6 +144,43 @@ TEST_CASE("strings") {
     CHECK(us2.to_string() == "7d444840-9dc0-11d1-b245-5ffdce74fad2");
 }
 
+TEST_CASE("stringsw") {
+
+    constexpr uuid us(L"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    uuid us1 = uuid::from_chars(L"7d444840-9dc0-11d1-b245-5ffdce74fad2"s).value();
+    constexpr uuid us2 = uuid::from_chars(L"7d444840-9dc0-11d1-b245-5ffdce74fad2").value();
+
+    CHECK(us == us1);
+    CHECK(us2 == us1);
+
+    auto match = [](const std::array<wchar_t, 36> & lhs, std::wstring_view rhs) {
+        return std::wstring_view(lhs.data(), lhs.size()) == rhs;
+    };
+
+    CHECK(match(us.to_chars<wchar_t>(), L"7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+    CHECK(match(us.to_chars<wchar_t>(uuid::lowercase), L"7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+    CHECK(match(us.to_chars<wchar_t>(uuid::uppercase), L"7D444840-9DC0-11D1-B245-5FFDCE74FAD2"));
+    std::array<wchar_t, 36> buf;
+    us.to_chars(buf);
+    CHECK(buf == us.to_chars<wchar_t>());
+    us.to_chars(buf, uuid::lowercase);
+    CHECK(buf == us.to_chars<wchar_t>(uuid::lowercase));
+    us.to_chars(buf, uuid::uppercase);
+    CHECK(buf == us.to_chars<wchar_t>(uuid::uppercase));
+
+    CHECK(match(uuid{}.to_chars<wchar_t>(), L"00000000-0000-0000-0000-000000000000"));
+    CHECK(match(uuid{}.to_chars<wchar_t>(uuid::lowercase), L"00000000-0000-0000-0000-000000000000"));
+    CHECK(match(uuid{}.to_chars<wchar_t>(uuid::uppercase), L"00000000-0000-0000-0000-000000000000"));
+
+    CHECK(match(uuid::max().to_chars<wchar_t>(), L"ffffffff-ffff-ffff-ffff-ffffffffffff"));
+    CHECK(match(uuid::max().to_chars<wchar_t>(uuid::lowercase), L"ffffffff-ffff-ffff-ffff-ffffffffffff"));
+    CHECK(match(uuid::max().to_chars<wchar_t>(uuid::uppercase), L"FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"));
+
+
+
+    CHECK(us2.to_string<wchar_t>() == L"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+}
+
 #if MUUID_SUPPORTS_STD_FORMAT
 TEST_CASE("format") {
 
@@ -138,6 +188,11 @@ TEST_CASE("format") {
     CHECK(std::format("{}", uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2")) == "7d444840-9dc0-11d1-b245-5ffdce74fad2");
     CHECK(std::format("{:l}", uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2")) == "7d444840-9dc0-11d1-b245-5ffdce74fad2");
     CHECK(std::format("{:u}", uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2")) == "7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
+
+    CHECK(std::format(L"{}", uuid()) == L"00000000-0000-0000-0000-000000000000");
+    CHECK(std::format(L"{}", uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2")) == L"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    CHECK(std::format(L"{:l}", uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2")) == L"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    CHECK(std::format(L"{:u}", uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2")) == L"7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
 }
 #endif
 
@@ -155,6 +210,22 @@ TEST_CASE("output") {
     obuf << std::uppercase << uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2");
     CHECK(obuf.str() == "7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
     obuf.str("");
+}
+
+TEST_CASE("outputw") {
+    std::wostringstream obuf;
+
+    obuf << uuid();
+    CHECK(obuf.str() == L"00000000-0000-0000-0000-000000000000");
+    obuf.str(L"");
+
+    obuf << uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    CHECK(obuf.str() == L"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    obuf.str(L"");
+
+    obuf << std::uppercase << uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    CHECK(obuf.str() == L"7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
+    obuf.str(L"");
 }
 
 TEST_CASE("input") {
@@ -187,6 +258,42 @@ TEST_CASE("input") {
 
     ibuf.clear();
     ibuf.str("7D4448409DC0-11D1-B245-5FFDCE74FAD2 ");
+    ibuf >> val;
+    CHECK(!ibuf);
+    CHECK(ibuf.fail());
+    CHECK(!ibuf.eof());
+}
+
+TEST_CASE("inputw") {
+    std::wistringstream ibuf;
+    uuid val;
+    
+    ibuf.str(L"00000000-0000-0000-0000-000000000000");
+    ibuf >> val;
+    CHECK(ibuf);
+    CHECK(val == uuid());
+
+    ibuf.clear();
+    ibuf.str(L"7d444840-9dc0-11d1-b245-5ffdce74fad2");
+    ibuf >> val;
+    CHECK(ibuf);
+    CHECK(val == uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+
+    ibuf.clear();
+    ibuf.str(L"7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
+    ibuf >> val;
+    CHECK(ibuf);
+    CHECK(val == uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+
+    ibuf.clear();
+    ibuf.str(L"7D444840-9DC0-11D1-B245-5FFDCE74FAD");
+    ibuf >> val;
+    CHECK(!ibuf);
+    CHECK(ibuf.fail());
+    CHECK(ibuf.eof());
+
+    ibuf.clear();
+    ibuf.str(L"7D4448409DC0-11D1-B245-5FFDCE74FAD2 ");
     ibuf >> val;
     CHECK(!ibuf);
     CHECK(ibuf.fail());

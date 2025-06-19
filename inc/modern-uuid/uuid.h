@@ -130,6 +130,64 @@ namespace muuid
         static_assert(byte_like<signed char>);
         static_assert(byte_like<std::byte>);
 
+        template<class T>
+        concept char_like = std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
+                            std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>;
+
+        template<char_like C> struct uuid_char_traits;
+
+        template<> struct uuid_char_traits<char> { 
+            static constexpr char dash = '-'; 
+            static constexpr char fmt_l = 'l';
+            static constexpr char fmt_u = 'u';
+            static constexpr char fmt_cl_br = '}';
+            static inline constexpr char digits[2][17] = {
+                "0123456789abcdef",
+                "0123456789ABCDEF",
+            };
+        };
+        template<> struct uuid_char_traits<wchar_t> { 
+            static constexpr wchar_t dash = L'-'; 
+            static constexpr wchar_t fmt_l = L'l';
+            static constexpr wchar_t fmt_u = L'u';
+            static constexpr wchar_t fmt_cl_br = L'}';
+            static inline constexpr wchar_t digits[2][17] = {
+                L"0123456789abcdef",
+                L"0123456789ABCDEF",
+            };
+        };
+        template<> struct uuid_char_traits<char16_t> { 
+            static constexpr char16_t dash = u'-'; 
+            static constexpr char16_t fmt_l = u'l';
+            static constexpr char16_t fmt_u = u'u';
+            static constexpr char16_t fmt_cl_br = u'}';
+            static inline constexpr char16_t digits[2][17] = {
+                u"0123456789abcdef",
+                u"0123456789ABCDEF",
+            };
+        };
+        template<> struct uuid_char_traits<char32_t> { 
+            static constexpr char32_t dash = U'-'; 
+            static constexpr char32_t fmt_l = U'l';
+            static constexpr char32_t fmt_u = U'u';
+            static constexpr char32_t fmt_cl_br = U'}';
+            static inline constexpr char32_t digits[2][17] = {
+                U"0123456789abcdef",
+                U"0123456789ABCDEF",
+            };
+        };
+        template<> struct uuid_char_traits<char8_t> { 
+            static constexpr char8_t dash = u8'-'; 
+            static constexpr char8_t fmt_l = u8'l';
+            static constexpr char8_t fmt_u = u8'u';
+            static constexpr char8_t fmt_cl_br = u8'}';
+            static inline constexpr char8_t digits[2][17] = {
+                u8"0123456789abcdef",
+                u8"0123456789ABCDEF",
+            };
+        };
+
+
         void invalid_constexpr_call(const char *);
 
         #if MUUID_USE_EXCEPTIONS
@@ -244,17 +302,26 @@ namespace muuid
             return bytes + sizeof(T);
         }
 
-        static constexpr bool read_hex(const char * str, uint8_t & val) noexcept {
+        template<impl::char_like T>
+        static constexpr bool read_hex(const T * str, uint8_t & val) noexcept {
+            using tr = impl::uuid_char_traits<T>;
+            constexpr T zero = tr::digits[0][0];
+            constexpr T nine = tr::digits[0][9];
+            constexpr T letter_a = tr::digits[0][10];
+            constexpr T letter_f = tr::digits[0][15];
+            constexpr T letter_A = tr::digits[1][10];
+            constexpr T letter_F = tr::digits[1][15];
+
             uint8_t ret = 0;
             for (int i = 0; i < 2; ++i) {
-                char c = *str++;
+                T c = *str++;
                 uint8_t nibble;
-                if (c >= '0' && c <= '9')
-                    nibble = (c - '0');
-                else if (c >= 'a' && c <= 'f')
-                    nibble = (c - 'a' + 10);
-                else if (c >= 'A' && c <= 'F')
-                    nibble = (c - 'A' + 10);
+                if (c >= zero && c <= nine)
+                    nibble = (c - zero);
+                else if (c >= letter_a && c <= letter_f)
+                    nibble = (c - letter_a + 10);
+                else if (c >= letter_A && c <= letter_F)
+                    nibble = (c - letter_A + 10);
                 else 
                     return false;
                 ret = (ret << 4) | nibble;
@@ -263,13 +330,11 @@ namespace muuid
             return true;
         }
 
-        static constexpr void write_hex(uint8_t val, char * str, format fmt) noexcept {
-            constexpr char digits[2][17] = {
-                "0123456789abcdef",
-                "0123456789ABCDEF",
-            };
-            *str++ = digits[fmt][uint8_t(val >> 4)];
-            *str++ = digits[fmt][uint8_t(val & 0x0F)];
+        template<impl::char_like T>
+        static constexpr void write_hex(uint8_t val, T * str, format fmt) noexcept {
+            using tr = impl::uuid_char_traits<T>;
+            *str++ = tr::digits[fmt][uint8_t(val >> 4)];
+            *str++ = tr::digits[fmt][uint8_t(val & 0x0F)];
         }
 
     public:
@@ -280,21 +345,24 @@ namespace muuid
         constexpr uuid() noexcept = default;
 
         ///Constructs uuid from a string literal
-        consteval uuid(const char (&src)[37]) noexcept {
-            const char * str = src;
+        template<impl::char_like T>
+        consteval uuid(const T (&src)[37]) noexcept {
+            using tr = impl::uuid_char_traits<T>;
+
+            const T * str = src;
             uint8_t * data = this->bytes.data();
             for (int i = 0; i < 4; ++i, str += 2, ++data) {
                 if (!read_hex(str, *data))
                     impl::invalid_constexpr_call("invalid uuid string");
             }
-            if (*str++ != '-')
+            if (*str++ != tr::dash)
                 impl::invalid_constexpr_call("invalid uuid string");
             for (int i = 0; i < 3; ++i) {
                 for (int j = 0; j < 2; ++j, str += 2, ++data) {
                     if (!read_hex(str, *data))
                         impl::invalid_constexpr_call("invalid uuid string");
                 }
-                if (*str++ != '-')
+                if (*str++ != tr::dash)
                     impl::invalid_constexpr_call("invalid uuid string");
             }
             for (int i = 0; i < 6; ++i, str += 2, ++data) {
@@ -441,26 +509,28 @@ namespace muuid
     #endif
 
         /// Parses uuid from a span of characters
-        template<size_t Extent>
-        static constexpr std::optional<uuid> from_chars(std::span<const char, Extent> src) noexcept {
+        template<impl::char_like T, size_t Extent>
+        static constexpr std::optional<uuid> from_chars(std::span<const T, Extent> src) noexcept {
             if (src.size() < 36)
                 return std::nullopt;
+
+            using tr = impl::uuid_char_traits<T>;
             
             uuid ret;
-            const char * str = src.data();
+            const T * str = src.data();
             uint8_t * dest = ret.bytes.data();
             for(int i = 0; i < 4; ++i, str += 2, ++dest) {
                 if (!read_hex(str, *dest))
                     return std::nullopt;
             }
-            if (*str++ != '-')
+            if (*str++ != tr::dash)
                 return std::nullopt;
             for(int i = 0; i < 3; ++i) {
                 for (int j = 0; j < 2; ++j, str += 2, ++dest) {
                     if (!read_hex(str, *dest))
                         return std::nullopt;
                 }
-                if (*str++ != '-')
+                if (*str++ != tr::dash)
                     return std::nullopt;
             }
             for (int i = 0; i < 6; ++i, str += 2, ++dest) {
@@ -474,15 +544,15 @@ namespace muuid
         template<class T>
         requires( !impl::is_span<T> && requires(T & x) { 
             std::span{x}; 
-            requires std::same_as<std::remove_cvref_t<decltype(*std::span{x}.begin())>, char>; 
+            requires impl::char_like<std::remove_cvref_t<decltype(*std::span{x}.begin())>>; 
         })
         static constexpr auto from_chars(const T & src) noexcept
             { return from_chars(std::span{src}); }
 
         /// Formats uuid into a span of characters
-        template<size_t Extent>
+        template<impl::char_like T, size_t Extent>
         [[nodiscard]]
-        constexpr auto to_chars(std::span<char, Extent> dest, format fmt = lowercase) const noexcept ->
+        constexpr auto to_chars(std::span<T, Extent> dest, format fmt = lowercase) const noexcept ->
             std::conditional_t<Extent == std::dynamic_extent, bool, void> {
             
             if constexpr (Extent == std::dynamic_extent) {
@@ -492,16 +562,18 @@ namespace muuid
                 static_assert(Extent >= 36, "destination is too small");
             }
 
-            char * out = dest.data();
+            using tr = impl::uuid_char_traits<T>;
+
+            T * out = dest.data();
             const uint8_t * src = this->bytes.data();
             for (int i = 0; i < 4; ++i, ++src, out += 2)
                 write_hex(*src, out, fmt);
-            *out++ = '-';
+            *out++ = tr::dash;
             for (int i = 0; i < 3; ++i) {
                 for (int j = 0; j < 2; ++j, ++src, out += 2) {
                     write_hex(*src, out, fmt);
                 }
-                *out++ = '-';
+                *out++ = tr::dash;
             }
             for (int i = 0; i < 6; ++i, ++src, out += 2) 
                 write_hex(*src, out, fmt);
@@ -514,7 +586,7 @@ namespace muuid
         template<class T>
         requires( !impl::is_span<T> && requires(T & x) {
             std::span{x}; 
-            requires std::is_same_v<std::remove_reference_t<decltype(*std::span{x}.begin())>, char>;
+            requires impl::char_like<std::remove_reference_t<decltype(*std::span{x}.begin())>>;
             requires !std::is_const_v<std::remove_reference_t<decltype(*std::span{x}.begin())>>;
         })
         [[nodiscard]]
@@ -523,45 +595,49 @@ namespace muuid
         }
 
         /// Returns a character array with formatted uuid
-        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<char, 36> {
-            std::array<char, 36> ret;
+        template<impl::char_like T = char>
+        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<T, 36> {
+            std::array<T, 36> ret;
             to_chars(ret, fmt);
             return ret;
         }
 
 
+        template<impl::char_like T = char>
     #if __cpp_lib_constexpr_string >= 201907L
         constexpr 
     #endif
         /// Returns a string with formatted uuid
-        auto to_string(format fmt = lowercase) const -> std::string
+        auto to_string(format fmt = lowercase) const -> std::basic_string<T>
         {
-            std::string ret(36, '\0');
+            std::basic_string<T> ret(36, T(0));
             (void)to_chars(ret, fmt);
             return ret;
         }
 
         /// Prints uuid into an ostream
-        friend std::ostream & operator<<(std::ostream & str, const uuid val) {
+        template<impl::char_like T>
+        friend std::basic_ostream<T> & operator<<(std::basic_ostream<T> & str, const uuid val) {
             const auto flags = str.flags();
             const format fmt = (flags & std::ios_base::uppercase ? uppercase : lowercase);
-            std::array<char, 36> buf;
+            std::array<T, 36> buf;
             val.to_chars(buf, fmt);
-            std::copy(buf.begin(), buf.end(), std::ostreambuf_iterator<char>(str));
+            std::copy(buf.begin(), buf.end(), std::ostreambuf_iterator<T>(str));
             return str;
         }
 
         /// Reads uuid from an istream
-        friend std::istream & operator>>(std::istream & str, uuid & val) {
-            std::array<char, 36> buf;
+        template<impl::char_like T>
+        friend std::basic_istream<T> & operator>>(std::basic_istream<T> & str, uuid & val) {
+            std::array<T, 36> buf;
             auto * strbuf = str.rdbuf();
-            for(char & c: buf) {
+            for(T & c: buf) {
                 auto res = strbuf->sbumpc();
-                if (res == std::char_traits<char>::eof()) {
+                if (res == std::char_traits<T>::eof()) {
                     str.setstate(std::ios_base::eofbit | std::ios_base::failbit);
                     return str;
                 }
-                c = char(res);
+                c = T(res);
             }
             if (auto maybe_val = uuid::from_chars(buf))
                 val = *maybe_val;
@@ -608,7 +684,7 @@ namespace muuid
     };
 
     namespace impl {
-        template<class Derived>
+        template<class Derived, class CharT>
         struct formatter_base
         {
             uuid::format fmt = uuid::lowercase;
@@ -616,13 +692,15 @@ namespace muuid
             template<class ParseContext>
             constexpr auto parse(ParseContext & ctx) -> typename ParseContext::iterator
             {
+                using tr = uuid_char_traits<CharT>;
+
                 auto it = ctx.begin();
                 while(it != ctx.end()) {
-                    if (*it == 'l') {
+                    if (*it == tr::fmt_l) {
                         this->fmt = uuid::lowercase; ++it;
-                    } else if (*it == 'u') {
+                    } else if (*it == tr::fmt_u) {
                         this->fmt = uuid::uppercase; ++it;
-                    } else if (*it == '}') {
+                    } else if (*it == tr::fmt_cl_br) {
                         break;
                     } else {
                         static_cast<Derived *>(this)->raise_exception("Invalid format args");
@@ -634,7 +712,7 @@ namespace muuid
             template <typename FormatContext>
             auto format(uuid val, FormatContext & ctx) const -> decltype(ctx.out()) 
             {
-                std::array<char, 36> buf;
+                std::array<CharT, 36> buf;
                 val.to_chars(buf, this->fmt);
                 return std::copy(buf.begin(), buf.end(), ctx.out());
             }
@@ -655,8 +733,8 @@ struct std::hash<muuid::uuid> {
 #if MUUID_SUPPORTS_STD_FORMAT
 
 /// uuid formatter for std::format
-template<>
-struct std::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std::formatter<::muuid::uuid>>
+template<class CharT>
+struct std::formatter<::muuid::uuid, CharT> : public ::muuid::impl::formatter_base<std::formatter<::muuid::uuid, CharT>, CharT>
 {
     [[noreturn]] void raise_exception(const char * message) {
         MUUID_THROW(std::format_error(message));
@@ -668,8 +746,8 @@ struct std::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<std:
 #if MUUID_SUPPORTS_FMT_FORMAT
 
 /// uuid formatter for fmt::format
-template<>
-struct fmt::formatter<::muuid::uuid> : public ::muuid::impl::formatter_base<fmt::formatter<::muuid::uuid>>
+template<class CharT>
+struct fmt::formatter<::muuid::uuid, CharT> : public ::muuid::impl::formatter_base<fmt::formatter<::muuid::uuid, CharT>, CharT>
 {
     void raise_exception(const char * message) {
         FMT_THROW(fmt::format_error(message));

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## Unreleased
 
 ### Added
+- All character/string-related `uuid` operations now work with `wchar_t`, `char16_t`, 
+  `char32_t` and `char8_t` in addition to `char`.
 - `uuidof<T>` that wraps `__uuidof` on Windows and can also be used portably
 
 ### Fixed
