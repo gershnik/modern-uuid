@@ -39,34 +39,7 @@ There is a single include file in this library
 #include <modern-uuid/uuid.h>
 ```
 
-<!-- TOC -->
-
-- [Usage Guide](#usage-guide)
-    - [Basics](#basics)
-        - [Headers and namespaces](#headers-and-namespaces)
-        - [Exceptions and errors](#exceptions-and-errors)
-        - [Thread safety](#thread-safety)
-        - [Multiprocess safety](#multiprocess-safety)
-    - [Usage](#usage)
-        - [uuid class](#uuid-class)
-        - [Literals](#literals)
-        - [Constructing from raw bytes](#constructing-from-raw-bytes)
-        - [Accessing raw bytes](#accessing-raw-bytes)
-        - [Generation](#generation)
-            - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
-        - [Conversions from/to strings](#conversions-fromto-strings)
-        - [Comparisons and hashing](#comparisons-and-hashing)
-        - [Formatting and I/O](#formatting-and-io)
-        - [Interoperability](#interoperability)
-            - [macOS](#macos)
-            - [Windows](#windows)
-        - [Accessing UUID properties](#accessing-uuid-properties)
-        - [Other features](#other-features)
-    - [Advanced](#advanced)
-        - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
-        - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
-
-<!-- /TOC -->Everything in the library is under `namespace muuid`. A declaration:
+Everything in the library is under `namespace muuid`. A declaration:
 ```cpp
 using namespace muuid;
 ```
@@ -122,6 +95,14 @@ constexpr uuid u1("e53d37db-e4e0-484f-996f-3ab1d4701abc");
 //or
 constexpr auto u2 = uuid("bc961bfb-b006-42f4-93ae-206f02658810");
 ```
+
+> Wherever this guide uses `char` type and strings of chars you can also use any of
+> `wchar_t`, `char16_t`, `char32_t` or `char8_t`. For example:
+> ```cpp
+> constexpr uuid u1(L"e53d37db-e4e0-484f-996f-3ab1d4701abc"); 
+> ```
+> For brevity this is usually will not be explicitly
+> mentioned in the rest of the guide unless there is some difference or limitation.
 
 Note that since UUIDs can be compile-time literals they can be used as template parameters:
 
@@ -270,6 +251,14 @@ chars = u.to_chars(uuid::lowercase);
 chars = u.to_chars(uuid::uppercase);
 ```
 
+If you want to use another character type you need to specify it explicitly:
+
+```cpp
+std::array<wchar_t, 36> wchars = u.to_chars<wchar_t>();
+std::array<char32_t, 36> wchars = u.to_chars<char32_t>();
+//etc.
+```
+
 Finally there is also `uuid::to_string` that returns `std::string`
 
 ```cpp
@@ -284,7 +273,13 @@ str = u.to_string(uuid::uppercase);
 ```
 
 > [!NOTE]
-> C++ standard unfortunately and bizarrely does not allow us to specialize `std::to_string` for user types. 
+> C++ standard unfortunately and bizarrely does not allow us to specialize `std::to_string` for user types.
+
+Similarly to `to_chars` if you want to use a different char type you need to specify it explicitly
+
+```cpp
+std::wstring str = u.to_string<wchar_t>();
+```
 
 
 ### Comparisons and hashing
