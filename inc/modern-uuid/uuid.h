@@ -317,11 +317,11 @@ namespace muuid
                 T c = *str++;
                 uint8_t nibble;
                 if (c >= zero && c <= nine)
-                    nibble = (c - zero);
+                    nibble = uint8_t(c - zero);
                 else if (c >= letter_a && c <= letter_f)
-                    nibble = (c - letter_a + 10);
+                    nibble = uint8_t(c - letter_a + 10);
                 else if (c >= letter_A && c <= letter_F)
-                    nibble = (c - letter_A + 10);
+                    nibble = uint8_t(c - letter_A + 10);
                 else 
                     return false;
                 ret = (ret << 4) | nibble;
