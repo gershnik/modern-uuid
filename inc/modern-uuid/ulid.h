@@ -117,9 +117,9 @@ namespace muuid {
             
             acc[0] = (src[0] >> 5) & 0x7u;
             acc[1] = src[0] & 0x1Fu;
-            impl::base32_encode_block(src.subspan< 1, 5>(), acc.subspan< 2, 8>());
-            impl::base32_encode_block(src.subspan< 6, 5>(), acc.subspan<10, 8>());
-            impl::base32_encode_block(src.subspan<11, 5>(), acc.subspan<18, 8>());
+            impl::base32_encode_block(src.template subspan< 1, 5>(), acc.template subspan< 2, 8>());
+            impl::base32_encode_block(src.template subspan< 6, 5>(), acc.template subspan<10, 8>());
+            impl::base32_encode_block(src.template subspan<11, 5>(), acc.template subspan<18, 8>());
 
             using tr = impl::ulid_char_traits<T>;
 
