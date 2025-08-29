@@ -139,7 +139,7 @@ namespace {
         
     private:
         generic_clock_persistence<Data> * m_persistence = nullptr;
-        generic_clock_persistence<Data>::per_thread * m_per_thread = nullptr;
+        typename generic_clock_persistence<Data>::per_thread * m_per_thread = nullptr;
     };
 
     template<class Derived, class PersData, class UnitDuration, class MaxUnitDuration>
@@ -478,10 +478,10 @@ namespace {
 
             void fill_random() {
                 auto & gen = get_random_generator();
-                std::uniform_int_distribution<uint8_t> distrib;
+                std::uniform_int_distribution<unsigned> distrib(0, 255);
                 auto * dest = reinterpret_cast<uint8_t *>(this);
                 for (size_t i = 0; i < sizeof(*this); ++i)
-                    *dest++ = distrib(gen);
+                    *dest++ = uint8_t(distrib(gen));
             }
             void increment() {
                 if (++low == 0) {

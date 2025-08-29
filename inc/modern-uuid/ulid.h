@@ -104,9 +104,9 @@ namespace muuid {
             if (acc[0] > 7)
                 return false;
             dest[0] = (acc[0] << 5) | acc[1];
-            impl::base32_decode_block(acc.subspan< 2, 8>(), dest.subspan< 1, 5>());
-            impl::base32_decode_block(acc.subspan<10, 8>(), dest.subspan< 6, 5>());
-            impl::base32_decode_block(acc.subspan<18, 8>(), dest.subspan<11, 5>());
+            impl::base32_decode_block(acc.template subspan< 2, 8>(), dest.template subspan< 1, 5>());
+            impl::base32_decode_block(acc.template subspan<10, 8>(), dest.template subspan< 6, 5>());
+            impl::base32_decode_block(acc.template subspan<18, 8>(), dest.template subspan<11, 5>());
             return true;
         }
 
