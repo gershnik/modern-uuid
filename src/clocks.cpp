@@ -604,28 +604,31 @@ namespace muuid {
 
     //ABI compat functions
 
-// #ifdef __GNUC__
-//     #pragma GCC diagnostic push
-//     #pragma GCC diagnostic ignored "-Wdeprecated"
-// #elif defined(_MSC_VER)
-//     #pragma warning(push)
-//     #pragma warning(disable: 4995)
-// #endif
+// The [[deprecated]] attribute on functions silences deprecation warnings for type usage
+// on most compilers compiler these days.
+// Except for very old gccs and MSVC (of course)
+ #ifdef __GNUC__
+     #pragma GCC diagnostic push
+     #pragma GCC diagnostic ignored "-Wdeprecated"
+ #elif defined(_MSC_VER)
+     #pragma warning(push)
+     #pragma warning(disable: 4996)
+ #endif
 
-    MUUID_EXPORTED [[deprecated]] void set_time_based_persistence(clock_persistence * persistence) {
+    [[deprecated]] MUUID_EXPORTED void set_time_based_persistence(clock_persistence * persistence) {
         return set_time_based_persistence(static_cast<uuid_clock_persistence *>(persistence));
     }
-    MUUID_EXPORTED [[deprecated]] void set_reordered_time_based_persistence(clock_persistence * persistence) {
+    [[deprecated]] MUUID_EXPORTED void set_reordered_time_based_persistence(clock_persistence * persistence) {
         return set_reordered_time_based_persistence(static_cast<uuid_clock_persistence *>(persistence));
     }
-    MUUID_EXPORTED [[deprecated]] void set_unix_time_based_persistence(clock_persistence * persistence) {
+    [[deprecated]] MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence * persistence) {
         return set_unix_time_based_persistence(static_cast<uuid_clock_persistence *>(persistence));
     }
 
-// #ifdef __GNUC__
-//     #pragma GCC diagnostic pop
-// #elif defined(_MSC_VER)
-//     #pragma warning(pop)
-// #endif
+ #ifdef __GNUC__
+     #pragma GCC diagnostic pop
+ #elif defined(_MSC_VER)
+     #pragma warning(pop)
+ #endif
 
 }
