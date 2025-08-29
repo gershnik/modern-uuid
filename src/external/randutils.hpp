@@ -102,6 +102,11 @@
 #include <thread>
 #include <algorithm>
 
+// Suppress __DATE__ and __TIME__ in reproducible builds
+#ifndef MUUID_BUILD_DATE_TIME
+    #define MUUID_BUILD_DATE_TIME __DATE__ __TIME__
+#endif
+
 // Ugly platform-specific code for auto_seeded
 
 #if !defined(RANDUTILS_CPU_ENTROPY) && defined(__has_builtin)
@@ -472,7 +477,7 @@ class auto_seeded : public SeedSeq {
     {
         // This is a constant that changes every time we compile the code
         constexpr uint32_t compile_stamp =
-            fnv(2166136261U, __DATE__ __TIME__ __FILE__);
+            fnv(2166136261U, MUUID_BUILD_DATE_TIME __FILE__);
 
         // Some people think you shouldn't use the random device much because
         // on some platforms it could be expensive to call or "use up" vital

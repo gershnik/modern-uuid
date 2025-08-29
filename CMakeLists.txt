@@ -100,6 +100,19 @@ foreach(suffix ${BUILD_SUFFIXES})
         MUUID_BUILDING_MUUID=1
     )
 
+    if (DEFINED ENV{SOURCE_DATE_EPOCH})
+
+        string(TIMESTAMP MUUID_BUILD_DATE_TIME "%Y-%m-%d %H:%M:%S" UTC)
+
+        message("modern-uuid-${suffix} will use reproducible timestamp: ${MUUID_BUILD_DATE_TIME}")
+
+        target_compile_definitions(modern-uuid-${suffix}
+        PRIVATE
+            MUUID_BUILD_DATE_TIME=\"${MUUID_BUILD_DATE_TIME}\"
+        )
+
+    endif()
+
     target_compile_options(modern-uuid-${suffix}
     PRIVATE
         $<$<CXX_COMPILER_ID:MSVC>:/utf-8;/W4>
