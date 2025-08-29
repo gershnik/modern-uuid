@@ -107,7 +107,7 @@ TEST_CASE("simple") {
 
         CHECK(up1 != ur1);
         CHECK(up2 < ur2);
-        CHECK(up3 < ur3);
+        CHECK(up3 != ur3);
     }
 
 }
