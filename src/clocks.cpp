@@ -609,7 +609,7 @@ namespace muuid {
 // Except for very old gccs and MSVC (of course)
  #ifdef __GNUC__
      #pragma GCC diagnostic push
-     #pragma GCC diagnostic ignored "-Wdeprecated"
+     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
  #elif defined(_MSC_VER)
      #pragma warning(push)
      #pragma warning(disable: 4996)
