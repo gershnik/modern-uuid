@@ -39,15 +39,20 @@ static_assert(std::three_way_comparable<uuid>);
 #endif
 static_assert(std::regular<uuid>);
 
-template<uuid U1> class some_class {};
-some_class<uuid("bc961bfb-b006-42f4-93ae-206f02658810")> some_object;
-some_class<uuid(L"bc961bfb-b006-42f4-93ae-206f02658810")> some_objectw;
-some_class<uuid(u"bc961bfb-b006-42f4-93ae-206f02658810")> some_object16;
-some_class<uuid(U"bc961bfb-b006-42f4-93ae-206f02658810")> some_object32;
-some_class<uuid(u8"bc961bfb-b006-42f4-93ae-206f02658810")> some_object8;
+namespace {
 
-std::map<uuid, std::string> m;
-std::unordered_map<uuid, std::string> um;
+    template<uuid U1> class some_class {};
+
+    [[maybe_unused]] some_class<uuid("bc961bfb-b006-42f4-93ae-206f02658810")> some_object;
+    [[maybe_unused]] some_class<uuid(L"bc961bfb-b006-42f4-93ae-206f02658810")> some_objectw;
+    [[maybe_unused]] some_class<uuid(u"bc961bfb-b006-42f4-93ae-206f02658810")> some_object16;
+    [[maybe_unused]] some_class<uuid(U"bc961bfb-b006-42f4-93ae-206f02658810")> some_object32;
+    [[maybe_unused]] some_class<uuid(u8"bc961bfb-b006-42f4-93ae-206f02658810")> some_object8;
+
+    [[maybe_unused]] std::map<uuid, std::string> m;
+    [[maybe_unused]] std::unordered_map<uuid, std::string> um;
+
+}
 
 TEST_CASE("nil") {
 

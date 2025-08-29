@@ -111,6 +111,8 @@ foreach(suffix ${BUILD_SUFFIXES})
         test_fork.cpp
         test_persistence.cpp
         test_system.cpp
+
+        test_ulid_basics.cpp
     )
 
     if (${CMAKE_SYSTEM_NAME} STREQUAL Android)

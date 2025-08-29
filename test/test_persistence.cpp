@@ -43,9 +43,9 @@
 
 using namespace muuid;
 
-class file_clock_persistence final : public clock_persistence {
+class file_clock_persistence final : public uuid_clock_persistence {
 private:
-    class per_thread final : public clock_persistence::per_thread {
+    class per_thread final : public uuid_clock_persistence::per_thread {
     public:
         per_thread(const std::filesystem::path & path) {
         #ifdef USE_POSIX_PERSISTENCE

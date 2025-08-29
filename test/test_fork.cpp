@@ -4,6 +4,7 @@
 #include <doctest/doctest.h>
 
 #include <modern-uuid/uuid.h>
+#include <modern-uuid/ulid.h>
 
 #include <iostream>
 
@@ -21,8 +22,9 @@ TEST_SUITE("fork") {
 
 TEST_CASE("simple") {
 
-    auto u1 = uuid::generate_time_based();
-    auto u2 = uuid::generate_unix_time_based();
+    auto up1 = uuid::generate_time_based();
+    auto up2 = uuid::generate_unix_time_based();
+    auto up3 = ulid::generate();
 
     int pipes[2];
     REQUIRE(pipe(pipes) == 0);
@@ -31,21 +33,29 @@ TEST_CASE("simple") {
     if (pid == 0) {
         //child
         close(pipes[0]);
-        auto u3 = uuid::generate_time_based();
-        auto u4 = uuid::generate_unix_time_based();
+        auto uc1 = uuid::generate_time_based();
+        auto uc2 = uuid::generate_unix_time_based();
+        auto uc3 = ulid::generate();
 
-        while (write(pipes[1], u3.bytes.data(), u3.bytes.size()) == -1) {
+        while (write(pipes[1], uc1.bytes.data(), uc1.bytes.size()) == -1) {
             int err = errno;
             if (err == EINTR)
                 continue;
             std::cout << "child: 1st write failed: " << err << '\n';
             exit(2);
         }
-        while (write(pipes[1], u4.bytes.data(), u4.bytes.size()) == -1) {
+        while (write(pipes[1], uc2.bytes.data(), uc2.bytes.size()) == -1) {
             int err = errno;
             if (err == EINTR)
                 continue;
             std::cout << "child: 2nd write failed: " << err << '\n';
+            exit(2);
+        }
+        while (write(pipes[1], uc3.bytes.data(), uc3.bytes.size()) == -1) {
+            int err = errno;
+            if (err == EINTR)
+                continue;
+            std::cout << "child: 3rd write failed: " << err << '\n';
             exit(2);
         }
         close(pipes[1]);
@@ -54,7 +64,7 @@ TEST_CASE("simple") {
         //parent
         close(pipes[1]);
 
-        uint8_t buf[2 * sizeof(uuid)];
+        uint8_t buf[3 * sizeof(uuid)];
         for (size_t read_count = 0; read_count < sizeof(buf); ) {
             auto res = read(pipes[0], buf + read_count, sizeof(buf) - read_count);
             if (res < 0) {
@@ -82,19 +92,22 @@ TEST_CASE("simple") {
         REQUIRE(bool(WIFEXITED(stat)));
         REQUIRE(WEXITSTATUS(stat) == 0);
 
-        uuid u3(std::span<uint8_t, sizeof(uuid)>{buf, sizeof(uuid)});
-        uuid u4(std::span<uint8_t, sizeof(uuid)>{buf + sizeof(uuid), sizeof(uuid)});
+        uuid ur1(std::span<uint8_t, sizeof(uuid)>{buf, sizeof(uuid)});
+        uuid ur2(std::span<uint8_t, sizeof(uuid)>{buf + sizeof(uuid), sizeof(uuid)});
+        ulid ur3(std::span<uint8_t, sizeof(ulid)>{buf + 2 * sizeof(uuid), sizeof(ulid)});
 
-        std::cout << "child v1: " << u3 << '\n';
-        std::cout << "child v7: " << u4 << '\n';
+        std::cout << "child v1: " << ur1 << '\n';
+        std::cout << "child v7: " << ur2 << '\n';
+        std::cout << "child ulid: " << ur3 << '\n';
 
-        CHECK(u3.get_variant() == uuid::variant::standard);
-        CHECK(u3.get_type() == uuid::type::time_based);
-        CHECK(u4.get_variant() == uuid::variant::standard);
-        CHECK(u4.get_type() == uuid::type::unix_time_based);
+        CHECK(ur1.get_variant() == uuid::variant::standard);
+        CHECK(ur1.get_type() == uuid::type::time_based);
+        CHECK(ur2.get_variant() == uuid::variant::standard);
+        CHECK(ur2.get_type() == uuid::type::unix_time_based);
 
-        CHECK(u1 != u3);
-        CHECK(u2 < u4);
+        CHECK(up1 != ur1);
+        CHECK(up2 < ur2);
+        CHECK(up3 < ur3);
     }
 
 }
