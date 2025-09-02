@@ -32,32 +32,36 @@ namespace std {
 }
 
 #define CHECK_EQUAL_SEQ(seq1, seq2) {\
-    auto [c1, e1] = get_ends(seq1); \
-    auto [c2, e2] = get_ends(seq2); \
+    const auto & s1 = seq1; \
+    const auto & s2 = seq2; \
+    auto [c1, e1] = get_ends(s1); \
+    auto [c2, e2] = get_ends(s2); \
     \
     for (size_t i = 0; ; ++i, ++c1, ++c2) {\
         if (c1 == e1) { \
             if (c2 == e2) \
                 break; \
             \
-            FAIL_CHECK("First sequence is shorter (length: ", i, ") than second, first: ", seq1, ", second: ", seq2); \
+            FAIL_CHECK("First sequence is shorter (length: ", i, ") than second, first: ", s1, ", second: ", s2); \
             break; \
         } \
         if (c2 == e2) { \
-            FAIL_CHECK("Second sequence is shorter (length: ", i, ") than first, first: ", seq1, ", second: ", seq2); \
+            FAIL_CHECK("Second sequence is shorter (length: ", i, ") than first, first: ", s1, ", second: ", s2); \
             break; \
         } \
         \
         if (*c1 != *c2) { \
-            FAIL_CHECK("Discrepancy at index ", i, ", first: ", seq1, ", second: ", seq2);\
+            FAIL_CHECK("Discrepancy at index ", i, ", first: ", s1, ", second: ", s2);\
             break;\
         }\
     }\
 }
 
 #define CHECK_UNEQUAL_SEQ(seq1, seq2) { \
-    auto [c1, e1] = get_ends(seq1); \
-    auto [c2, e2] = get_ends(seq2); \
+    const auto & s1 = seq1; \
+    const auto & s2 = seq2; \
+    auto [c1, e1] = get_ends(s1); \
+    auto [c2, e2] = get_ends(s2); \
     bool equal = true; \
     for ( ; ; ++c1, ++c2) { \
         if (c1 == e1) { \
@@ -70,7 +74,7 @@ namespace std {
         } \
     } \
     if (equal) \
-        FAIL_CHECK("Sequences are equal, first: ", seq1, ", second: ", seq2); \
+        FAIL_CHECK("Sequences are equal, first: ", s1, ", second: ", s2); \
 }
 
 #endif

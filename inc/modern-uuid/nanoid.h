@@ -81,7 +81,7 @@ namespace muuid {
 
         public:
             static constexpr size_t size = narrow.size(); 
-            static constexpr bool is_full = size_t(1u << ct_log2<size>()) == size;
+            static constexpr bool is_full = size_t(size_t(1) << ct_log2<size>()) == size;
             static constexpr size_t bits_per_char = ct_log2<size>() + !is_full;
             
 
