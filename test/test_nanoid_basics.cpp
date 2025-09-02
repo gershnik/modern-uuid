@@ -363,8 +363,6 @@ TEST_CASE("custom6") {
 
     using fooid = basic_nanoid<foo, 9>;
 
-    auto gug = fooid::from_chars("nTXfkq!Pu");
-
     constexpr auto f1 = fooid("nTXfkq!Pu");
     constexpr auto f2 = fooid("nTXfkq!Ps");
     CHECK(f1 != f2);
