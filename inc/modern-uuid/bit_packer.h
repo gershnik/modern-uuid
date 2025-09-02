@@ -6,7 +6,7 @@
 
 #include <modern-uuid/common.h>
 
-//We are using Duff's device throughout this file. Shut the GCC warning up
+//We are fallthrough switches throughout this file. Shut the GCC warning up
 #ifdef __GNUC__
     #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 #endif
@@ -39,28 +39,31 @@ namespace muuid::impl {
                 dst[0] = 0;
 
             size_t i = 0, j = 0;
-                //Duff's device
-            switch (bit_packer::remainder) {
-                while(i < bit_packer::full_rounds * (bit_packer::lcm / 8)) {
-            case 0: dst[i] = src[j++] << 3;   // |0|0|0|0|0| | | |
-                    dst[i] |= src[j] >> 2;    // | | | | | |1|1|1|
-                    ++i;
-            case 2: dst[i] = src[j++] << 6;   // |1|1| | | | | | |
-                    dst[i] |= src[j++] << 1;  // | | |2|2|2|2|2| |
-                    dst[i] |= src[j] >> 4;    // | | | | | | | |3|
-                    ++i; 
-            case 4: dst[i] = src[j++] << 4;   // |3|3|3|3| | | | |
-                    dst[i] |= src[j] >> 1;    // | | | | |4|4|4|4|
-                    ++i;
-            case 1: dst[i] = src[j++] << 7;   // |4| | | | | | | |
-                    dst[i] |= src[j++] << 2;  // | |5|5|5|5|5| | |
-                    dst[i] |= src[j] >> 3;    // | | | | | | |6|6|
-                    ++i;
-            case 3: dst[i] = src[j++] << 5;   // |6|6|6| | | | | |
-                    dst[i] |= src[j++];       // | | | |7|7|7|7|7|
-                    ++i;
+            //For reasons unknown MSVC doesn't compile Duff's device properly here in constexpr mode
+            //so we use a mutable state and hope that optimizer will figure it out :(
+            auto state = bit_packer::remainder;
+            do {
+                switch (state) {
+                case 0: dst[i] = src[j++] << 3;   // |0|0|0|0|0| | | |
+                        dst[i] |= src[j] >> 2;    // | | | | | |1|1|1|
+                        ++i;
+                case 2: dst[i] = src[j++] << 6;   // |1|1| | | | | | |
+                        dst[i] |= src[j++] << 1;  // | | |2|2|2|2|2| |
+                        dst[i] |= src[j] >> 4;    // | | | | | | | |3|
+                        ++i; 
+                case 4: dst[i] = src[j++] << 4;   // |3|3|3|3| | | | |
+                        dst[i] |= src[j] >> 1;    // | | | | |4|4|4|4|
+                        ++i;
+                case 1: dst[i] = src[j++] << 7;   // |4| | | | | | | |
+                        dst[i] |= src[j++] << 2;  // | |5|5|5|5|5| | |
+                        dst[i] |= src[j] >> 3;    // | | | | | | |6|6|
+                        ++i;
+                case 3: dst[i] = src[j++] << 5;   // |6|6|6| | | | | |
+                        dst[i] |= src[j++];       // | | | |7|7|7|7|7|
+                        ++i;
                 }
-            }
+                state = 0;
+            } while(i < bit_packer::full_rounds * (bit_packer::lcm / 8));
         }
 
         template<class Byte>
@@ -71,31 +74,34 @@ namespace muuid::impl {
                 dst[0] = 0;
 
             size_t i = 0, j = 0;
-            //Duff's device
-            switch (bit_packer::remainder) {
-                while(i < bit_packer::full_rounds * bit_packer::lcm / bit_packer::bits_per_byte) {
-            case 0: dst[i] = src[j] >> 3;              // | | | |0|0|0|0|0|
-                    ++i;
-                    dst[i] = (src[j++] << 2) & 0x1Fu;  // | | | |0|0|0| | |
-            case 2: dst[i] |= src[j] >> 6;             // | | | | | | |1|1|
-                    ++i;
-                    dst[i] = (src[j] >> 1) & 0x1Fu;    // | | | |1|1|1|1|1|
-                    ++i;
-                    dst[i] = (src[j++] << 4) & 0x1Fu;  // | | | |1| | | | |
-            case 4: dst[i] |= src[j] >> 4;             // | | | | |2|2|2|2|
-                    ++i;
-                    dst[i] = (src[j++] << 1) & 0x1Fu;  // | | | |2|2|2|2| |
-            case 1: dst[i] |= src[j] >> 7;             // | | | | | | | |3|
-                    ++i;
-                    dst[i] = (src[j] >> 2) & 0x1Fu;    // | | | |3|3|3|3|3|
-                    ++i;
-                    dst[i] = (src[j++] << 3) & 0x1Fu;  // | | | |3|3| | | |
-            case 3: dst[i] |= src[j] >> 5;             // | | | | | |4|4|4|
-                    ++i;
-                    dst[i] =  src[j++] & 0x1Fu;        // | | | |4|4|4|4|4|
-                    ++i;
+            //For reasons unknown MSVC doesn't compile Duff's device properly here in constexpr mode
+            //so we use a mutable state and hope that optimizer will figure it out :(
+            auto state = bit_packer::remainder;
+            do {
+                switch (state) {
+                case 0: dst[i] = src[j] >> 3;              // | | | |0|0|0|0|0|
+                        ++i;
+                        dst[i] = (src[j++] << 2) & 0x1Fu;  // | | | |0|0|0| | |
+                case 2: dst[i] |= src[j] >> 6;             // | | | | | | |1|1|
+                        ++i;
+                        dst[i] = (src[j] >> 1) & 0x1Fu;    // | | | |1|1|1|1|1|
+                        ++i;
+                        dst[i] = (src[j++] << 4) & 0x1Fu;  // | | | |1| | | | |
+                case 4: dst[i] |= src[j] >> 4;             // | | | | |2|2|2|2|
+                        ++i;
+                        dst[i] = (src[j++] << 1) & 0x1Fu;  // | | | |2|2|2|2| |
+                case 1: dst[i] |= src[j] >> 7;             // | | | | | | | |3|
+                        ++i;
+                        dst[i] = (src[j] >> 2) & 0x1Fu;    // | | | |3|3|3|3|3|
+                        ++i;
+                        dst[i] = (src[j++] << 3) & 0x1Fu;  // | | | |3|3| | | |
+                case 3: dst[i] |= src[j] >> 5;             // | | | | | |4|4|4|
+                        ++i;
+                        dst[i] =  src[j++] & 0x1Fu;        // | | | |4|4|4|4|4|
+                        ++i;
                 }
-            }
+                state = 0;
+            } while(i < bit_packer::full_rounds * bit_packer::lcm / bit_packer::bits_per_byte);
         }
     };
 
@@ -111,20 +117,23 @@ namespace muuid::impl {
                 dst[0] = 0;
 
             size_t i = 0, j = 0;
-            //Duff's device
-            switch (bit_packer::remainder) {
-                while(i < bit_packer::full_rounds * (bit_packer::lcm / 8)) {
-            case 0: dst[i] = src[j++] << 2;   // |0|0|0|0|0|0| | |
-                    dst[i] |= src[j] >> 4;    // | | | | | | |1|1|
-                    ++i;
-            case 4: dst[i] = src[j++] << 4;   // |1|1|1|1| | | | |
-                    dst[i] |= src[j] >> 2;    // | | | | |2|2|2|2|
-                    ++i;
-            case 2: dst[i] = src[j++] << 6;   // |2|2| | | | | | |
-                    dst[i] |= src[j++];       // | | |3|3|3|3|3|3|
-                    ++i;
+            //For reasons unknown MSVC doesn't compile Duff's device properly here in constexpr mode
+            //so we use a mutable state and hope that optimizer will figure it out :(
+            auto state = bit_packer::remainder;
+            do {
+                switch (state) {
+                case 0: dst[i] = src[j++] << 2;   // |0|0|0|0|0|0| | |
+                        dst[i] |= src[j] >> 4;    // | | | | | | |1|1|
+                        ++i;
+                case 4: dst[i] = src[j++] << 4;   // |1|1|1|1| | | | |
+                        dst[i] |= src[j] >> 2;    // | | | | |2|2|2|2|
+                        ++i;
+                case 2: dst[i] = src[j++] << 6;   // |2|2| | | | | | |
+                        dst[i] |= src[j++];       // | | |3|3|3|3|3|3|
+                        ++i;
                 }
-            }
+                state = 0;
+            } while(i < bit_packer::full_rounds * (bit_packer::lcm / 8));
         }
 
         template<class Byte>
@@ -135,21 +144,24 @@ namespace muuid::impl {
                 dst[0] = 0;
 
             size_t i = 0, j = 0;
-            //Duff's device
-            switch (bit_packer::remainder) {
-                while(i < bit_packer::full_rounds * bit_packer::lcm / bit_packer::bits_per_byte) {
-            case 0: dst[i] = src[j] >> 2;              // | | |0|0|0|0|0|0|
-                    ++i;
-                    dst[i] = (src[j++] << 4) & 0x3Fu;  // | | |0|0| | | | |
-            case 4: dst[i] |= src[j] >> 4;             // | | | | |1|1|1|1|
-                    ++i;
-                    dst[i] = (src[j++] << 2) & 0x3Fu;  // | | |1|1|1|1| | |
-            case 2: dst[i] |= src[j] >> 6;             // | | | | | | |2|2|
-                    ++i;
-                    dst[i] = src[j++] & 0x3Fu;         // | | |2|2|2|2|2|2|
-                    ++i;
+            //For reasons unknown MSVC doesn't compile Duff's device properly here in constexpr mode
+            //so we use a mutable state and hope that optimizer will figure it out :(
+            auto state = bit_packer::remainder;
+            do {
+                switch (state) {
+                case 0: dst[i] = src[j] >> 2;              // | | |0|0|0|0|0|0|
+                        ++i;
+                        dst[i] = (src[j++] << 4) & 0x3Fu;  // | | |0|0| | | | |
+                case 4: dst[i] |= src[j] >> 4;             // | | | | |1|1|1|1|
+                        ++i;
+                        dst[i] = (src[j++] << 2) & 0x3Fu;  // | | |1|1|1|1| | |
+                case 2: dst[i] |= src[j] >> 6;             // | | | | | | |2|2|
+                        ++i;
+                        dst[i] = src[j++] & 0x3Fu;         // | | |2|2|2|2|2|2|
+                        ++i;
                 }
-            }
+                state = 0;
+            } while(i < bit_packer::full_rounds * bit_packer::lcm / bit_packer::bits_per_byte);
         }
 
     };

@@ -143,6 +143,9 @@ TEST_CASE("strings") {
     CHECK_EQUAL_SEQ(nanoid::max().to_chars(), "ttttttttttttttttttttt"sv);
     
     CHECK(us2.to_string() == "Uakgb_J5m9g-0JDMbcJqL");
+
+    constexpr auto cchars = us.to_chars();
+    CHECK_EQUAL_SEQ(cchars, "Uakgb_J5m9g-0JDMbcJqL"sv);
 }
 
 TEST_CASE("stringsw") {

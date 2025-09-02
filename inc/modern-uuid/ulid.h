@@ -79,7 +79,7 @@ namespace muuid {
         }
 
         template<impl::char_like T>
-        static constexpr void write(std::span<const uint8_t, 16> src, T * str, format fmt) {
+        static constexpr void write(std::span<const uint8_t, 16> src, T * str, format fmt) noexcept {
             using tr = impl::ulid_char_traits<T>;
 
             uint8_t buf[26];

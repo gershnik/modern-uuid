@@ -87,7 +87,7 @@ namespace muuid {
 
         public:
             template<impl::char_like C> 
-            static constexpr C forward(uint8_t idx) {
+            static constexpr C forward(uint8_t idx) noexcept {
                 if constexpr (std::is_same_v<C, char32_t> || std::is_same_v<C, char16_t> || std::is_same_v<C, char8_t>) 
                     return C(utf.chars[idx]);
                 else if constexpr (std::is_same_v<C, wchar_t>)
@@ -97,7 +97,7 @@ namespace muuid {
             }
             
             template<impl::char_like C>
-            static constexpr uint8_t reverse(C c) {
+            static constexpr uint8_t reverse(C c) noexcept {
                 if (unsigned(c) >= 128)
                     return size;
                 if constexpr (std::is_same_v<C, char32_t> || std::is_same_v<C, char16_t> || std::is_same_v<C, char8_t>)
@@ -163,7 +163,7 @@ namespace muuid {
         }
 
         template<impl::char_like T>
-        static constexpr void write(std::span<const uint8_t, bytes_count> src, T * str) {
+        static constexpr void write(std::span<const uint8_t, bytes_count> src, T * str) noexcept {
             uint8_t buf[unpack_buf_size];
             constexpr size_t first_offset = (CharCount != unpack_buf_size);
 
@@ -225,7 +225,7 @@ namespace muuid {
             requires impl::byte_like<std::remove_reference_t<decltype(*std::span{x}.begin())>>; 
             requires decltype(std::span{x})::extent == bytes_count;
         })
-        constexpr basic_nanoid(const T & src) noexcept:
+        constexpr basic_nanoid(const T & src) noexcept(noexcept(basic_nanoid{std::span{src}})):
             basic_nanoid{std::span{src}}
         {}
 

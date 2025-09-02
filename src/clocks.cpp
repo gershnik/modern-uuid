@@ -605,7 +605,7 @@ namespace muuid {
     //ABI compat functions
 
 // The [[deprecated]] attribute on functions silences deprecation warnings for type usage
-// on most compilers compiler these days.
+// on most compilers these days.
 // Except for very old gccs and MSVC (of course)
  #ifdef __GNUC__
      #pragma GCC diagnostic push

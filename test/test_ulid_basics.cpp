@@ -151,9 +151,10 @@ TEST_CASE("strings") {
     CHECK_EQUAL_SEQ(ulid::max().to_chars(ulid::lowercase), "7zzzzzzzzzzzzzzzzzzzzzzzzz"sv);
     CHECK_EQUAL_SEQ(ulid::max().to_chars(ulid::uppercase), "7ZZZZZZZZZZZZZZZZZZZZZZZZZ"sv);
 
-
-
     CHECK(us2.to_string() == "01bx5zzkbkactav9wevgemmvry");
+
+    constexpr auto cchars = us.to_chars();
+    CHECK_EQUAL_SEQ(cchars, "01bx5zzkbkactav9wevgemmvry"sv);
 }
 
 TEST_CASE("stringsw") {
