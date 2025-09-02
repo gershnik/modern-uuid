@@ -109,7 +109,7 @@ namespace muuid {
             }
         };
 
-        #define MUUID_DECLARE_NANOID_ALPHABET(name, str) using name = ::muuid::impl::alphabet_impl<str, L##str, u8##str>
+        #define MUUID_DECLARE_NANOID_ALPHABET(name, str) struct name : ::muuid::impl::alphabet_impl<str, L##str, u8##str> {}
 
         template<char_like C> struct nanoid_char_traits;
 
