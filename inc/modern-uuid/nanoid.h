@@ -31,6 +31,19 @@ namespace muuid {
             return ret; 
         }
 
+        template<size_t Val>
+        requires(Val > 0 && Val <= 128)
+        static constexpr size_t ct_log2() {
+            if constexpr (Val == 1) return 0;
+            else if constexpr (Val < 4) return 1;
+            else if constexpr (Val < 8) return 2;
+            else if constexpr (Val < 16) return 3;
+            else if constexpr (Val < 32) return 4;
+            else if constexpr (Val < 64) return 5;
+            else if constexpr (Val < 128) return 6;
+            return 7;
+        }
+
         template<class T, size_t N>
         struct ct_string {
             T chars[N];
@@ -38,7 +51,12 @@ namespace muuid {
             constexpr auto size() const -> size_t { return N - 1; }
 
             constexpr ct_string(const T (&src)[N]) {
-                std::copy(src, src + N, chars);
+                std::copy(src, src + N, this->chars);
+            }
+
+            constexpr ct_string(const T el) {
+                std::fill(this->chars, this->chars + N - 1, el);
+                this->chars[N - 1] = 0;
             }
         };
         template<class T, size_t N>
@@ -57,27 +75,14 @@ namespace muuid {
             static_assert(valid_nanoid_alphabet(utf.chars), "utf alphabet characters must be in range (0, 127]");
 
         private:
-            template<size_t Val>
-            requires(Val > 0 && Val <= 128)
-            static constexpr size_t ct_log2() {
-                if constexpr (Val == 1) return 0;
-                else if constexpr (Val < 4) return 1;
-                else if constexpr (Val < 8) return 2;
-                else if constexpr (Val < 16) return 3;
-                else if constexpr (Val < 32) return 4;
-                else if constexpr (Val < 64) return 5;
-                else if constexpr (Val < 128) return 6;
-                return 7;
-            }
-
             static constexpr auto reverse_narrow = make_reverse_nanoid_alphabet(narrow.chars);
             static constexpr auto reverse_wide = make_reverse_nanoid_alphabet(wide.chars);
             static constexpr auto reverse_utf = make_reverse_nanoid_alphabet(narrow.chars);
 
         public:
             static constexpr size_t size = narrow.size(); 
-            static constexpr bool is_full = (1 << alphabet_impl::ct_log2<size>()) == size;
-            static constexpr size_t bits_per_char = alphabet_impl::ct_log2<size>() + !is_full;
+            static constexpr bool is_full = size_t(1u << ct_log2<size>()) == size;
+            static constexpr size_t bits_per_char = ct_log2<size>() + !is_full;
             
 
         public:
@@ -185,7 +190,7 @@ namespace muuid {
         ///Constructs nanoid from a string literal
         template<impl::char_like T>
         consteval basic_nanoid(const T (&src)[CharCount + 1]) noexcept {            
-            if (!basic_nanoid::read(src, bytes) || src[CharCount] != 0)
+            if (!basic_nanoid::read(src, this->bytes) || src[CharCount] != 0)
                 impl::invalid_constexpr_call("invalid nanoid string");
         }
 
@@ -193,7 +198,7 @@ namespace muuid {
         template<impl::byte_like Byte>
         constexpr basic_nanoid(std::span<Byte, bytes_count> src) 
                 noexcept(Alphabet::is_full && basic_nanoid::bits_in_string == basic_nanoid::bits_count) {
-                    
+
             std::copy(src.begin(), src.end(), this->bytes.data());
             if constexpr (Alphabet::is_full) {
                 if constexpr (basic_nanoid::bits_in_string <  basic_nanoid::bits_count) {
@@ -247,11 +252,8 @@ namespace muuid {
 
         /// Returns a Max nanoid
         static constexpr basic_nanoid max() noexcept {
-            char buf[CharCount + 1];
-            for(size_t i = 0; i < CharCount; ++i)
-                buf[i] = Alphabet::template forward<char>(Alphabet::size - 1);
-            buf[CharCount] = 0;
-            return basic_nanoid(buf);
+            constexpr impl::ct_string<char, CharCount + 1> ctstr(Alphabet::template forward<char>(Alphabet::size - 1));
+            return basic_nanoid(ctstr.chars);
         }
 
         /// Resets the object to a Nil nanoid

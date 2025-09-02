@@ -13,5 +13,5 @@ void muuid::impl::generate_nanoid(std::span<uint8_t> dest, uint8_t max) {
     std::uniform_int_distribution<unsigned> distrib(0, max);
 
     for (auto & b: dest)
-        b = distrib(gen);
+        b = uint8_t(distrib(gen));
 }

@@ -98,7 +98,7 @@ namespace muuid {
         ///Constructs ulid from a string literal
         template<impl::char_like T>
         consteval ulid(const T (&src)[27]) noexcept {            
-            if (!ulid::read(src, bytes) || src[26] != 0)
+            if (!ulid::read(src, this->bytes) || src[26] != 0)
                 impl::invalid_constexpr_call("invalid ulid string");
         }
 
