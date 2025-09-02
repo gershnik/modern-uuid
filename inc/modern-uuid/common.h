@@ -28,6 +28,7 @@
 #include <optional>
 #include <limits>
 #include <chrono>
+#include <numeric>
 #include <istream>
 #include <ostream>
 

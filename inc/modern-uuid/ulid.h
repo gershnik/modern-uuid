@@ -5,6 +5,7 @@
 #define HEADER_MODERN_UUID_ULID_H_INCLUDED
 
 #include <modern-uuid/common.h>
+#include <modern-uuid/bit_packer.h>
 
 namespace muuid {
     namespace impl {
@@ -42,36 +43,6 @@ namespace muuid {
             10,11,12,13,14,15,16,17, 1,18,19, 1,20,21, 0,22,23,24,25,26,32,27,28,29,30,31
         };
 
-        constexpr void base32_decode_block(std::span<const uint8_t, 8> src, std::span<uint8_t, 5> dst) {
-            dst[0] = src[0] << 3;   // |0|0|0|0|0| | | |
-            dst[0] |= src[1] >> 2;  // | | | | | |1|1|1|
-            dst[1] = src[1] << 6;   // |1|1| | | | | | |
-            dst[1] |= src[2] << 1;  // | | |2|2|2|2|2| |
-            dst[1] |= src[3] >> 4;  // | | | | | | | |3|
-            dst[2] = src[3] << 4;   // |3|3|3|3| | | | |
-            dst[2] |= src[4] >> 1;  // | | | | |4|4|4|4|
-            dst[3] = src[4] << 7;   // |4| | | | | | | |
-            dst[3] |= src[5] << 2;  // | |5|5|5|5|5| | |
-            dst[3] |= src[6] >> 3;  // | | | | | | |6|6|
-            dst[4] = src[6] << 5;   // |6|6|6| | | | | |
-            dst[4] |= src[7];       // | | | |7|7|7|7|7|
-        }
-
-        constexpr void base32_encode_block(std::span<const uint8_t, 5> src, std::span<uint8_t, 8> dst) {
-            dst[0] = src[0] >> 3;            // | | | |0|0|0|0|0|
-            dst[1] = (src[0] << 2) & 0x1Fu;  // | | | |0|0|0| | |
-            dst[1] |= src[1] >> 6;           // | | | | | | |1|1|
-            dst[2] = (src[1] >> 1) & 0x1Fu;  // | | | |1|1|1|1|1|
-            dst[3] = (src[1] << 4) & 0x1Fu;  // | | | |1| | | | |
-            dst[3] |= src[2] >> 4;           // | | | | |2|2|2|2|
-            dst[4] = (src[2] << 1) & 0x1Fu;  // | | | |2|2|2|2| |
-            dst[4] |= src[3] >> 7;           // | | | | | | | |3|
-            dst[5] = (src[3] >> 2) & 0x1Fu;  // | | | |3|3|3|3|3|
-            dst[6] = (src[3] << 3) & 0x1Fu;  // | | | |3|3| | | |
-            dst[6] |= src[4] >> 5;           // | | | | | |4|4|4|
-            dst[7] =  src[4] & 0x1Fu;        // | | | |4|4|4|4|4|
-        }
-
     }
 
     class ulid {
@@ -103,26 +74,16 @@ namespace muuid {
             }
             if (acc[0] > 7)
                 return false;
-            dest[0] = (acc[0] << 5) | acc[1];
-            impl::base32_decode_block(acc.template subspan< 2, 8>(), dest.template subspan< 1, 5>());
-            impl::base32_decode_block(acc.template subspan<10, 8>(), dest.template subspan< 6, 5>());
-            impl::base32_decode_block(acc.template subspan<18, 8>(), dest.template subspan<11, 5>());
+            impl::bit_packer<5, 16>::pack_bits(acc, dest);
             return true;
         }
 
         template<impl::char_like T>
         static constexpr void write(std::span<const uint8_t, 16> src, T * str, format fmt) {
-            uint8_t buf[26];
-            auto acc = std::span(buf);
-            
-            acc[0] = (src[0] >> 5) & 0x7u;
-            acc[1] = src[0] & 0x1Fu;
-            impl::base32_encode_block(src.template subspan< 1, 5>(), acc.template subspan< 2, 8>());
-            impl::base32_encode_block(src.template subspan< 6, 5>(), acc.template subspan<10, 8>());
-            impl::base32_encode_block(src.template subspan<11, 5>(), acc.template subspan<18, 8>());
-
             using tr = impl::ulid_char_traits<T>;
 
+            uint8_t buf[26];
+            impl::bit_packer<5, 16>::unpack_bits(src, std::span(buf));
             for(uint8_t val: buf) {
                 *str++ = tr::base32_alphabet[fmt][val];
             }

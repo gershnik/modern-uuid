@@ -11,6 +11,8 @@
 #include <map>
 #include <unordered_map>
 
+#include "test_util.h"
+
 using namespace muuid;
 using namespace std::literals;
 
@@ -59,7 +61,7 @@ TEST_CASE("nil") {
 
     constexpr uint8_t null_bytes[16] = {};
 
-    CHECK(memcmp(u.bytes.data(), null_bytes, u.bytes.size()) == 0);
+    CHECK_EQUAL_SEQ(u.bytes, null_bytes);
 }
 
 TEST_CASE("max") {
@@ -71,7 +73,7 @@ TEST_CASE("max") {
         0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
     };
 
-    CHECK(memcmp(u.bytes.data(), max_bytes, u.bytes.size()) == 0);
+    CHECK_EQUAL_SEQ(u.bytes, max_bytes);
 }
 
 TEST_CASE("bytes") {
@@ -88,8 +90,8 @@ TEST_CASE("bytes") {
     CHECK(ulid() < u2);
     CHECK(u2 == u3);
 
-    CHECK(u2.bytes == buf1);
-    CHECK(u3.bytes == buf1);
+    CHECK_EQUAL_SEQ(u2.bytes, buf1);
+    CHECK_EQUAL_SEQ(u3.bytes, buf1);
 }
 
 TEST_CASE("literals") {
@@ -102,11 +104,11 @@ TEST_CASE("literals") {
     constexpr std::array<uint8_t, 16> expected = 
         {0x01,0x56,0x3d,0xf3,0x64,0x81, 0xF7,0xBD,0xEF,0x7B,0xDE,0xF7,0xBD,0xEF,0x7B,0xDE};
     
-    CHECK(us.bytes == expected);
-    CHECK(usw.bytes == expected);
-    CHECK(us16.bytes == expected);
-    CHECK(us32.bytes == expected);
-    CHECK(us8.bytes == expected);
+    CHECK_EQUAL_SEQ(us.bytes, expected);
+    CHECK_EQUAL_SEQ(usw.bytes, expected);
+    CHECK_EQUAL_SEQ(us16.bytes, expected);
+    CHECK_EQUAL_SEQ(us32.bytes, expected);
+    CHECK_EQUAL_SEQ(us8.bytes, expected);
 }
 
 TEST_CASE("hash") {
@@ -130,13 +132,9 @@ TEST_CASE("strings") {
     CHECK(us == us1);
     CHECK(us2 == us1);
 
-    auto match = [](const std::array<char, 26> & lhs, std::string_view rhs) {
-        return std::string_view(lhs.data(), lhs.size()) == rhs;
-    };
-
-    CHECK(match(us.to_chars(), "01bx5zzkbkactav9wevgemmvry"));
-    CHECK(match(us.to_chars(ulid::lowercase), "01bx5zzkbkactav9wevgemmvry"));
-    CHECK(match(us.to_chars(ulid::uppercase), "01BX5ZZKBKACTAV9WEVGEMMVRY"));
+    CHECK_EQUAL_SEQ(us.to_chars(), "01bx5zzkbkactav9wevgemmvry"sv);
+    CHECK_EQUAL_SEQ(us.to_chars(ulid::lowercase), "01bx5zzkbkactav9wevgemmvry"sv);
+    CHECK_EQUAL_SEQ(us.to_chars(ulid::uppercase), "01BX5ZZKBKACTAV9WEVGEMMVRY"sv);
     std::array<char, 26> buf;
     us.to_chars(buf);
     CHECK(buf == us.to_chars());
@@ -145,13 +143,13 @@ TEST_CASE("strings") {
     us.to_chars(buf, ulid::uppercase);
     CHECK(buf == us.to_chars(ulid::uppercase));
 
-    CHECK(match(ulid{}.to_chars(), "00000000000000000000000000"));
-    CHECK(match(ulid{}.to_chars(ulid::lowercase), "00000000000000000000000000"));
-    CHECK(match(ulid{}.to_chars(ulid::uppercase), "00000000000000000000000000"));
+    CHECK_EQUAL_SEQ(ulid{}.to_chars(), "00000000000000000000000000"sv);
+    CHECK_EQUAL_SEQ(ulid{}.to_chars(ulid::lowercase), "00000000000000000000000000"sv);
+    CHECK_EQUAL_SEQ(ulid{}.to_chars(ulid::uppercase), "00000000000000000000000000"sv);
 
-    CHECK(match(ulid::max().to_chars(), "7zzzzzzzzzzzzzzzzzzzzzzzzz"));
-    CHECK(match(ulid::max().to_chars(ulid::lowercase), "7zzzzzzzzzzzzzzzzzzzzzzzzz"));
-    CHECK(match(ulid::max().to_chars(ulid::uppercase), "7ZZZZZZZZZZZZZZZZZZZZZZZZZ"));
+    CHECK_EQUAL_SEQ(ulid::max().to_chars(), "7zzzzzzzzzzzzzzzzzzzzzzzzz"sv);
+    CHECK_EQUAL_SEQ(ulid::max().to_chars(ulid::lowercase), "7zzzzzzzzzzzzzzzzzzzzzzzzz"sv);
+    CHECK_EQUAL_SEQ(ulid::max().to_chars(ulid::uppercase), "7ZZZZZZZZZZZZZZZZZZZZZZZZZ"sv);
 
 
 
@@ -167,13 +165,9 @@ TEST_CASE("stringsw") {
     CHECK(us == us1);
     CHECK(us2 == us1);
 
-    auto match = [](const std::array<wchar_t, 26> & lhs, std::wstring_view rhs) {
-        return std::wstring_view(lhs.data(), lhs.size()) == rhs;
-    };
-
-    CHECK(match(us.to_chars<wchar_t>(), L"01bx5zzkbkactav9wevgemmvry"));
-    CHECK(match(us.to_chars<wchar_t>(ulid::lowercase), L"01bx5zzkbkactav9wevgemmvry"));
-    CHECK(match(us.to_chars<wchar_t>(ulid::uppercase), L"01BX5ZZKBKACTAV9WEVGEMMVRY"));
+    CHECK_EQUAL_SEQ(us.to_chars<wchar_t>(), L"01bx5zzkbkactav9wevgemmvry"sv);
+    CHECK_EQUAL_SEQ(us.to_chars<wchar_t>(ulid::lowercase), L"01bx5zzkbkactav9wevgemmvry"sv);
+    CHECK_EQUAL_SEQ(us.to_chars<wchar_t>(ulid::uppercase), L"01BX5ZZKBKACTAV9WEVGEMMVRY"sv);
     std::array<wchar_t, 26> buf;
     us.to_chars(buf);
     CHECK(buf == us.to_chars<wchar_t>());
@@ -182,13 +176,13 @@ TEST_CASE("stringsw") {
     us.to_chars(buf, ulid::uppercase);
     CHECK(buf == us.to_chars<wchar_t>(ulid::uppercase));
 
-    CHECK(match(ulid{}.to_chars<wchar_t>(), L"00000000000000000000000000"));
-    CHECK(match(ulid{}.to_chars<wchar_t>(ulid::lowercase), L"00000000000000000000000000"));
-    CHECK(match(ulid{}.to_chars<wchar_t>(ulid::uppercase), L"00000000000000000000000000"));
+    CHECK_EQUAL_SEQ(ulid{}.to_chars<wchar_t>(), L"00000000000000000000000000"sv);
+    CHECK_EQUAL_SEQ(ulid{}.to_chars<wchar_t>(ulid::lowercase), L"00000000000000000000000000"sv);
+    CHECK_EQUAL_SEQ(ulid{}.to_chars<wchar_t>(ulid::uppercase), L"00000000000000000000000000"sv);
 
-    CHECK(match(ulid::max().to_chars<wchar_t>(), L"7zzzzzzzzzzzzzzzzzzzzzzzzz"));
-    CHECK(match(ulid::max().to_chars<wchar_t>(ulid::lowercase), L"7zzzzzzzzzzzzzzzzzzzzzzzzz"));
-    CHECK(match(ulid::max().to_chars<wchar_t>(ulid::uppercase), L"7ZZZZZZZZZZZZZZZZZZZZZZZZZ"));
+    CHECK_EQUAL_SEQ(ulid::max().to_chars<wchar_t>(), L"7zzzzzzzzzzzzzzzzzzzzzzzzz"sv);
+    CHECK_EQUAL_SEQ(ulid::max().to_chars<wchar_t>(ulid::lowercase), L"7zzzzzzzzzzzzzzzzzzzzzzzzz"sv);
+    CHECK_EQUAL_SEQ(ulid::max().to_chars<wchar_t>(ulid::uppercase), L"7ZZZZZZZZZZZZZZZZZZZZZZZZZ"sv);
 
 
 

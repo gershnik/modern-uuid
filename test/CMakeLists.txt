@@ -113,6 +113,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         test_system.cpp
 
         test_ulid_basics.cpp
+        test_nanoid_basics.cpp
     )
 
     if (${CMAKE_SYSTEM_NAME} STREQUAL Android)

@@ -48,6 +48,8 @@ list(APPEND INSTALL_LIBS modern-uuid-header)
 
 set(PUBLIC_HEADER_NAMES
     common.h
+    bit_packer.h
+    nanoid.h
     ulid.h
     uuid.h
 )
@@ -156,6 +158,8 @@ foreach(suffix ${BUILD_SUFFIXES})
         ${SRCDIR}/random_generator.h
         ${SRCDIR}/random_generator.cpp
         ${SRCDIR}/threading.h
+
+        ${SRCDIR}/nanoid.cpp
         ${SRCDIR}/ulid.cpp
         ${SRCDIR}/uuid.cpp
     )

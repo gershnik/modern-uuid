@@ -13,6 +13,23 @@ auto get_ends(const T & seq) {
     return std::make_pair(std::begin(seq), std::end(seq));
 }
 
+namespace std {
+    
+    template<class T, size_t N>
+    doctest::String toString(const std::array<T, N> & arr) {
+        using doctest::toString;
+        
+        doctest::String ret = "[";
+        for (size_t i = 0; i < N; ++i) {
+            if (i > 0)
+                ret += ", ";
+            ret += toString(arr[i]);
+        }
+        ret += "]";
+        return ret;
+    }
+}
+
 #define CHECK_EQUAL_SEQ(seq1, seq2) {\
     auto [c1, e1] = get_ends(seq1); \
     auto [c2, e2] = get_ends(seq2); \
