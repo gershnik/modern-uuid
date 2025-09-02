@@ -283,10 +283,14 @@ TEST_CASE("custom1") {
 
     using fooid = basic_nanoid<foo, 10>;
 
+    static_assert(sizeof(fooid) == 5); //4 * 10 = 40 
+
     constexpr auto f1 = fooid("4f90d13a42");
     constexpr auto f2 = fooid("4f90d13a41");
     CHECK(f1 != f2);
     CHECK(f1.to_string() == "4f90d13a42");
+
+    std::cout << "nanoid('1234567890abcdef', 10): " << fooid::generate() << '\n';
 }
 
 TEST_CASE("custom2") {
@@ -295,10 +299,78 @@ TEST_CASE("custom2") {
 
     using fooid = basic_nanoid<foo, 10>;
 
+    static_assert(sizeof(fooid) == 7); //5 * 10 = 50 => 56
+
     constexpr auto f1 = fooid("4f90d13a42");
     constexpr auto f2 = fooid("4f90d13a41");
     CHECK(f1 != f2);
     CHECK(f1.to_string() == "4f90d13a42");
+
+    std::cout << "nanoid('1234567890abcdefqm', 10): " << fooid::generate() << '\n';
+}
+
+TEST_CASE("custom3") {
+
+    MUUID_DECLARE_NANOID_ALPHABET(foo, "1234567890");
+
+    using fooid = basic_nanoid<foo, 3>;
+
+    static_assert(sizeof(fooid) == 2); //4 * 3 = 12
+
+    constexpr auto f1 = fooid("478");
+    constexpr auto f2 = fooid("479");
+    CHECK(f1 != f2);
+    CHECK(f1.to_string() == "478");
+
+    std::cout << "nanoid('1234567890', 3): " << fooid::generate() << '\n';
+}
+
+TEST_CASE("custom4") {
+
+    MUUID_DECLARE_NANOID_ALPHABET(foo, "12345");
+
+    using fooid = basic_nanoid<foo, 3>;
+
+    static_assert(sizeof(fooid) == 2); //4 * 3 = 12
+
+    constexpr auto f1 = fooid("421");
+    constexpr auto f2 = fooid("422");
+    CHECK(f1 != f2);
+    CHECK(f1.to_string() == "421");
+
+    std::cout << "nanoid('12345', 3): " << fooid::generate() << '\n';
+}
+
+TEST_CASE("custom5") {
+
+    MUUID_DECLARE_NANOID_ALPHABET(foo, "123");
+
+    using fooid = basic_nanoid<foo, 7>;
+
+    static_assert(sizeof(fooid) == 2); //2 * 7 = 14
+
+    constexpr auto f1 = fooid("3211233");
+    constexpr auto f2 = fooid("3211232");
+    CHECK(f1 != f2);
+    CHECK(f1.to_string() == "3211233");
+
+    std::cout << "nanoid('123', 7): " << fooid::generate() << '\n';
+}
+
+TEST_CASE("custom6") {
+
+    MUUID_DECLARE_NANOID_ALPHABET(foo, "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict!?");
+
+    using fooid = basic_nanoid<foo, 9>;
+
+    auto gug = fooid::from_chars("nTXfkq!Pu");
+
+    constexpr auto f1 = fooid("nTXfkq!Pu");
+    constexpr auto f2 = fooid("nTXfkq!Ps");
+    CHECK(f1 != f2);
+    CHECK(f1.to_string() == "nTXfkq!Pu");
+
+    std::cout << "nanoid('<huge>', 9): " << fooid::generate() << '\n';
 }
 
 }

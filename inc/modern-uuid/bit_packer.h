@@ -40,8 +40,8 @@ namespace muuid::impl {
             size_t i = 0, j = 0;
             do {
                 dst[i] = src[j++] << 6;
-                dst[i] = src[j++] << 4;
-                dst[i] = src[j++] << 2;
+                dst[i] |= src[j++] << 4;
+                dst[i] |= src[j++] << 2;
                 dst[i] |= src[j++];
                 ++i;
             } while (i < bit_packer::packed_bytes);
@@ -323,25 +323,25 @@ namespace muuid::impl {
             do {
                 switch (state) {
                 case 0: dst[i] = src[j++] << 1;   // |0|0|0|0|0|0|0| |
-                case 1: dst[i] |= src[j] >> 6;    // | | | | | | | |1|
+                        dst[i] |= src[j] >> 6;    // | | | | | | | |1|
                         ++i;
-                        dst[i] = src[j++] << 2;   // |1|1|1|1|1|1| | |
-                case 2: dst[i] |= src[j] >> 5;    // | | | | | | |2|2|
+                case 6: dst[i] = src[j++] << 2;   // |1|1|1|1|1|1| | |
+                        dst[i] |= src[j] >> 5;    // | | | | | | |2|2|
                         ++i;
-                        dst[i] = src[j++] << 3;   // |2|2|2|2|2| | | |
-                case 3: dst[i] |= src[j] >> 4;    // | | | | | |3|3|3|
+                case 5: dst[i] = src[j++] << 3;   // |2|2|2|2|2| | | |
+                        dst[i] |= src[j] >> 4;    // | | | | | |3|3|3|
                         ++i;
-                        dst[i] = src[j++] << 4;   // |3|3|3|3| | | | |
-                case 4: dst[i] |= src[j] >> 3;    // | | | | |4|4|4|4|
+                case 4: dst[i] = src[j++] << 4;   // |3|3|3|3| | | | |
+                        dst[i] |= src[j] >> 3;    // | | | | |4|4|4|4|
                         ++i;
-                        dst[i] = src[j++] << 5;   // |4|4|4| | | | | |
-                case 5: dst[i] |= src[j] >> 2;    // | | | |5|5|5|5|5|
+                case 3: dst[i] = src[j++] << 5;   // |4|4|4| | | | | |
+                        dst[i] |= src[j] >> 2;    // | | | |5|5|5|5|5|
                         ++i;
-                        dst[i] = src[j++] << 6;   // |5|5| | | | | | |
-                case 6: dst[i] |= src[j] >> 1;    // | | |6|6|6|6|6|6|
+                case 2: dst[i] = src[j++] << 6;   // |5|5| | | | | | |
+                        dst[i] |= src[j] >> 1;    // | | |6|6|6|6|6|6|
                         ++i;
-                        dst[i] = src[j++] << 6;   // |6| | | | | | | |
-                case 7: dst[i] |= src[j] >> 1;    // | |7|7|7|7|7|7|7|
+                case 1: dst[i] = src[j++] << 7;   // |6| | | | | | | |
+                        dst[i] |= src[j++];       // | |7|7|7|7|7|7|7|
                         ++i;
                 }
                 state = 0;
