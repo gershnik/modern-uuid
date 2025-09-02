@@ -7,6 +7,7 @@
 #include <doctest/doctest.h>
 
 #include <iterator>
+#include <array>
 
 template<class T>
 auto get_ends(const T & seq) {

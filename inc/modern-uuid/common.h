@@ -29,6 +29,7 @@
 #include <limits>
 #include <chrono>
 #include <numeric>
+#include <algorithm>
 #include <istream>
 #include <ostream>
 

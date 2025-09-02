@@ -6,6 +6,11 @@
 
 #include <modern-uuid/common.h>
 
+//We are using Duff's device throughout this file. Shut the GCC warning up
+#ifdef __GNUC__
+    #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
+
 
 namespace muuid::impl {
 
