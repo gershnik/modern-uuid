@@ -277,5 +277,29 @@ TEST_CASE("generate") {
     std::cout << "nanoid: " << u2 << '\n';
 }
 
+TEST_CASE("custom1") {
+
+    MUUID_DECLARE_NANOID_ALPHABET(foo, "1234567890abcdef");
+
+    using fooid = basic_nanoid<foo, 10>;
+
+    constexpr auto f1 = fooid("4f90d13a42");
+    constexpr auto f2 = fooid("4f90d13a41");
+    CHECK(f1 != f2);
+    CHECK(f1.to_string() == "4f90d13a42");
+}
+
+TEST_CASE("custom2") {
+
+    MUUID_DECLARE_NANOID_ALPHABET(foo, "1234567890abcdefqm");
+
+    using fooid = basic_nanoid<foo, 10>;
+
+    constexpr auto f1 = fooid("4f90d13a42");
+    constexpr auto f2 = fooid("4f90d13a41");
+    CHECK(f1 != f2);
+    CHECK(f1.to_string() == "4f90d13a42");
+}
 
 }
+

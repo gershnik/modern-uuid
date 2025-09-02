@@ -101,11 +101,11 @@ namespace muuid {
                 if (unsigned(c) >= 128)
                     return size;
                 if constexpr (std::is_same_v<C, char32_t> || std::is_same_v<C, char16_t> || std::is_same_v<C, char8_t>)
-                    return reverse_utf[unsigned(c)];
+                    return alphabet_impl::reverse_utf[unsigned(c)];
                 else if constexpr (std::is_same_v<C, wchar_t>)
-                    return reverse_wide[unsigned(c)];
+                    return alphabet_impl::reverse_wide[unsigned(c)];
                 else
-                    return reverse_narrow[unsigned(c)];
+                    return alphabet_impl::reverse_narrow[unsigned(c)];
             }
         };
 
@@ -146,13 +146,14 @@ namespace muuid {
         template<impl::char_like T>
         static constexpr bool read(const T * str, std::span<uint8_t, bytes_count> dest) noexcept {
             uint8_t buf[unpack_buf_size];
-            constexpr size_t first_offset = (CharCount != unpack_buf_size);
+            constexpr size_t padding = unpack_buf_size - CharCount;
             
-            if constexpr (first_offset)
-                buf[0] = 0;
+            size_t i = 0; 
+            for(; i < padding; ++i)
+                buf[i] = 0;
 
-            for(size_t i = first_offset; i < unpack_buf_size; ++i) {
-                auto c = str[i - first_offset];
+            for(; i < unpack_buf_size; ++i) {
+                auto c = str[i - padding];
                 uint8_t val = Alphabet::reverse(c);
                 if (val >= Alphabet::size)
                     return false;
@@ -165,10 +166,10 @@ namespace muuid {
         template<impl::char_like T>
         static constexpr void write(std::span<const uint8_t, bytes_count> src, T * str) noexcept {
             uint8_t buf[unpack_buf_size];
-            constexpr size_t first_offset = (CharCount != unpack_buf_size);
+            constexpr size_t padding = unpack_buf_size - CharCount;
 
             impl::bit_packer<Alphabet::bits_per_char, bytes_count>::unpack_bits(src, std::span(buf));
-            for(size_t i = first_offset; i < std::size(buf); ++i) {
+            for(size_t i = padding; i < std::size(buf); ++i) {
                 *str++ = Alphabet::template forward<T>(buf[i]);
             }
         }
@@ -208,10 +209,10 @@ namespace muuid {
                 }
             } else {
                 uint8_t buf[unpack_buf_size];
-                constexpr size_t first_offset = (CharCount != unpack_buf_size);
+                constexpr size_t padding = unpack_buf_size - CharCount;
 
                 impl::bit_packer<Alphabet::bits_per_char, bytes_count>::unpack_bits(this->bytes, std::span(buf));
-                for(size_t i = first_offset; i < std::size(buf); ++i) {
+                for(size_t i = padding; i < std::size(buf); ++i) {
                     if (buf[i] >= Alphabet::size)
                         MUUID_THROW(std::runtime_error("invalid muuid bytes"));
                 }
@@ -238,12 +239,12 @@ namespace muuid {
             } else {
                 uint8_t unpacked[unpack_buf_size];
                 std::span<uint8_t> unpacked_span(unpacked);
-                constexpr size_t first_offset = (CharCount != unpack_buf_size);
+                constexpr size_t padding = unpack_buf_size - CharCount;
                 
-                if constexpr (first_offset) {
-                    unpacked_span[0] = 0;
-                    unpacked_span = unpacked_span.subspan(1);
-                }
+                for(size_t i = 0; i < padding; ++i)
+                    unpacked_span[i] = 0;
+                
+                unpacked_span = unpacked_span.subspan(padding);
                 impl::generate_nanoid(unpacked_span, Alphabet::size - 1);
                 impl::bit_packer<Alphabet::bits_per_char, bytes_count>::pack_bits(std::span(unpacked), buf);
             }
