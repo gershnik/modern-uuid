@@ -180,41 +180,6 @@ namespace muuid {
                 impl::invalid_constexpr_call("invalid nanoid string");
         }
 
-        /// Constructs nanoid from a span of bytes_count byte-like objects
-        template<impl::byte_like Byte>
-        constexpr basic_nanoid(std::span<Byte, bytes_count> src) 
-                noexcept(Alphabet::is_full && basic_nanoid::bits_in_string == basic_nanoid::bits_count) {
-
-            std::copy(src.begin(), src.end(), this->bytes.data());
-            if constexpr (Alphabet::is_full) {
-                if constexpr (basic_nanoid::bits_in_string <  basic_nanoid::bits_count) {
-                    constexpr uint8_t mask = uint8_t((1u << (basic_nanoid::bits_in_string % 8)) - 1);
-                    if (bytes[0] > mask)
-                        MUUID_THROW(std::runtime_error("invalid muuid bytes"));
-                }
-            } else {
-                uint8_t buf[unpack_buf_size];
-                constexpr size_t padding = unpack_buf_size - CharCount;
-
-                impl::bit_packer<Alphabet::bits_per_char, bytes_count>::unpack_bits(this->bytes, std::span(buf));
-                for(size_t i = padding; i < std::size(buf); ++i) {
-                    if (buf[i] >= Alphabet::size)
-                        MUUID_THROW(std::runtime_error("invalid muuid bytes"));
-                }
-            }
-        }
-
-        /// Constructs nanoid from anything convertible to a span of bytes_count byte-like objects
-        template<class T>
-        requires( !impl::is_span<T> && requires(const T & x) { 
-            std::span{x}; 
-            requires impl::byte_like<std::remove_reference_t<decltype(*std::span{x}.begin())>>; 
-            requires decltype(std::span{x})::extent == bytes_count;
-        })
-        constexpr basic_nanoid(const T & src) noexcept(noexcept(basic_nanoid{std::span{src}})):
-            basic_nanoid{std::span{src}}
-        {}
-
         /// Generates a nanoid
         static auto generate() -> basic_nanoid {
             std::array<uint8_t, bytes_count> buf;
@@ -249,6 +214,44 @@ namespace muuid {
 
         constexpr friend auto operator==(const basic_nanoid & lhs, const basic_nanoid & rhs) noexcept -> bool = default;
         constexpr friend auto operator<=>(const basic_nanoid & lhs, const basic_nanoid & rhs) noexcept -> std::strong_ordering = default;
+
+
+        /// Constructs nanoid from a span of bytes_count byte-like objects
+        template<impl::byte_like Byte>
+        static constexpr std::optional<basic_nanoid> from_bytes(std::span<Byte, bytes_count> src) noexcept {
+
+            basic_nanoid ret;
+            std::copy(src.begin(), src.end(), ret.bytes.data());
+
+            if constexpr (!Alphabet::is_full) {
+                uint8_t buf[unpack_buf_size];
+                constexpr size_t padding = unpack_buf_size - CharCount;
+
+                impl::bit_packer<Alphabet::bits_per_char, bytes_count>::unpack_bits(ret.bytes, std::span(buf));
+                for(size_t i = padding; i < std::size(buf); ++i) {
+                    if (buf[i] >= Alphabet::size)
+                        return {};
+                }
+
+            } else if constexpr (basic_nanoid::bits_in_string <  basic_nanoid::bits_count) {
+
+                constexpr uint8_t mask = uint8_t((1u << (basic_nanoid::bits_in_string % 8)) - 1);
+                if (ret.bytes[0] > mask)
+                    return {};
+            }
+            return ret;
+        }
+
+        /// Constructs nanoid from anything convertible to a span of bytes_count byte-like objects
+        template<class T>
+        requires( !impl::is_span<T> && requires(const T & x) { 
+            std::span{x}; 
+            requires impl::byte_like<std::remove_reference_t<decltype(*std::span{x}.begin())>>; 
+            requires decltype(std::span{x})::extent == bytes_count;
+        })
+        static constexpr std::optional<basic_nanoid> from_bytes(const T & src) noexcept {
+            return from_bytes(std::span{src});
+        }
 
         /// Parses nanoid from a span of characters
         template<impl::char_like T, size_t Extent>

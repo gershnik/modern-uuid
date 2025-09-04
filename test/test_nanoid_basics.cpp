@@ -78,21 +78,21 @@ TEST_CASE("bytes") {
     constexpr std::array<uint8_t, 16> buf1 = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
     std::vector<uint8_t> buf2{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}};
 
-    constexpr nanoid u1(buf1);
-    constexpr nanoid u2{std::array<uint8_t, 16>{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}}};
-    nanoid u3{std::span<uint8_t, 16>{buf2}};
-    nanoid u4{std::span{buf2}.subspan<0, 16>()};
+    constexpr nanoid u1 = *nanoid::from_bytes(buf1);
+    constexpr nanoid u2 = *nanoid::from_bytes(std::array<uint8_t, 16>{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}});
+    nanoid u3 = *nanoid::from_bytes(std::span<uint8_t, 16>{buf2});
+    nanoid u4 = *nanoid::from_bytes(std::span{buf2}.subspan<0, 16>());
 
     CHECK(u1 == u2);
     CHECK(u1 != nanoid());
     CHECK(nanoid() < u2);
     CHECK(u2 == u3);
+    CHECK(u4 == u3);
 
     CHECK(u2.bytes == buf1);
     CHECK(u3.bytes == buf1);
 
-    //constexpr nanoid invalid{std::array<uint8_t, 16>{{255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255}}};
-    //CHECK(invalid == nanoid::max());
+    CHECK(!nanoid::from_bytes(std::array<uint8_t, 16>{{255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255}}));
 }
 
 TEST_CASE("literals") {
