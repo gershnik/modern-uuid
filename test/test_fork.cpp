@@ -5,6 +5,7 @@
 
 #include <modern-uuid/uuid.h>
 #include <modern-uuid/ulid.h>
+#include <modern-uuid/nanoid.h>
 
 #include <iostream>
 
@@ -25,6 +26,7 @@ TEST_CASE("simple") {
     auto up1 = uuid::generate_time_based();
     auto up2 = uuid::generate_unix_time_based();
     auto up3 = ulid::generate();
+    nanoid::generate();
 
     int pipes[2];
     REQUIRE(pipe(pipes) == 0);
@@ -36,6 +38,7 @@ TEST_CASE("simple") {
         auto uc1 = uuid::generate_time_based();
         auto uc2 = uuid::generate_unix_time_based();
         auto uc3 = ulid::generate();
+        auto uc4 = nanoid::generate();
 
         while (write(pipes[1], uc1.bytes.data(), uc1.bytes.size()) == -1) {
             int err = errno;
@@ -58,13 +61,20 @@ TEST_CASE("simple") {
             std::cout << "child: 3rd write failed: " << err << '\n';
             exit(2);
         }
+        while (write(pipes[1], uc4.bytes.data(), uc4.bytes.size()) == -1) {
+            int err = errno;
+            if (err == EINTR)
+                continue;
+            std::cout << "child: 4th write failed: " << err << '\n';
+            exit(2);
+        }
         close(pipes[1]);
         exit(0);
     } else {
         //parent
         close(pipes[1]);
 
-        uint8_t buf[3 * sizeof(uuid)];
+        uint8_t buf[4 * sizeof(uuid)];
         for (size_t read_count = 0; read_count < sizeof(buf); ) {
             auto res = read(pipes[0], buf + read_count, sizeof(buf) - read_count);
             if (res < 0) {
@@ -95,10 +105,12 @@ TEST_CASE("simple") {
         uuid ur1(std::span<uint8_t, sizeof(uuid)>{buf, sizeof(uuid)});
         uuid ur2(std::span<uint8_t, sizeof(uuid)>{buf + sizeof(uuid), sizeof(uuid)});
         ulid ur3(std::span<uint8_t, sizeof(ulid)>{buf + 2 * sizeof(uuid), sizeof(ulid)});
+        nanoid ur4 = nanoid::from_bytes(std::span<uint8_t, sizeof(ulid)>{buf + 3 * sizeof(uuid), sizeof(nanoid)}).value();
 
         std::cout << "child v1: " << ur1 << '\n';
         std::cout << "child v7: " << ur2 << '\n';
         std::cout << "child ulid: " << ur3 << '\n';
+        std::cout << "child nanoid: " << ur4 << '\n';
 
         CHECK(ur1.get_variant() == uuid::variant::standard);
         CHECK(ur1.get_type() == uuid::type::time_based);
@@ -108,6 +120,7 @@ TEST_CASE("simple") {
         CHECK(up1 != ur1);
         CHECK(up2 < ur2);
         CHECK(up3 != ur3);
+        CHECK(nanoid::generate() != ur4);
     }
 
 }

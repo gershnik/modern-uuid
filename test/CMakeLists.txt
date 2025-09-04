@@ -106,6 +106,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         test_util.h
 
         main.cpp
+        test_bit_packer.cpp
         test_basics.cpp
         test_fmt.cpp
         test_fork.cpp

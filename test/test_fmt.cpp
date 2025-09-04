@@ -6,6 +6,7 @@
 #include <fmt/format.h>
 #include <modern-uuid/uuid.h>
 #include <modern-uuid/ulid.h>
+#include <modern-uuid/nanoid.h>
 
 using namespace muuid;
 using namespace std::literals;
@@ -28,6 +29,12 @@ TEST_CASE("format ulid") {
     CHECK(fmt::format("{}", ulid("01BX5ZZKBKACTAV9WEVGEMMVRY")) == "01bx5zzkbkactav9wevgemmvry");
     CHECK(fmt::format("{:l}", ulid("01BX5ZZKBKACTAV9WEVGEMMVRY")) == "01bx5zzkbkactav9wevgemmvry");
     CHECK(fmt::format("{:u}", ulid("01BX5ZZKBKACTAV9WEVGEMMVRY")) == "01BX5ZZKBKACTAV9WEVGEMMVRY");
+}
+
+TEST_CASE("format nanoid") {
+
+    CHECK(fmt::format("{}", nanoid()) == "uuuuuuuuuuuuuuuuuuuuu");
+    CHECK(fmt::format("{}", nanoid("Uakgb_J5m9g-0JDMbcJqL")) == "Uakgb_J5m9g-0JDMbcJqL");
 }
 
 }

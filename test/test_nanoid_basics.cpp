@@ -78,10 +78,10 @@ TEST_CASE("bytes") {
     constexpr std::array<uint8_t, 16> buf1 = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
     std::vector<uint8_t> buf2{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}};
 
-    constexpr nanoid u1 = *nanoid::from_bytes(buf1);
-    constexpr nanoid u2 = *nanoid::from_bytes(std::array<uint8_t, 16>{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}});
-    nanoid u3 = *nanoid::from_bytes(std::span<uint8_t, 16>{buf2});
-    nanoid u4 = *nanoid::from_bytes(std::span{buf2}.subspan<0, 16>());
+    constexpr nanoid u1 = nanoid::from_bytes(buf1).value();
+    constexpr nanoid u2 = nanoid::from_bytes(std::array<uint8_t, 16>{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}}).value();
+    nanoid u3 = nanoid::from_bytes(std::span<uint8_t, 16>{buf2}).value();
+    nanoid u4 = nanoid::from_bytes(std::span{buf2}.subspan<0, 16>()).value();
 
     CHECK(u1 == u2);
     CHECK(u1 != nanoid());
@@ -363,12 +363,30 @@ TEST_CASE("custom6") {
 
     using fooid = basic_nanoid<foo, 9>;
 
+    static_assert(sizeof(fooid) == 8); //7 * 9 = 63 
+
     constexpr auto f1 = fooid("nTXfkq!Pu");
     constexpr auto f2 = fooid("nTXfkq!Ps");
     CHECK(f1 != f2);
     CHECK(f1.to_string() == "nTXfkq!Pu");
 
     std::cout << "nanoid('<huge>', 9): " << fooid::generate() << '\n';
+}
+
+TEST_CASE("custom7") {
+
+    MUUID_DECLARE_NANOID_ALPHABET(foo, "useandom");
+
+    using fooid = basic_nanoid<foo, 1>;
+
+    static_assert(sizeof(fooid) == 1); //3 * 1 = 3 
+
+    constexpr auto f1 = fooid("s");
+    constexpr auto f2 = fooid("e");
+    CHECK(f1 != f2);
+    CHECK(f1.to_string() == "s");
+
+    std::cout << "nanoid('useandom', 1): " << fooid::generate() << '\n';
 }
 
 }
