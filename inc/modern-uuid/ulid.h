@@ -9,40 +9,132 @@
 
 namespace muuid {
     namespace impl {
-        template<char_like C> struct ulid_char_traits;
+        template<char_like C> struct ulid_char_traits {
+            static constexpr unsigned max = 128;
 
-        #define MUUID_MAKE_ULID_CHAR_TRAITS(type, pr) \
-            template<> struct ulid_char_traits<type> { \
-                static constexpr type fmt_l = pr##'l'; \
-                static constexpr type fmt_u = pr##'u'; \
-                static constexpr type fmt_cl_br = pr##'}'; \
-                \
-                static constexpr type zero = pr##'0'; \
-                static constexpr type nine = pr##'9'; \
-                static constexpr type a = pr##'a'; \
-                static constexpr type z = pr##'z'; \
-                static constexpr type A = pr##'A'; \
-                static constexpr type Z = pr##'Z'; \
-                \
-                static inline constexpr type base32_alphabet[2][33] = { \
-                    pr##"0123456789abcdefghjkmnpqrstvwxyz", \
-                    pr##"0123456789ABCDEFGHJKMNPQRSTVWXYZ", \
-                }; \
-            }
-
-        MUUID_MAKE_ULID_CHAR_TRAITS(char, );
-        MUUID_MAKE_ULID_CHAR_TRAITS(wchar_t, L);
-        MUUID_MAKE_ULID_CHAR_TRAITS(char16_t, u);
-        MUUID_MAKE_ULID_CHAR_TRAITS(char32_t, U);
-        MUUID_MAKE_ULID_CHAR_TRAITS(char8_t, u8);
-
-        #undef MUUID_MAKE_ULID_CHAR_TRAITS
-
-        static inline constexpr uint8_t base32_letter_values[26] = {
-        //   a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  p  q  r  s  t  u  v  w  x  y  z
-            10,11,12,13,14,15,16,17, 1,18,19, 1,20,21, 0,22,23,24,25,26,32,27,28,29,30,31
+            static constexpr C i = C(u8'i');
+            static constexpr C I = C(u8'I');
+            static constexpr C o = C(u8'o');
+            static constexpr C O = C(u8'O');
+            static constexpr C l = C(u8'l');
+            static constexpr C L = C(u8'L');
+            static constexpr C u = C(u8'u');
+            static constexpr C cl_br = C(u8'}');
         };
 
+        template<> struct ulid_char_traits<char> {
+            static constexpr unsigned max = ('a' == u8'a' ? 128 : 256);
+
+            static constexpr char i = 'i';
+            static constexpr char I = 'I';
+            static constexpr char o = 'o';
+            static constexpr char O = 'O';
+            static constexpr char l = 'l';
+            static constexpr char L = 'L';
+            static constexpr char u = 'u';
+            static constexpr char cl_br = '}';
+        };
+
+        template<> struct ulid_char_traits<wchar_t> {
+            static constexpr unsigned max = (L'a' == u8'a' ? 128 : 256);
+
+            static constexpr wchar_t i = L'i';
+            static constexpr wchar_t I = L'I';
+            static constexpr wchar_t o = L'o';
+            static constexpr wchar_t O = L'O';
+            static constexpr wchar_t l = L'l';
+            static constexpr wchar_t L = L'L';
+            static constexpr wchar_t u = L'u';
+            static constexpr wchar_t cl_br = L'}';
+        };
+
+
+        #define MUUID_ULID_ALPHABET(...) \
+                __VA_ARGS__##"0123456789abcdefghjkmnpqrstvwxyz" \
+                __VA_ARGS__##"0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+        template<class C, size_t N>
+        static consteval auto make_reverse_ulid_alphabet(const C (&chars)[N]) {
+            using tr = ulid_char_traits<C>;
+
+            std::array<uint8_t, tr::max> ret;
+            for (size_t i = 0; i < std::size(ret); ++i) {
+                auto val = uint8_t(std::find(std::begin(chars), std::end(chars) - 1, C(i)) - std::begin(chars));
+                if (val != N - 1) {
+                    ret[i] = val % ((N - 1) / 2);
+                } else {
+                    ret[i] = (N - 1) / 2;
+                }
+            }
+            ret[tr::i] = 1;
+            ret[tr::I] = 1;
+            ret[tr::l] = 1;
+            ret[tr::L] = 1;
+            ret[tr::o] = 0;
+            ret[tr::O] = 0;
+            return ret; 
+        }
+
+        class ulid_alphabet {
+        private:
+            static constexpr const char narrow[] = MUUID_ULID_ALPHABET();
+            static constexpr const wchar_t wide[] = MUUID_ULID_ALPHABET(L);
+            static constexpr const char8_t utf[] = MUUID_ULID_ALPHABET(u8);
+
+            
+            static constexpr auto reverse_narrow = make_reverse_ulid_alphabet(narrow);
+            static constexpr auto reverse_wide = make_reverse_ulid_alphabet(wide);
+            static constexpr auto reverse_utf = make_reverse_ulid_alphabet(utf);
+
+        public:
+            static constexpr size_t size = (std::size(utf) - 1) / 2;
+
+        public:
+            template<impl::char_like C> 
+            static constexpr C encode(bool uppercase, uint8_t idx) noexcept {
+                auto real_idx = idx + (uppercase << ct_log2<size>::value);
+
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
+                    return C(utf[real_idx]);
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+                    return wide[real_idx];
+                } else {
+                    return narrow[real_idx];
+                }
+            }
+            
+            template<impl::char_like C>
+            static constexpr uint8_t decode(C c) noexcept {
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
+                
+                    if (unsigned(c) >= std::size(reverse_utf))
+                        return size;
+                    return reverse_utf[unsigned(c)];
+                
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+
+                    if (unsigned(c) >= std::size(reverse_wide))
+                        return size;
+                    return reverse_wide[unsigned(c)];
+
+                } else {
+
+                    if (unsigned(c) >= std::size(reverse_narrow))
+                        return size;
+                    return reverse_narrow[unsigned(c)];
+                }
+            }
+        };
+
+        #undef MUUID_ULID_ALPHABET
     }
 
     class ulid {
@@ -55,37 +147,26 @@ namespace muuid {
     private:
         template<impl::char_like T>
         static constexpr bool read(const T * str, std::span<uint8_t, 16> dest) noexcept {
-            using tr = impl::ulid_char_traits<T>;
-
             uint8_t buf[26];
-            auto acc = std::span(buf);
             for(int i = 0; i < 26; ++i) {
                 T c = str[i];
-                uint8_t val = 32;
-                if (c >= tr::zero && c <= tr::nine)
-                    val = uint8_t(c - tr::zero);
-                else if (c >= tr::a && c <= tr::z)
-                    val = impl::base32_letter_values[c - tr::a];
-                else if (c >= tr::A && c <= tr::Z)
-                    val = impl::base32_letter_values[c - tr::A];
-                if (val > 31)
+                uint8_t val = impl::ulid_alphabet::decode(c);
+                if (val >= impl::ulid_alphabet::size)
                     return false;
-                acc[i] = val;
+                buf[i] = val;
             }
-            if (acc[0] > 7)
+            if (buf[0] > 7)
                 return false;
-            impl::bit_packer<5, 16>::pack_bits(acc, dest);
+            impl::bit_packer<5, 16>::pack_bits(std::span(buf), dest);
             return true;
         }
 
         template<impl::char_like T>
         static constexpr void write(std::span<const uint8_t, 16> src, T * str, format fmt) noexcept {
-            using tr = impl::ulid_char_traits<T>;
-
             uint8_t buf[26];
             impl::bit_packer<5, 16>::unpack_bits(src, std::span(buf));
             for(uint8_t val: buf) {
-                *str++ = tr::base32_alphabet[fmt][val];
+                *str++ = impl::ulid_alphabet::encode<T>(fmt, val);
             }
         }
     public:
@@ -267,11 +348,11 @@ namespace muuid {
 
                 auto it = ctx.begin();
                 while(it != ctx.end()) {
-                    if (*it == tr::fmt_l) {
+                    if (*it == tr::l) {
                         this->fmt = ulid::lowercase; ++it;
-                    } else if (*it == tr::fmt_u) {
+                    } else if (*it == tr::u) {
                         this->fmt = ulid::uppercase; ++it;
-                    } else if (*it == tr::fmt_cl_br) {
+                    } else if (*it == tr::cl_br) {
                         break;
                     } else {
                         static_cast<Derived *>(this)->raise_exception("Invalid format args");

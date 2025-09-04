@@ -11,19 +11,29 @@ namespace muuid {
 
     namespace impl {
 
-        template<impl::char_like C>
-        constexpr bool invalid_nanoid_char(C c) {
-            return unsigned(c) >= 128;
+        template<class T> struct nanoid_char_traits {
+            static constexpr T fmt_cl_br = T(u8'}');
+            static constexpr unsigned max = 128;
+        };
+        template<> struct nanoid_char_traits<char> {
+            static constexpr char fmt_cl_br = '}';
+            static constexpr unsigned max = ('a' == u8'a' ? 128 : 256);
+        };
+        template<> struct nanoid_char_traits<wchar_t> {
+            static constexpr wchar_t fmt_cl_br = L'}';
+            static constexpr unsigned max = (L'a' == u8'a' ? 128 : 256);
+        };
+
+        template<class C, size_t N>
+        consteval bool valid_nanoid_alphabet(const C (&values)[N]) {
+            return std::find_if(std::begin(values), std::end(values) - 1, [](auto c) {
+                return unsigned(c) >= nanoid_char_traits<C>::max;
+            }) == std::end(values) - 1;
         }
 
-        template<impl::char_like C, size_t N>
-        constexpr bool valid_nanoid_alphabet(const C (&values)[N]) {
-            return std::find_if(std::begin(values), std::end(values) - 1, invalid_nanoid_char<C>) == std::end(values) - 1;
-        }
-
-        template<impl::char_like C, size_t N> 
-        constexpr std::array<uint8_t, 128> make_reverse_nanoid_alphabet(const C (&values)[N]) {
-            std::array<uint8_t, 128> ret;
+        template<class C, size_t N>
+        consteval auto make_reverse_nanoid_alphabet(const C (&values)[N]) {
+            std::array<uint8_t, nanoid_char_traits<C>::max> ret;
             for (size_t i = 0; i < std::size(ret); ++i) {
                 auto val = uint8_t(std::find(std::begin(values), std::end(values) - 1, C(i)) - std::begin(values));
                 ret[i] = val;
@@ -31,100 +41,75 @@ namespace muuid {
             return ret; 
         }
 
-        template<size_t Val>
-        requires(Val > 0 && Val <= 128)
-        static constexpr size_t ct_log2() {
-            if constexpr (Val == 1) return 0;
-            else if constexpr (Val < 4) return 1;
-            else if constexpr (Val < 8) return 2;
-            else if constexpr (Val < 16) return 3;
-            else if constexpr (Val < 32) return 4;
-            else if constexpr (Val < 64) return 5;
-            else if constexpr (Val < 128) return 6;
-            return 7;
-        }
-
-        template<class T, size_t N>
-        struct ct_string {
-            T chars[N];
-
-            constexpr auto size() const -> size_t { return N - 1; }
-
-            constexpr ct_string(const T (&src)[N]) {
-                std::copy(src, src + N, this->chars);
-            }
-
-            constexpr ct_string(const T el) {
-                std::fill(this->chars, this->chars + N - 1, el);
-                this->chars[N - 1] = 0;
-            }
-        };
-        template<class T, size_t N>
-        ct_string(const T (&src)[N]) -> ct_string<T, N>;
-
-
         template<ct_string narrow, ct_string wide, ct_string utf>
-        class alphabet_impl {
-            static_assert(narrow.size() > 1, "alphabet must contain at least 2 characters");
-            static_assert(narrow.size() <= 128, "alphabet must contain at most 128 characters");
-            static_assert(wide.size() == narrow.size());
-            static_assert(utf.size() == narrow.size());
+        class nanoid_alphabet {
+            static_assert(valid_nanoid_alphabet(utf.chars), "alphabet characters must be in Unicode range (0, 127]");
+            static_assert(utf.size() > 1, "alphabet must contain at least 2 characters");
+            static_assert(utf.size() <= 128, "alphabet must contain at most 128 characters");
+            
+            static_assert(utf.size() == narrow.size(), "multi-byte characters are not allowed");
+            static_assert(utf.size() == wide.size(), "multi-wchar_t characters are not allowed");
 
-            static_assert(valid_nanoid_alphabet(narrow.chars), "alphabet characters must be in range (0, 127]");
-            static_assert(valid_nanoid_alphabet(wide.chars), "wide alphabet characters must be in range (0, 127]");
-            static_assert(valid_nanoid_alphabet(utf.chars), "utf alphabet characters must be in range (0, 127]");
+            
+            static_assert(valid_nanoid_alphabet(wide.chars), "wide alphabet characters are out of allowed range");
+            static_assert(valid_nanoid_alphabet(narrow.chars), "alphabet characters are out of allowed range");
 
         private:
             static constexpr auto reverse_narrow = make_reverse_nanoid_alphabet(narrow.chars);
             static constexpr auto reverse_wide = make_reverse_nanoid_alphabet(wide.chars);
-            static constexpr auto reverse_utf = make_reverse_nanoid_alphabet(narrow.chars);
+            static constexpr auto reverse_utf = make_reverse_nanoid_alphabet(utf.chars);
 
         public:
-            static constexpr size_t size = narrow.size(); 
-            static constexpr bool is_full = size_t(size_t(1) << ct_log2<size>()) == size;
-            static constexpr size_t bits_per_char = ct_log2<size>() + !is_full;
+            static constexpr size_t size = utf.size();
+            static constexpr bool is_full = size_t(size_t(1) << ct_log2<size>::value) == size;
+            static constexpr size_t bits_per_char = ct_log2<size>::value + !is_full;
             
 
         public:
             template<impl::char_like C> 
-            static constexpr C forward(uint8_t idx) noexcept {
-                if constexpr (std::is_same_v<C, char32_t> || std::is_same_v<C, char16_t> || std::is_same_v<C, char8_t>) 
+            static constexpr C encode(uint8_t idx) noexcept {
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
                     return C(utf.chars[idx]);
-                else if constexpr (std::is_same_v<C, wchar_t>)
-                    return wide.chars[idx]; 
-                else 
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+                    return wide.chars[idx];
+                } else {
                     return narrow.chars[idx];
+                }
             }
             
             template<impl::char_like C>
-            static constexpr uint8_t reverse(C c) noexcept {
-                if (unsigned(c) >= 128)
-                    return size;
-                if constexpr (std::is_same_v<C, char32_t> || std::is_same_v<C, char16_t> || std::is_same_v<C, char8_t>)
-                    return alphabet_impl::reverse_utf[unsigned(c)];
-                else if constexpr (std::is_same_v<C, wchar_t>)
-                    return alphabet_impl::reverse_wide[unsigned(c)];
-                else
-                    return alphabet_impl::reverse_narrow[unsigned(c)];
+            static constexpr uint8_t decode(C c) noexcept {
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
+                
+                    if (unsigned(c) >= std::size(nanoid_alphabet::reverse_utf))
+                        return size;
+                    return nanoid_alphabet::reverse_utf[unsigned(c)];
+                
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+
+                    if (unsigned(c) >= std::size(nanoid_alphabet::reverse_wide))
+                        return size;
+                    return nanoid_alphabet::reverse_wide[unsigned(c)];
+
+                } else {
+
+                    if (unsigned(c) >= std::size(nanoid_alphabet::reverse_narrow))
+                        return size;
+                    return nanoid_alphabet::reverse_narrow[unsigned(c)];
+
+                }
             }
         };
 
-        #define MUUID_DECLARE_NANOID_ALPHABET(name, str) struct name : ::muuid::impl::alphabet_impl<str, L##str, u8##str> {}
-
-        template<char_like C> struct nanoid_char_traits;
-
-        #define MUUID_MAKE_NANOID_CHAR_TRAITS(type, pr) \
-            template<> struct nanoid_char_traits<type> { \
-                static constexpr type fmt_cl_br = pr##'}'; \
-            }
-
-        MUUID_MAKE_NANOID_CHAR_TRAITS(char, );
-        MUUID_MAKE_NANOID_CHAR_TRAITS(wchar_t, L);
-        MUUID_MAKE_NANOID_CHAR_TRAITS(char16_t, u);
-        MUUID_MAKE_NANOID_CHAR_TRAITS(char32_t, U);
-        MUUID_MAKE_NANOID_CHAR_TRAITS(char8_t, u8);
-
-        #undef MUUID_MAKE_NANOID_CHAR_TRAITS
+        #define MUUID_DECLARE_NANOID_ALPHABET(name, str) struct name : ::muuid::impl::nanoid_alphabet<str, L##str, u8##str> {}
 
         MUUID_EXPORTED void generate_nanoid(std::span<uint8_t> dest, uint8_t max);
     }
@@ -154,7 +139,7 @@ namespace muuid {
 
             for(; i < unpack_buf_size; ++i) {
                 auto c = str[i - padding];
-                uint8_t val = Alphabet::reverse(c);
+                uint8_t val = Alphabet::decode(c);
                 if (val >= Alphabet::size)
                     return false;
                 buf[i] = val;
@@ -170,7 +155,7 @@ namespace muuid {
 
             impl::bit_packer<Alphabet::bits_per_char, bytes_count>::unpack_bits(src, std::span(buf));
             for(size_t i = padding; i < std::size(buf); ++i) {
-                *str++ = Alphabet::template forward<T>(buf[i]);
+                *str++ = Alphabet::template encode<T>(buf[i]);
             }
         }
 
@@ -253,7 +238,7 @@ namespace muuid {
 
         /// Returns a Max nanoid
         static constexpr basic_nanoid max() noexcept {
-            constexpr impl::ct_string<char, CharCount + 1> ctstr(Alphabet::template forward<char>(Alphabet::size - 1));
+            constexpr impl::ct_string<char, CharCount + 1> ctstr(Alphabet::template encode<char>(Alphabet::size - 1));
             return basic_nanoid(ctstr.chars);
         }
 

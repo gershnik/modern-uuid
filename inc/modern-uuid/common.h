@@ -140,6 +140,39 @@ namespace muuid
             #define MUUID_THROW(x) ::muuid::impl::fail((x).what())
         #endif
 
+        template<size_t Val>
+        requires(Val > 0 && Val <= 128)
+        struct ct_log2 {
+            static constexpr size_t value = []() constexpr {
+                if constexpr (Val == 1) return 0;
+                else if constexpr (Val < 4) return 1;
+                else if constexpr (Val < 8) return 2;
+                else if constexpr (Val < 16) return 3;
+                else if constexpr (Val < 32) return 4;
+                else if constexpr (Val < 64) return 5;
+                else if constexpr (Val < 128) return 6;
+                return 7;
+            }();
+        };
+
+        template<class T, size_t N>
+        struct ct_string {
+            T chars[N];
+
+            constexpr auto size() const -> size_t { return N - 1; }
+
+            constexpr ct_string(const T (&src)[N]) {
+                std::copy(src, src + N, this->chars);
+            }
+
+            constexpr ct_string(const T el) {
+                std::fill(this->chars, this->chars + N - 1, el);
+                this->chars[N - 1] = 0;
+            }
+        };
+        template<class T, size_t N>
+        ct_string(const T (&src)[N]) -> ct_string<T, N>;
+
         template<std::same_as<size_t> S>
         constexpr size_t hash_combine(S prev, S next) {
             constexpr auto digits = std::numeric_limits<S>::digits;
