@@ -18,12 +18,12 @@ namespace muuid::impl {
     template<size_t BitsPerByte, size_t PackedBytes> struct bit_packer_impl {
         static constexpr size_t bits_per_byte = BitsPerByte;
         static constexpr size_t total_bits = PackedBytes * 8;
-        static constexpr size_t unpacked_bytes = (bit_packer_impl::total_bits / BitsPerByte) + (bit_packer_impl::total_bits % BitsPerByte != 0);
+        static constexpr auto remainder = bit_packer_impl::total_bits % BitsPerByte;
+        static constexpr size_t unpacked_bytes = (bit_packer_impl::total_bits / BitsPerByte) + (remainder != 0);
         static constexpr size_t packed_bytes = PackedBytes;
     
-        static constexpr size_t lcm = std::lcm(bits_per_byte, 8);
-        static constexpr auto full_rounds = bit_packer_impl::total_bits / lcm;
-        static constexpr auto remainder = bit_packer_impl::total_bits % bits_per_byte;
+        static constexpr size_t lcm = std::lcm(BitsPerByte, 8);
+        static constexpr auto full_rounds = bit_packer_impl::total_bits / bit_packer_impl::lcm;
     };
 
     template<size_t BitsPerByte, size_t PackedBytes> class bit_packer;
@@ -112,21 +112,21 @@ namespace muuid::impl {
                 switch (state) {
                 case 0: dst[i] = src[j] >> 5;              // | | | | | |0|0|0|
                         ++i;
-                        dst[i] = (src[j] >> 2) & 0x3u;     // | | | | | |0|0|0|
+                        dst[i] = (src[j] >> 2) & 0x7u;     // | | | | | |0|0|0|
                         ++i;
-                        dst[i] = (src[j++] << 1) & 0x3u;   // | | | | | |0|0| |
+                        dst[i] = (src[j++] << 1) & 0x7u;   // | | | | | |0|0| |
                 case 1: dst[i] |= src[j] >> 7;             // | | | | | | | |1|
                         ++i;
-                        dst[i] = (src[j] >> 4) & 0x3u;     // | | | | | |1|1|1|
+                        dst[i] = (src[j] >> 4) & 0x7u;     // | | | | | |1|1|1|
                         ++i;
-                        dst[i] = (src[j] >> 1) & 0x3u;     // | | | | | |1|1|1|
+                        dst[i] = (src[j] >> 1) & 0x7u;     // | | | | | |1|1|1|
                         ++i;
-                        dst[i] = (src[j++] << 2) & 0x3u;   // | | | | | |1| | |
+                        dst[i] = (src[j++] << 2) & 0x7u;   // | | | | | |1| | |
                 case 2: dst[i] |= src[j] >> 6;             // | | | | | | |2|2|
                         ++i;
-                        dst[i] = (src[j] >> 3) & 0x3u;     // | | | | | |2|2|2|
+                        dst[i] = (src[j] >> 3) & 0x7u;     // | | | | | |2|2|2|
                         ++i;
-                        dst[i] = src[j++] & 0x3u;          // | | | | | |2|2|2|
+                        dst[i] = src[j++] & 0x7u;          // | | | | | |2|2|2|
                         ++i;
                 }
                 state = 0;
