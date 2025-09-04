@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <thread>
 
 #include "test_util.h"
 
@@ -312,6 +313,7 @@ TEST_CASE("inputw") {
 TEST_CASE("generate") {
     ulid u1 = ulid::generate();
     ulid u2 = ulid::generate();
+    std::this_thread::sleep_for(1ms);
     ulid u3 = ulid::generate();
     
     CHECK(ulid() < u1);
