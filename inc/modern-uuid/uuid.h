@@ -17,27 +17,113 @@
 namespace muuid {
     namespace impl {
 
-        template<char_like C> struct uuid_char_traits;
+        template<char_like C> struct uuid_char_traits {
+            static constexpr unsigned max = 128;
 
-        #define MUUID_MAKE_UUID_CHAR_TRAITS(type, pr) \
-            template<> struct uuid_char_traits<type> { \
-                static constexpr type dash = pr##'-'; \
-                static constexpr type fmt_l = pr##'l'; \
-                static constexpr type fmt_u = pr##'u'; \
-                static constexpr type fmt_cl_br = pr##'}'; \
-                static inline constexpr type digits[2][17] = { \
-                    pr##"0123456789abcdef", \
-                    pr##"0123456789ABCDEF", \
-                }; \
+            static constexpr C l = C(u8'l');
+            static constexpr C u = C(u8'u');
+            static constexpr C cl_br = C(u8'}');
+            static constexpr C dash = C(u8'-');
+        };
+
+        template<> struct uuid_char_traits<char> {
+            static constexpr unsigned max = ('a' == u8'a' ? 128 : 256);
+
+            static constexpr char l = 'l';
+            static constexpr char u = 'u';
+            static constexpr char cl_br = '}';
+            static constexpr char dash = '-';
+        };
+
+        template<> struct uuid_char_traits<wchar_t> {
+            static constexpr unsigned max = (L'a' == u8'a' ? 128 : 256);
+
+            static constexpr wchar_t l = L'l';
+            static constexpr wchar_t u = L'u';
+            static constexpr wchar_t cl_br = L'}';
+            static constexpr wchar_t dash = L'-';
+        };
+
+        #define MUUID_UUID_ALPHABET(...) \
+                __VA_ARGS__##"0123456789abcdef" \
+                __VA_ARGS__##"0123456789ABCDEF"
+
+        template<class C, size_t N>
+        static consteval auto make_reverse_uuid_alphabet(const C (&chars)[N]) {
+            using tr = uuid_char_traits<C>;
+
+            std::array<uint8_t, tr::max> ret;
+            for (size_t i = 0; i < std::size(ret); ++i) {
+                auto val = uint8_t(std::find(std::begin(chars), std::end(chars) - 1, C(i)) - std::begin(chars));
+                if (val != N - 1) {
+                    ret[i] = val % ((N - 1) / 2);
+                } else {
+                    ret[i] = (N - 1) / 2;
+                }
             }
+            return ret; 
+        }
 
-        MUUID_MAKE_UUID_CHAR_TRAITS(char, );
-        MUUID_MAKE_UUID_CHAR_TRAITS(wchar_t, L);
-        MUUID_MAKE_UUID_CHAR_TRAITS(char16_t, u);
-        MUUID_MAKE_UUID_CHAR_TRAITS(char32_t, U);
-        MUUID_MAKE_UUID_CHAR_TRAITS(char8_t, u8);
+        class uuid_alphabet {
+        private:
+            static constexpr const char narrow[] = MUUID_UUID_ALPHABET();
+            static constexpr const wchar_t wide[] = MUUID_UUID_ALPHABET(L);
+            static constexpr const char8_t utf[] = MUUID_UUID_ALPHABET(u8);
 
-        #undef MUUID_MAKE_UUID_CHAR_TRAITS
+            
+            static constexpr auto reverse_narrow = make_reverse_uuid_alphabet(narrow);
+            static constexpr auto reverse_wide = make_reverse_uuid_alphabet(wide);
+            static constexpr auto reverse_utf = make_reverse_uuid_alphabet(utf);
+
+        public:
+            static constexpr size_t size = (std::size(utf) - 1) / 2;
+
+        public:
+            template<impl::char_like C> 
+            static constexpr C encode(bool uppercase, uint8_t idx) noexcept {
+                auto real_idx = idx + (uppercase << ct_log2<size>::value);
+
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
+                    return C(utf[real_idx]);
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+                    return wide[real_idx];
+                } else {
+                    return narrow[real_idx];
+                }
+            }
+            
+            template<impl::char_like C>
+            static constexpr uint8_t decode(C c) noexcept {
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
+                
+                    if (unsigned(c) >= std::size(reverse_utf))
+                        return size;
+                    return reverse_utf[unsigned(c)];
+                
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+
+                    if (unsigned(c) >= std::size(reverse_wide))
+                        return size;
+                    return reverse_wide[unsigned(c)];
+
+                } else {
+
+                    if (unsigned(c) >= std::size(reverse_narrow))
+                        return size;
+                    return reverse_narrow[unsigned(c)];
+                }
+            }
+        };
+
+        #undef MUUID_UUID_ALPHABET
     }
 
     struct uuid_parts {
@@ -95,25 +181,11 @@ namespace muuid {
     private:
         template<impl::char_like T>
         static constexpr bool read_hex(const T * str, uint8_t & val) noexcept {
-            using tr = impl::uuid_char_traits<T>;
-            constexpr T zero = tr::digits[0][0];
-            constexpr T nine = tr::digits[0][9];
-            constexpr T letter_a = tr::digits[0][10];
-            constexpr T letter_f = tr::digits[0][15];
-            constexpr T letter_A = tr::digits[1][10];
-            constexpr T letter_F = tr::digits[1][15];
-
             uint8_t ret = 0;
             for (int i = 0; i < 2; ++i) {
                 T c = *str++;
-                uint8_t nibble;
-                if (c >= zero && c <= nine)
-                    nibble = uint8_t(c - zero);
-                else if (c >= letter_a && c <= letter_f)
-                    nibble = uint8_t(c - letter_a + 10);
-                else if (c >= letter_A && c <= letter_F)
-                    nibble = uint8_t(c - letter_A + 10);
-                else 
+                uint8_t nibble = impl::uuid_alphabet::decode(c);
+                if (nibble >= impl::uuid_alphabet::size)
                     return false;
                 ret = (ret << 4) | nibble;
             }
@@ -123,9 +195,8 @@ namespace muuid {
 
         template<impl::char_like T>
         static constexpr void write_hex(uint8_t val, T * str, format fmt) noexcept {
-            using tr = impl::uuid_char_traits<T>;
-            *str++ = tr::digits[fmt][uint8_t(val >> 4)];
-            *str++ = tr::digits[fmt][uint8_t(val & 0x0F)];
+            *str++ = impl::uuid_alphabet::encode<T>(fmt, uint8_t(val >> 4));
+            *str++ = impl::uuid_alphabet::encode<T>(fmt, uint8_t(val & 0x0F));
         }
 
     public:
@@ -487,11 +558,11 @@ namespace muuid {
 
                 auto it = ctx.begin();
                 while(it != ctx.end()) {
-                    if (*it == tr::fmt_l) {
+                    if (*it == tr::l) {
                         this->fmt = uuid::lowercase; ++it;
-                    } else if (*it == tr::fmt_u) {
+                    } else if (*it == tr::u) {
                         this->fmt = uuid::uppercase; ++it;
-                    } else if (*it == tr::fmt_cl_br) {
+                    } else if (*it == tr::cl_br) {
                         break;
                     } else {
                         static_cast<Derived *>(this)->raise_exception("Invalid format args");

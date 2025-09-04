@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Support for [ULID](https://github.com/ulid/spec)
 - Support for [Nano ID](https://github.com/ai/nanoid)
+- Significant performance improvements in UUID conversion from/to strings.
 
 ### Changed
 - Name of `clock_persistence` interface is deprecated. Use identical `uuid_clock_persistence` instead.
