@@ -7,13 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 - Support for [ULID](https://github.com/ulid/spec)
+- Support for [Nano ID](https://github.com/ai/nanoid)
 
 ### Changed
 - Name of `clock_persistence` interface is deprecated. Use identical `uuid_clock_persistence` instead.
   This is to support ULID which has `ulid_clock_persistence`
 
 ### Fixed
-- The library now properly respects [reproducible builds](https://reproducible-builds.org):
+- The library now properly supports [reproducible builds](https://reproducible-builds.org):
   - CMake build respects SOURCE_DATE_EPOCH environment variable
   - For non-CMake build define MUUID_BUILD_DATE_TIME macro on command line to a string
     containing something resembling concatenation of `__DATE__` `__TIME__`
