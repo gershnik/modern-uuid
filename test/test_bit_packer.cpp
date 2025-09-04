@@ -54,6 +54,15 @@ TEST_CASE("3 bits") {
         bit_packer<3, 2>::unpack_bits(std::span(dest), src);
         CHECK_EQUAL_SEQ(src, ARR(1, 7, 7, 7, 7, 7));
     }
+    {
+        auto dest = ARR(1, 1, 1);
+        bit_packer<3, 3>::pack_bits(SPN(7, 7, 7, 7, 7, 7, 7, 7), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1, 1, 1, 1);
+        bit_packer<3, 3>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(7, 7, 7, 7, 7, 7, 7, 7));
+    }
 }
 
 TEST_CASE("4 bits") {
@@ -96,6 +105,33 @@ TEST_CASE("5 bits") {
         bit_packer<5, 2>::unpack_bits(std::span(dest), src);
         CHECK_EQUAL_SEQ(src, ARR(0x1, 0x1F, 0x1F, 0x1F));
     }
+    {
+        auto dest = ARR(1, 1, 1);
+        bit_packer<5, 3>::pack_bits(SPN(0xF, 0x1F, 0x1F, 0x1F, 0x1F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1);
+        bit_packer<5, 3>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0xF, 0x1F, 0x1F, 0x1F, 0x1F));
+    }
+    {
+        auto dest = ARR(1, 1, 1, 1);
+        bit_packer<5, 4>::pack_bits(SPN(0x3, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1, 1, 1);
+        bit_packer<5, 4>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0x3, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F));
+    }
+    {
+        auto dest = ARR(1, 1, 1, 1, 1);
+        bit_packer<5, 5>::pack_bits(SPN(0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1, 1, 1, 1);
+        bit_packer<5, 5>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F));
+    }
 }
 
 TEST_CASE("6 bits") {
@@ -117,6 +153,15 @@ TEST_CASE("6 bits") {
         bit_packer<6, 2>::unpack_bits(std::span(dest), src);
         CHECK_EQUAL_SEQ(src, ARR(0xF, 0x3F, 0x3F));
     }
+    {
+        auto dest = ARR(1, 1, 1);
+        bit_packer<6, 3>::pack_bits(SPN(0x3F, 0x3F, 0x3F, 0x3F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1);
+        bit_packer<6, 3>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0x3F, 0x3F, 0x3F, 0x3F));
+    }
 }
 
 TEST_CASE("7 bits") {
@@ -137,6 +182,51 @@ TEST_CASE("7 bits") {
         auto src = ARR(1, 1, 1);
         bit_packer<7, 2>::unpack_bits(std::span(dest), src);
         CHECK_EQUAL_SEQ(src, ARR(0x3, 0x7F, 0x7F));
+    }
+    {
+        auto dest = ARR(1, 1, 1);
+        bit_packer<7, 3>::pack_bits(SPN(0x7, 0x7F, 0x7F, 0x7F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1);
+        bit_packer<7, 3>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0x7, 0x7F, 0x7F, 0x7F));
+    }
+    {
+        auto dest = ARR(1, 1, 1, 1);
+        bit_packer<7, 4>::pack_bits(SPN(0xF, 0x7F, 0x7F, 0x7F, 0x7F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1);
+        bit_packer<7, 4>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0xF, 0x7F, 0x7F, 0x7F, 0x7F));
+    }
+    {
+        auto dest = ARR(1, 1, 1, 1, 1);
+        bit_packer<7, 5>::pack_bits(SPN(0x1F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1, 1);
+        bit_packer<7, 5>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0x1F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F));
+    }
+    {
+        auto dest = ARR(1, 1, 1, 1, 1, 1);
+        bit_packer<7, 6>::pack_bits(SPN(0x3F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1, 1, 1);
+        bit_packer<7, 6>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0x3F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F));
+    }
+    {
+        auto dest = ARR(1, 1, 1, 1, 1, 1, 1);
+        bit_packer<7, 7>::pack_bits(SPN(0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F), dest);
+        CHECK_EQUAL_SEQ(dest, ARR(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF));
+
+        auto src = ARR(1, 1, 1, 1, 1, 1, 1, 1);
+        bit_packer<7, 7>::unpack_bits(std::span(dest), src);
+        CHECK_EQUAL_SEQ(src, ARR(0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F));
     }
 }
 

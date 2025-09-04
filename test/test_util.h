@@ -55,6 +55,7 @@ namespace std {
             break;\
         }\
     }\
+    CHECK(true); \
 }
 
 #define CHECK_UNEQUAL_SEQ(seq1, seq2) { \
@@ -73,8 +74,7 @@ namespace std {
             break; \
         } \
     } \
-    if (equal) \
-        FAIL_CHECK("Sequences are equal, first: ", s1, ", second: ", s2); \
+    CHECK_MESSAGE(!equal, "Sequences are equal, first: ", s1, ", second: ", s2); \
 }
 
 #endif
