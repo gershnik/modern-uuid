@@ -1,4 +1,4 @@
-## modern-uuid
+# modern-uuid
 
 [![Language](https://img.shields.io/badge/language-C++-blue.svg)](https://isocpp.org/)
 [![Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
@@ -7,6 +7,17 @@
 
 A modern, no-dependencies, portable C++ library for manipulating [UUIDs](https://en.wikipedia.org/wiki/Universally_unique_identifier), 
 [ULIDs](https://github.com/ulid/spec) and [NanoIDs](https://github.com/ai/nanoid).
+
+<!-- TOC depthfrom:2 -->
+
+- [Features](#features)
+- [Usage](#usage)
+    - [UUID](#uuid)
+    - [ULID](#ulid)
+    - [NanoID](#nanoid)
+- [Building/Integrating](#buildingintegrating)
+
+<!-- /TOC -->
 
 ## Features
 
@@ -192,9 +203,9 @@ assert(str == "01bx5zzkbkactav9wevgemmvry")
 
 //when reading case doesn't matter
 std::istringstream istr("01bx5zzkbkactav9wevgemmvry");
-ulid ulidr;
-istr >> ulidr;
-assert(ulidr = ulid("01bx5zzkbkactav9wevgemmvry"));
+ulid ur;
+istr >> ur;
+assert(ur = ulid("01bx5zzkbkactav9wevgemmvry"));
 
 std::ostringstream ostr;
 ostr << ulid("01bx5zzkbkactav9wevgemmvry");
@@ -219,7 +230,7 @@ ulid u_from_bytes(std::span{vec}.subspan<3, 19>());
 
 //finally you can access raw ulid bytes via bytes public member
 constexpr ulid ua("01bx5zzkbkactav9wevgemmvry");
-assert(ua.bytes[3] == 0x48);
+assert(ua.bytes[6] == 83);
 
 //bytes is an std::array<uint8_t, 16> so you can use all std::array
 //functionality
@@ -227,6 +238,104 @@ for(auto b: ua.bytes) {
     ...use the byte...
 }
 ```
+
+### NanoID
+
+```cpp
+#include <modern-uuid/nanoid.h>
+
+using namespace muuid;
+
+//this is a compile time NanoID literal
+constexpr nanoid n1("V1StGXR8_Z5jdHi6B-myT");
+
+//default constructor creates Nil NanoID: uuuuuuuuuuuuuuuuuuuuu
+constexpr nanoid nil_nanoid;
+
+//there is also nanoid::max() to get Max NanoID: ttttttttttttttttttttt
+constexpr nanoid max_nanoid = nanoid::max();
+
+//if you want to you can use nanoid as a template parameter
+template<nanoid N1> class some_class {...};
+some_class<nanoid("V1StGXR8_Z5jdHi6B-myT")> some_object;
+
+//generate a NanoID:
+nanoid ng = nanoid::generate();
+
+//for non-literal strings you can parse nanoids from strings using nanoid::from_chars
+//the argument to from_chars can be anything convertible to std::span<char, any extent>
+//the call is constexpr
+std::string some_nanoid_str = "Uakgb_J5m9g-0JDMbcJqL";
+std::optional<nanoid> maybe_nanoid = nanoid::from_chars(some_nanoid_str);
+if (maybe_nanoid) {
+    nanoid parsed = *maybe_nanoid;
+}
+
+//nanoid objects can be compared in every possible way
+assert(ng > nil_nanoid);
+assert(ng != u1);
+std::strong_ordering res = (ng <=> n1);
+//etc.
+
+//nanoid objects can be hashed
+std::unordered_map<nanoid, transaction> transaction_map;
+
+//they can be formatted. 
+
+std::string str = std::format("{}", n1);
+assert(str == "V1StGXR8_Z5jdHi6B-myT");
+
+//nanoids can be read/written from/to iostream 
+
+std::istringstream istr("V1StGXR8_Z5jdHi6B-myT");
+nanoid nr;
+istr >> nr;
+assert(nr = nanoid("V1StGXR8_Z5jdHi6B-myT"));
+
+std::ostringstream ostr;
+ostr << nanoid("V1StGXR8_Z5jdHi6B-myT");
+assert(ostr.str() == "V1StGXR8_Z5jdHi6B-myT");
+
+//nanoid objects can be created from raw bytes. 
+//you need an std::span<anything byte-like, 16> or anything convertible to 
+//such a span
+//Because not every 16-byte value is a valid nanoid (21 units of 6 bit = 126 bit)
+//the result is an `std::optional`. It will be empty if the input is invalid.
+std::array<std::byte, 16> arr1 = {...};
+std::optional<nanoid> maybe_n1 = nanoid::from_bytes(arr1);
+
+uint8_t arr2[16] = {...};
+std::optional<nanoid> maybe_n2 = nanoid::from_bytes(arr2);
+
+std::vector<uint8_t> vec = {...};
+std::optional<nanoid> maybe_n3 = nanoid::from_bytes(std::span{vec}.subspan<3, 19>());
+
+//finally you can access raw nanoid bytes via bytes public member
+constexpr nanoid na("V1StGXR8_Z5jdHi6B-myT");
+assert(na.bytes[3] == 237);
+
+//bytes is an std::array<uint8_t, 16> so you can use all std::array
+//functionality
+for(auto b: na.bytes) {
+    ...use the byte...
+}
+
+//You can define different nanoid types that use custom alphabets and sizes
+MUUID_DECLARE_NANOID_ALPHABET(my_alphabet, "1234567890abcdef");
+
+using my_id = basic_nanoid<my_alphabet, 10>;
+
+//Note that the size of such ID might be different from default nanoid
+static_assert(sizeof(fooid) == 5);
+
+constexpr my_id mid1("4f90d13a42");
+my_id mid2 = my_id::generate();
+//etc.
+//all other nanoid operations are the same (with different string/buffer sizes)
+//as for default nanoid
+
+```
+
 
 ## Building/Integrating
 
