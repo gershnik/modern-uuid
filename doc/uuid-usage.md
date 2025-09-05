@@ -28,6 +28,7 @@
     - [Advanced](#advanced)
         - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
         - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
+    - [Implementation details](#implementation-details)
 
 <!-- /TOC -->
 
@@ -120,7 +121,36 @@ assert(uuid() == uuid("00000000-0000-0000-0000-000000000000"));
 If you need it, there is also `uuid::max()` static method that returns Max UUID: `FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF`
 
 ### Constructing from raw bytes 
+<!-- TOC -->
 
+- [Usage Guide](#usage-guide)
+    - [Basics](#basics)
+        - [Headers and namespaces](#headers-and-namespaces)
+        - [Exceptions and errors](#exceptions-and-errors)
+        - [Thread safety](#thread-safety)
+        - [Multiprocess safety](#multiprocess-safety)
+    - [Usage](#usage)
+        - [uuid class](#uuid-class)
+        - [Literals](#literals)
+        - [Constructing from raw bytes](#constructing-from-raw-bytes)
+        - [Accessing raw bytes](#accessing-raw-bytes)
+        - [Generation](#generation)
+            - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
+        - [Conversions from/to strings](#conversions-fromto-strings)
+        - [Comparisons and hashing](#comparisons-and-hashing)
+        - [Formatting and I/O](#formatting-and-io)
+        - [Interoperability](#interoperability)
+            - [macOS](#macos)
+            - [Windows](#windows)
+            - [__uuidof](#__uuidof)
+        - [Accessing UUID properties](#accessing-uuid-properties)
+        - [Other features](#other-features)
+    - [Advanced](#advanced)
+        - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
+        - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
+    - [Implementation details](#implementation-details)
+
+<!-- /TOC -->
 You can construct a `uuid` from `std::span</*byte-like*/, 16>` or anything convertible to such a span. A _byte_like_ is
 any standard layout type of sizeof 1 that is convertible to `uint8_t`. This includes `uint8_t` itself, `std::byte`, `char`,
 `signed char` and `unsigned char`. 
@@ -580,5 +610,33 @@ The new instance will be used for all generations of the given type subsequent t
 > Do not use the **same** `clock_persistence` for different UUID types! The content and meaning of the `data` is different for each
 > and mixing them will produce very bad results.
 
+
+## Implementation details
+
+There are many implementation choices for generating time-based UUIDs of versions 1, 6 and 7. This section documents some of them but these are
+not contractual and can change in future releases
+
+For UUID version 7 the `rand_a` field is used to store additional clock precision using Method 3 of the [section 6.2](https://www.rfc-editor.org/rfc/rfc9562.html#name-monotonicity-and-counters) of the RFC. This extends the precision of distinct representable times to 1µs. The first 14 bit of `rand_b` field are filled with a randomly seeded counter using Method 1 of the same section.
+
+For UUID version 6 the `node` field is populated with a random value on each generation. The `clock_seq` field is filled with a randomly seeded counter using Method 1 of the [section 6.2](https://www.rfc-editor.org/rfc/rfc9562.html#name-monotonicity-and-counters) of the RFC. 
+
+The actual granularity of the system clock is detected at runtime (unfortunately you cannot trust `time_point::period` on many systems). If the clock ticks slower than the maximum available precision for the desired UUID version then the unfilled rightmost decimal digits of the timestamp are filled by incrementing a counter for each generation. The counter is in the range `[0, max-1)` where `max` is the ratio of clock tick period to the desired precision (e.g. if the clock period is 1ms and desired precision is 1µs then `max` is 1,000). 
+When the counter reaches `max`:
+- for version 1 the generation waits until the clock changes
+- for versions 6 and 7 the `clock_seq`/`rand_b` field is used to provide further monotonicity as described above. When the these counters are exhausted the generation also waits for a clock change.
+
+If the system clock goes backwards:
+- for version 1 the `clock_seq` is incremented by 1 modulo 2<sup>14</sup>
+- for versions 6 and 7 the monotonicity has been lost - there is nothing that can be done about it - so the `clock_seq`/first 14 bits of `rand_b` are initialized to a random number.
+
+On Unix-like systems upon `fork()` without `exec()` in the child process all the "static" state
+for all generators is reinitialized anew as-if on a new process start. Specifically this affects:
+- random number generator(s)
+- all `clock_seq`/first 14 bits of `rand_b` fields
+
+In a multithreaded environment generation of UUIDs is completely independent on different threads.
+That is, different threads behave similar to how different processes would with regards to the UUIDs they generate. If full monotonicity for UUID versions 6 or 7 across different threads is desired the generation and clock usage can be made synchronous by providing custom `clock_persistence` callback implementation. 
+
+By default, if available, one of the system's network cards MAC addresses is used for version 1 UUIDs. If not available it is replaced by a random number (initialized once per process) as described in RFC 9562. You can change this behavior via `set_node_id` APIs. Alternatively, you can simply use UUID versions 6, 7 or 4.
 
 
