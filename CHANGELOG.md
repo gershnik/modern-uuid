@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## [1.9] - 2025-09-05
+
 ### Added
 - Support for [ULID](https://github.com/ulid/spec)
 - Support for [Nano ID](https://github.com/ai/nanoid)
@@ -106,3 +108,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [1.6]: https://github.com/gershnik/modern-uuid/releases/v1.6
 [1.7]: https://github.com/gershnik/modern-uuid/releases/v1.7
 [1.8]: https://github.com/gershnik/modern-uuid/releases/v1.8
+[1.9]: https://github.com/gershnik/modern-uuid/releases/v1.9
