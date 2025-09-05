@@ -1,40 +1,40 @@
 
-# Usage Guide
+# UUID Usage Guide
 
 <!-- TOC -->
 
-- [Usage Guide](#usage-guide)
-    - [Basics](#basics)
-        - [Headers and namespaces](#headers-and-namespaces)
-        - [Exceptions and errors](#exceptions-and-errors)
-        - [Thread safety](#thread-safety)
-        - [Multiprocess safety](#multiprocess-safety)
-    - [Usage](#usage)
-        - [uuid class](#uuid-class)
-        - [Literals](#literals)
-        - [Constructing from raw bytes](#constructing-from-raw-bytes)
-        - [Accessing raw bytes](#accessing-raw-bytes)
-        - [Generation](#generation)
-            - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
-        - [Conversions from/to strings](#conversions-fromto-strings)
-        - [Comparisons and hashing](#comparisons-and-hashing)
-        - [Formatting and I/O](#formatting-and-io)
-        - [Interoperability](#interoperability)
-            - [macOS](#macos)
-            - [Windows](#windows)
-            - [__uuidof](#__uuidof)
-        - [Accessing UUID properties](#accessing-uuid-properties)
-        - [Other features](#other-features)
-    - [Advanced](#advanced)
-        - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
-        - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
+- [Basics](#basics)
+    - [Headers and namespaces](#headers-and-namespaces)
+    - [Exceptions and errors](#exceptions-and-errors)
+    - [Thread safety](#thread-safety)
+    - [Multiprocess safety](#multiprocess-safety)
+- [Usage](#usage)
+    - [uuid class](#uuid-class)
+    - [Literals](#literals)
+    - [Constructing from raw bytes](#constructing-from-raw-bytes)
+    - [Accessing raw bytes](#accessing-raw-bytes)
+    - [Generation](#generation)
+        - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
+    - [Conversions from/to strings](#conversions-fromto-strings)
+    - [Comparisons and hashing](#comparisons-and-hashing)
+    - [Formatting and I/O](#formatting-and-io)
+    - [Interoperability](#interoperability)
+        - [macOS](#macos)
+        - [Windows](#windows)
+        - [__uuidof](#__uuidof)
+    - [Accessing UUID properties](#accessing-uuid-properties)
+    - [Other features](#other-features)
+- [Advanced](#advanced)
+    - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
+    - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
+- [Implementation details](#implementation-details)
 
 <!-- /TOC -->
 
 ## Basics
 
 ### Headers and namespaces
-There is a single include file in this library
+Everything related to UUIDs is provided by a single include file:
 ```cpp
 #include <modern-uuid/uuid.h>
 ```
@@ -77,7 +77,7 @@ guarantees as UUIDs generated from completely unrelated processes - negligible p
 
 ### `uuid` class
 
-`uuid` is the main class of this library. It is a [regular](https://en.cppreference.com/w/cpp/concepts/regular), 
+`uuid` is the class that represents a UUID. It is a [regular](https://en.cppreference.com/w/cpp/concepts/regular), 
 [totally ordered](https://en.cppreference.com/w/cpp/concepts/totally_ordered) and 
 [three way comparable](https://en.cppreference.com/w/cpp/utility/compare/three_way_comparable) class.
 It is [trivially copyable](https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable) and has a 
@@ -151,7 +151,7 @@ The `bytes` member is an `std:array<uint8_t, 16>` and can be manipulated using a
 ```cpp
 constexpr uuid u("7d444840-9dc0-11d1-b245-5ffdce74fad2");
 assert(u.bytes[2] == 0x44);
-for(auto byte: uuid.bytes) {
+for(auto byte: u.bytes) {
     ...
 }
 ```
@@ -223,7 +223,7 @@ if (auto maybe_uuid = uuid::from_chars("7d444840-9dc0-11d1-b245-5ffdce74fad2")) 
 }
 ```
 
-To convert in the opposite direction there is `uuid::to_chars` method that has two main form.
+To convert in the opposite direction there is `uuid::to_chars` method that has two main forms.
 
 1. You can pass the destination buffer as an argument. It must be an `std::span<char, 36>` or anything convertible to it.
 
@@ -508,10 +508,10 @@ different threads or processes. It can be especially important for UUID version 
 clock going backwards. It can also be important for UUID version 6 and 7 to ensure strict monotonicity between different threads
 and/or processes.
 
-To handle this `modern-uuid` specifies `clock_persistence` callback interface. You can implement this interface in your code and
+To handle this `modern-uuid` specifies `uuid_clock_persistence` callback interface. You can implement this interface in your code and
 pass it to the library to be used for time based UUID generation.
 
-The `clock_persistence` interface itself contains only 3 methods:
+The `uuid_clock_persistence` interface itself contains only 3 methods:
 
 ```cpp
 virtual void add_ref() noexcept = 0;
@@ -520,10 +520,10 @@ virtual per_thread & get_for_current_thread() = 0;
 ```
 
 The first 2 methods are the classical reference counting. Implement them as you need (e.g. for a static object they would be no-op) 
-to ensure that your `clock_persistence` stays alive while it is being used by the library. 
+to ensure that your `uuid_clock_persistence` stays alive while it is being used by the library. 
 
 The third method, `get_for_current_thread()` returns the _actual_ callback interface **for the thread that calls it**. The
-`clock_persistence::per_thread` interface contains the following methods:
+`uuid_clock_persistence::per_thread` interface contains the following methods:
 
 ```cpp
 virtual void close() noexcept = 0;
@@ -545,7 +545,7 @@ Finally the `load()`/`store()` are called to load the initial persistent data (i
 
 The `load()` method should return `false` if the persistent data is not available. 
 
-The `clock_persistence::data` struct for `load()`/`store()` looks like this:
+The `uuid_clock_persistence::data` struct for `load()`/`store()` looks like this:
 
 ```cpp
 struct data {
@@ -565,20 +565,46 @@ its value. This can be useful in optimizing access to persistent storage. You ca
 `when` field set to a future time. If your process is reloaded and the future time is read on load all UUID generators will handle this safely and correctly.
 
 
-Once you implement `clock_persistence` and `clock_persistence::per_thread` you can assign a `clock_persistence` instance to a given generator via:
+Once you implement `uuid_clock_persistence` and `uuid_clock_persistence::per_thread` you can assign a `uuid_clock_persistence` instance to a given generator via:
 
 ```cpp
-void set_time_based_persistence(clock_persistence * persistence);
-void set_reordered_time_based_persistence(clock_persistence * persistence);
-void set_unix_time_based_persistence(clock_persistence * persistence);
+void set_time_based_persistence(uuid_clock_persistence * persistence);
+void set_reordered_time_based_persistence(uuid_clock_persistence * persistence);
+void set_unix_time_based_persistence(uuid_clock_persistence * persistence);
 ```
 
 The new instance will be used for all generations of the given type subsequent to these calls. Pass `nullptr` to remove the custom 
-`clock_persistence`. 
+`uuid_clock_persistence`. 
 
 > [!WARN]
-> Do not use the **same** `clock_persistence` for different UUID types! The content and meaning of the `data` is different for each
+> Do not use the **same** `uuid_clock_persistence` for different UUID types! The content and meaning of the `data` is different for each
 > and mixing them will produce very bad results.
 
 
+## Implementation details
 
+There are many implementation choices for generating time-based UUIDs of versions 1, 6 and 7. This section documents some of them but these are
+not contractual and can change in future releases
+
+For UUID version 7 the `rand_a` field is used to store additional clock precision using Method 3 of the [section 6.2](https://www.rfc-editor.org/rfc/rfc9562.html#name-monotonicity-and-counters) of the RFC. This extends the precision of distinct representable times to 1µs. The first 14 bit of `rand_b` field are filled with a randomly seeded counter using Method 1 of the same section.
+
+For UUID version 6 the `node` field is populated with a random value on each generation. The `clock_seq` field is filled with a randomly seeded counter using Method 1 of the [section 6.2](https://www.rfc-editor.org/rfc/rfc9562.html#name-monotonicity-and-counters) of the RFC. 
+
+The actual granularity of the system clock is detected at runtime (unfortunately you cannot trust `time_point::period` on many systems). If the clock ticks slower than the maximum available precision for the desired UUID version then the unfilled rightmost decimal digits of the timestamp are filled by incrementing a counter for each generation. The counter is in the range `[0, max-1)` where `max` is the ratio of clock tick period to the desired precision (e.g. if the clock period is 1ms and desired precision is 1µs then `max` is 1,000). 
+When the counter reaches `max`:
+- for version 1 the generation waits until the clock changes
+- for versions 6 and 7 the `clock_seq`/`rand_b` field is used to provide further monotonicity as described above. When the these counters are exhausted the generation also waits for a clock change.
+
+If the system clock goes backwards:
+- for version 1 the `clock_seq` is incremented by 1 modulo 2<sup>14</sup>
+- for versions 6 and 7 the monotonicity has been lost - there is nothing that can be done about it - so the `clock_seq`/first 14 bits of `rand_b` are initialized to a random number.
+
+On Unix-like systems upon `fork()` without `exec()` in the child process all the "static" state
+for all generators is reinitialized anew as-if on a new process start. Specifically this affects:
+- random number generator(s)
+- all `clock_seq`/first 14 bits of `rand_b` fields
+
+In a multithreaded environment generation of UUIDs is completely independent on different threads.
+That is, different threads behave similar to how different processes would with regards to the UUIDs they generate. If full monotonicity for UUID versions 6 or 7 across different threads is desired the generation and clock usage can be made synchronous by providing custom `uuid_clock_persistence` callback implementation. 
+
+By default, if available, one of the system's network cards MAC addresses is used for version 1 UUIDs. If not available it is replaced by a random number (initialized once per process) as described in RFC 9562. You can change this behavior via `set_node_id` APIs. Alternatively, you can simply use UUID versions 6, 7 or 4.

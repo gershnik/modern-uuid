@@ -41,17 +41,30 @@ set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_library(modern-uuid-header INTERFACE EXCLUDE_FROM_ALL)
 
-# Single interface only library for the public header
-# This is to avoid having the header in both shared and static libs
+# Single interface only library for the public headers
+# This is to avoid having the headers in both shared and static libs
 # Which is not well supported by some generators (e.g. Xcode)
 list(APPEND INSTALL_LIBS modern-uuid-header)
 
+set(PUBLIC_HEADER_NAMES
+    common.h
+    bit_packer.h
+    nanoid.h
+    ulid.h
+    uuid.h
+)
+foreach(name ${PUBLIC_HEADER_NAMES})
+    list(APPEND PUBLIC_HEADERS $<BUILD_INTERFACE:${INCDIR}/modern-uuid/${name}>)
+    list(APPEND PUBLIC_HEADERS $<INSTALL_INTERFACE:include/modern-uuid/${name}>)
+    list(APPEND PROPERTY_PUBLIC_HEADERS ${INCDIR}/modern-uuid/${name})
+endforeach()
+
+
 target_sources(modern-uuid-header 
 INTERFACE
-    $<BUILD_INTERFACE:${INCDIR}/modern-uuid/uuid.h>
-    $<INSTALL_INTERFACE:include/modern-uuid/uuid.h>
+    ${PUBLIC_HEADERS}
 )
-set_target_properties(modern-uuid-header PROPERTIES PUBLIC_HEADER ${INCDIR}/modern-uuid/uuid.h)
+set_target_properties(modern-uuid-header PROPERTIES PUBLIC_HEADER "${PROPERTY_PUBLIC_HEADERS}")
 
 
 if (MUUID_SHARED)
@@ -88,6 +101,19 @@ foreach(suffix ${BUILD_SUFFIXES})
     PRIVATE
         MUUID_BUILDING_MUUID=1
     )
+
+    if (DEFINED ENV{SOURCE_DATE_EPOCH})
+
+        string(TIMESTAMP MUUID_BUILD_DATE_TIME "%Y-%m-%d %H:%M:%S" UTC)
+
+        message("modern-uuid-${suffix} will use reproducible timestamp: ${MUUID_BUILD_DATE_TIME}")
+
+        target_compile_definitions(modern-uuid-${suffix}
+        PRIVATE
+            MUUID_BUILD_DATE_TIME=\"${MUUID_BUILD_DATE_TIME}\"
+        )
+
+    endif()
 
     target_compile_options(modern-uuid-${suffix}
     PRIVATE
@@ -132,6 +158,9 @@ foreach(suffix ${BUILD_SUFFIXES})
         ${SRCDIR}/random_generator.h
         ${SRCDIR}/random_generator.cpp
         ${SRCDIR}/threading.h
+
+        ${SRCDIR}/nanoid.cpp
+        ${SRCDIR}/ulid.cpp
         ${SRCDIR}/uuid.cpp
     )
 

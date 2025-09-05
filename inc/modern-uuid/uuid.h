@@ -4,99 +4,7 @@
 #ifndef HEADER_MODERN_UUID_UUID_H_INCLUDED
 #define HEADER_MODERN_UUID_UUID_H_INCLUDED
 
-// Config macros:
-//
-// The following macros must be defined identically when using and building this library:
-//
-// MUUID_MULTITHREADED - auto-detected. Set to 1 to force multi-threaded build and 0 to force single threaded 1
-// MUUID_USE_EXCEPTIONS - auto-detected. Set to 1 to force usage of exceptions and 0 to force not using them
-// MUUID_SHARED - set to 1 when using/building a shared library version of the library
-//
-// The following macro should be set when building the library itself but not when using it:
-//
-// MUUID_BUILDING_MUUID - set 1 if building the library itself. 
-
-#include <cstdint>
-#include <cstring>
-#include <cstdio>
-
-#include <concepts>
-#include <compare>
-#include <array>
-#include <span>
-#include <string_view>
-#include <optional>
-#include <limits>
-#include <chrono>
-#include <istream>
-#include <ostream>
-
-#if !defined(MUUID_MULTITHREADED)
-    #if defined(_MSC_VER) && !defined(_MT)
-        #define MUUID_MULTITHREADED 0
-    #elif defined(_LIBCPP_VERSION) && (defined(_LIBCPP_HAS_NO_THREADS) || defined(_LIBCPP_HAS_THREADS) && !_LIBCPP_HAS_THREADS)
-        #define MUUID_MULTITHREADED 0
-    #elif defined(__GLIBCXX__) && !_GLIBCXX_HAS_GTHREADS
-        #define MUUID_MULTITHREADED 0
-    #elif !__has_include(<thread>) || !__has_include(<mutex>) || !__has_include(<atomic>)
-        #define MUUID_MULTITHREADED 0
-    #else
-        #define MUUID_MULTITHREADED 1
-    #endif
-#endif
-
-#if !defined(MUUID_USE_EXCEPTIONS)
-    #if defined(__GNUC__) && !defined(__EXCEPTIONS)
-        #define MUUID_USE_EXCEPTIONS 0
-    #elif defined(__clang__) && !defined(__cpp_exceptions)
-        #define MUUID_USE_EXCEPTIONS 0
-    #elif defined(_MSC_VER) && !_HAS_EXCEPTIONS 
-        #define MUUID_USE_EXCEPTIONS 0
-    #else
-        #define MUUID_USE_EXCEPTIONS 1
-    #endif
-#endif
-
-#if MUUID_SHARED
-    #if defined(_WIN32) || defined(_WIN64)
-        #if MUUID_BUILDING_MUUID
-            #define MUUID_EXPORTED __declspec(dllexport)
-        #else
-            #define MUUID_EXPORTED __declspec(dllimport)
-        #endif
-    #elif defined(__GNUC__)
-        #define MUUID_EXPORTED [[gnu::visibility("default")]]
-    #else
-        #define MUUID_EXPORTED
-    #endif
-#else
-    #define MUUID_EXPORTED
-#endif
-
-
-//See https://github.com/llvm/llvm-project/issues/77773 for the sad story of how feature test
-//macros are useless with libc++
-#if (__cpp_lib_format >= 201907L || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 170000)) && __has_include(<format>)
-
-    #define MUUID_SUPPORTS_STD_FORMAT 1
-
-#endif
-
-#if defined(FMT_VERSION) && FMT_VERSION >= 60000 && defined(FMT_THROW)
-
-    #define MUUID_SUPPORTS_FMT_FORMAT 1
-
-#endif
-
-#if MUUID_USE_FMT && !MUUID_SUPPORTS_FMT_FROMAT
-
-    #error "MUUID_USE_FMT is requested but fmt library (of version >= 5.0) is not detected. Did you forget to include <fmt/format.h> before this header?"
-
-#endif
-
-#if MUUID_SUPPORTS_STD_FORMAT
-    #include <format>
-#endif
+#include <modern-uuid/common.h>
 
 #if defined(__APPLE__)
     #include <CoreFoundation/CoreFoundation.h>
@@ -106,126 +14,116 @@
     #include <guiddef.h>
 #endif
 
-namespace muuid
-{
+namespace muuid {
     namespace impl {
-        template<class T, size_t Extent>
-        std::true_type is_span_helper(std::span<T, Extent> * x);
 
-        std::false_type is_span_helper(...);
+        template<char_like C> struct uuid_char_traits {
+            static constexpr unsigned max = 128;
 
-        template<class T>
-        constexpr bool is_span = decltype(is_span_helper((T *)nullptr))::value;
-
-        template<class T>
-        concept byte_like = std::is_standard_layout_v<T> && 
-                            sizeof(T) == sizeof(uint8_t) && 
-        requires {
-            static_cast<T>(uint8_t{});
-            static_cast<uint8_t>(T{});
+            static constexpr C l = C(u8'l');
+            static constexpr C u = C(u8'u');
+            static constexpr C cl_br = C(u8'}');
+            static constexpr C dash = C(u8'-');
         };
 
-        static_assert(byte_like<char>);
-        static_assert(byte_like<unsigned char>);
-        static_assert(byte_like<signed char>);
-        static_assert(byte_like<std::byte>);
+        template<> struct uuid_char_traits<char> {
+            static constexpr unsigned max = ('a' == u8'a' ? 128 : 256);
 
-        template<class T>
-        concept char_like = std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
-                            std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>;
-
-        template<char_like C> struct uuid_char_traits;
-
-        template<> struct uuid_char_traits<char> { 
-            static constexpr char dash = '-'; 
-            static constexpr char fmt_l = 'l';
-            static constexpr char fmt_u = 'u';
-            static constexpr char fmt_cl_br = '}';
-            static inline constexpr char digits[2][17] = {
-                "0123456789abcdef",
-                "0123456789ABCDEF",
-            };
-        };
-        template<> struct uuid_char_traits<wchar_t> { 
-            static constexpr wchar_t dash = L'-'; 
-            static constexpr wchar_t fmt_l = L'l';
-            static constexpr wchar_t fmt_u = L'u';
-            static constexpr wchar_t fmt_cl_br = L'}';
-            static inline constexpr wchar_t digits[2][17] = {
-                L"0123456789abcdef",
-                L"0123456789ABCDEF",
-            };
-        };
-        template<> struct uuid_char_traits<char16_t> { 
-            static constexpr char16_t dash = u'-'; 
-            static constexpr char16_t fmt_l = u'l';
-            static constexpr char16_t fmt_u = u'u';
-            static constexpr char16_t fmt_cl_br = u'}';
-            static inline constexpr char16_t digits[2][17] = {
-                u"0123456789abcdef",
-                u"0123456789ABCDEF",
-            };
-        };
-        template<> struct uuid_char_traits<char32_t> { 
-            static constexpr char32_t dash = U'-'; 
-            static constexpr char32_t fmt_l = U'l';
-            static constexpr char32_t fmt_u = U'u';
-            static constexpr char32_t fmt_cl_br = U'}';
-            static inline constexpr char32_t digits[2][17] = {
-                U"0123456789abcdef",
-                U"0123456789ABCDEF",
-            };
-        };
-        template<> struct uuid_char_traits<char8_t> { 
-            static constexpr char8_t dash = u8'-'; 
-            static constexpr char8_t fmt_l = u8'l';
-            static constexpr char8_t fmt_u = u8'u';
-            static constexpr char8_t fmt_cl_br = u8'}';
-            static inline constexpr char8_t digits[2][17] = {
-                u8"0123456789abcdef",
-                u8"0123456789ABCDEF",
-            };
+            static constexpr char l = 'l';
+            static constexpr char u = 'u';
+            static constexpr char cl_br = '}';
+            static constexpr char dash = '-';
         };
 
+        template<> struct uuid_char_traits<wchar_t> {
+            static constexpr unsigned max = (L'a' == u8'a' ? 128 : 256);
 
-        void invalid_constexpr_call(const char *);
+            static constexpr wchar_t l = L'l';
+            static constexpr wchar_t u = L'u';
+            static constexpr wchar_t cl_br = L'}';
+            static constexpr wchar_t dash = L'-';
+        };
 
-        #if MUUID_USE_EXCEPTIONS
-            #define MUUID_THROW(x) throw x
-        #else
-            [[noreturn]] inline void fail(const char* message) {
-                fprintf(stderr, "muuid: fatal error: %s", message);
-                abort();
+        #define MUUID_UUID_ALPHABET(...) \
+                __VA_ARGS__##"0123456789abcdef" \
+                __VA_ARGS__##"0123456789ABCDEF"
+
+        template<class C, size_t N>
+        static consteval auto make_reverse_uuid_alphabet(const C (&chars)[N]) {
+            using tr = uuid_char_traits<C>;
+
+            std::array<uint8_t, tr::max> ret;
+            for (size_t i = 0; i < std::size(ret); ++i) {
+                auto val = uint8_t(std::find(std::begin(chars), std::end(chars) - 1, C(i)) - std::begin(chars));
+                if (val != N - 1) {
+                    ret[i] = val % ((N - 1) / 2);
+                } else {
+                    ret[i] = (N - 1) / 2;
+                }
             }
-            #define MUUID_THROW(x) ::muuid::impl::fail((x).what())
-        #endif
-
-        template<std::same_as<size_t> S>
-        static constexpr size_t hash_combine(S prev, S next) {
-            constexpr auto digits = std::numeric_limits<S>::digits;
-            static_assert(digits == 64 || digits == 32);
-            
-            if constexpr (digits == 64) {
-                S x = prev + 0x9e3779b9 + next;
-                const S m = 0xe9846af9b1a615d;
-                x ^= x >> 32;
-                x *= m;
-                x ^= x >> 32;
-                x *= m;
-                x ^= x >> 28;
-                return x;
-            } else {
-                S x = prev + 0x9e3779b9 + next;
-                const S m1 = 0x21f0aaad;
-                const S m2 = 0x735a2d97;
-                x ^= x >> 16;
-                x *= m1;
-                x ^= x >> 15;
-                x *= m2;
-                x ^= x >> 15;
-                return x;
-            }
+            return ret; 
         }
+
+        class uuid_alphabet {
+        private:
+            static constexpr const char narrow[] = MUUID_UUID_ALPHABET();
+            static constexpr const wchar_t wide[] = MUUID_UUID_ALPHABET(L);
+            static constexpr const char8_t utf[] = MUUID_UUID_ALPHABET(u8);
+
+            
+            static constexpr auto reverse_narrow = make_reverse_uuid_alphabet(narrow);
+            static constexpr auto reverse_wide = make_reverse_uuid_alphabet(wide);
+            static constexpr auto reverse_utf = make_reverse_uuid_alphabet(utf);
+
+        public:
+            static constexpr size_t size = (std::size(utf) - 1) / 2;
+
+        public:
+            template<impl::char_like C> 
+            static constexpr C encode(bool uppercase, uint8_t idx) noexcept {
+                auto real_idx = idx + (uppercase << ct_log2<size>::value);
+
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
+                    return C(utf[real_idx]);
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+                    return wide[real_idx];
+                } else {
+                    return narrow[real_idx];
+                }
+            }
+            
+            template<impl::char_like C>
+            static constexpr uint8_t decode(C c) noexcept {
+                if constexpr (std::is_same_v<C, char32_t> || 
+                              std::is_same_v<C, char16_t> || 
+                              std::is_same_v<C, char8_t> ||
+                              (std::is_same_v<C, wchar_t> && L'a' == u8'a') ||
+                              (std::is_same_v<C, wchar_t> && 'a' == u8'a')) {
+                
+                    if (unsigned(c) >= std::size(reverse_utf))
+                        return size;
+                    return reverse_utf[unsigned(c)];
+                
+                } else if constexpr (std::is_same_v<C, wchar_t>) {
+
+                    if (unsigned(c) >= std::size(reverse_wide))
+                        return size;
+                    return reverse_wide[unsigned(c)];
+
+                } else {
+
+                    if (unsigned(c) >= std::size(reverse_narrow))
+                        return size;
+                    return reverse_narrow[unsigned(c)];
+                }
+            }
+        };
+
+        #undef MUUID_UUID_ALPHABET
     }
 
     struct uuid_parts {
@@ -281,48 +179,13 @@ namespace muuid
 
         struct namespaces;
     private:
-        template<impl::byte_like Byte, class T>
-        static constexpr const uint8_t * read_bytes(const Byte * bytes, T & val) noexcept {
-            T tmp = uint8_t(*bytes++);
-            for(unsigned i = 0; i < sizeof(T) - 1; ++i)
-                tmp = (tmp << 8) | uint8_t(*bytes++);
-            val = tmp;
-            return bytes;
-        }
-
-        template<impl::byte_like Byte, class T>
-        static constexpr uint8_t * write_bytes(T val, Byte * bytes) noexcept {
-            bytes[sizeof(T) - 1] = Byte(static_cast<uint8_t>(val));
-            if constexpr (sizeof(T) > 1) {
-                for(unsigned i = 1; i != sizeof(T); ++i) {
-                    val >>= 8;
-                    bytes[sizeof(T) - i - 1] = Byte(static_cast<uint8_t>(val));
-                }
-            }
-            return bytes + sizeof(T);
-        }
-
         template<impl::char_like T>
         static constexpr bool read_hex(const T * str, uint8_t & val) noexcept {
-            using tr = impl::uuid_char_traits<T>;
-            constexpr T zero = tr::digits[0][0];
-            constexpr T nine = tr::digits[0][9];
-            constexpr T letter_a = tr::digits[0][10];
-            constexpr T letter_f = tr::digits[0][15];
-            constexpr T letter_A = tr::digits[1][10];
-            constexpr T letter_F = tr::digits[1][15];
-
             uint8_t ret = 0;
             for (int i = 0; i < 2; ++i) {
                 T c = *str++;
-                uint8_t nibble;
-                if (c >= zero && c <= nine)
-                    nibble = uint8_t(c - zero);
-                else if (c >= letter_a && c <= letter_f)
-                    nibble = uint8_t(c - letter_a + 10);
-                else if (c >= letter_A && c <= letter_F)
-                    nibble = uint8_t(c - letter_A + 10);
-                else 
+                uint8_t nibble = impl::uuid_alphabet::decode(c);
+                if (nibble >= impl::uuid_alphabet::size)
                     return false;
                 ret = (ret << 4) | nibble;
             }
@@ -332,9 +195,8 @@ namespace muuid
 
         template<impl::char_like T>
         static constexpr void write_hex(uint8_t val, T * str, format fmt) noexcept {
-            using tr = impl::uuid_char_traits<T>;
-            *str++ = tr::digits[fmt][uint8_t(val >> 4)];
-            *str++ = tr::digits[fmt][uint8_t(val & 0x0F)];
+            *str++ = impl::uuid_alphabet::encode<T>(fmt, uint8_t(val >> 4));
+            *str++ = impl::uuid_alphabet::encode<T>(fmt, uint8_t(val & 0x0F));
         }
 
     public:
@@ -352,21 +214,21 @@ namespace muuid
             const T * str = src;
             uint8_t * data = this->bytes.data();
             for (int i = 0; i < 4; ++i, str += 2, ++data) {
-                if (!read_hex(str, *data))
+                if (!uuid::read_hex(str, *data))
                     impl::invalid_constexpr_call("invalid uuid string");
             }
             if (*str++ != tr::dash)
                 impl::invalid_constexpr_call("invalid uuid string");
             for (int i = 0; i < 3; ++i) {
                 for (int j = 0; j < 2; ++j, str += 2, ++data) {
-                    if (!read_hex(str, *data))
+                    if (!uuid::read_hex(str, *data))
                         impl::invalid_constexpr_call("invalid uuid string");
                 }
                 if (*str++ != tr::dash)
                     impl::invalid_constexpr_call("invalid uuid string");
             }
             for (int i = 0; i < 6; ++i, str += 2, ++data) {
-                if (!read_hex(str, *data))
+                if (!uuid::read_hex(str, *data))
                     impl::invalid_constexpr_call("invalid uuid string");
             }
             if (*str != 0)
@@ -393,10 +255,10 @@ namespace muuid
         /// Constructs uuid from an old-style uuid_parts struct
         constexpr uuid(const uuid_parts & parts) noexcept {
             auto dest = this->bytes.data();
-            dest = write_bytes(parts.time_low, dest);
-            dest = write_bytes(parts.time_mid, dest);
-            dest = write_bytes(parts.time_hi_and_version, dest);
-            dest = write_bytes(parts.clock_seq, dest);
+            dest = impl::write_bytes(parts.time_low, dest);
+            dest = impl::write_bytes(parts.time_mid, dest);
+            dest = impl::write_bytes(parts.time_hi_and_version, dest);
+            dest = impl::write_bytes(parts.clock_seq, dest);
             std::copy(std::begin(parts.node), std::end(parts.node), dest);
         }
 
@@ -416,9 +278,9 @@ namespace muuid
         /// Constructs uuid from Windows GUID
         constexpr uuid(const GUID & guid) noexcept {
             auto dest = this->bytes.data();
-            dest = write_bytes(guid.Data1, dest);
-            dest = write_bytes(guid.Data2, dest);
-            dest = write_bytes(guid.Data3, dest);
+            dest = impl::write_bytes(guid.Data1, dest);
+            dest = impl::write_bytes(guid.Data2, dest);
+            dest = impl::write_bytes(guid.Data3, dest);
             std::copy(std::begin(guid.Data4), std::end(guid.Data4), dest);
         }
     #endif
@@ -470,10 +332,10 @@ namespace muuid
         constexpr auto to_parts() const noexcept -> uuid_parts {
             uuid_parts ret;
             auto ptr = this->bytes.data();
-            ptr = read_bytes(ptr, ret.time_low);
-            ptr = read_bytes(ptr, ret.time_mid);
-            ptr = read_bytes(ptr, ret.time_hi_and_version);
-            ptr = read_bytes(ptr, ret.clock_seq);
+            ptr = impl::read_bytes(ptr, ret.time_low);
+            ptr = impl::read_bytes(ptr, ret.time_mid);
+            ptr = impl::read_bytes(ptr, ret.time_hi_and_version);
+            ptr = impl::read_bytes(ptr, ret.clock_seq);
             std::copy(ptr, ptr + 6, ret.node);
             return ret;
         }
@@ -500,9 +362,9 @@ namespace muuid
         constexpr auto to_GUID() const noexcept -> GUID {
             GUID ret;
             auto ptr = this->bytes.data();
-            ptr = read_bytes(ptr, ret.Data1);
-            ptr = read_bytes(ptr, ret.Data2);
-            ptr = read_bytes(ptr, ret.Data3);
+            ptr = impl::read_bytes(ptr, ret.Data1);
+            ptr = impl::read_bytes(ptr, ret.Data2);
+            ptr = impl::read_bytes(ptr, ret.Data3);
             std::copy(ptr, ptr + 8, ret.Data4);
             return ret;
         }
@@ -520,21 +382,21 @@ namespace muuid
             const T * str = src.data();
             uint8_t * dest = ret.bytes.data();
             for(int i = 0; i < 4; ++i, str += 2, ++dest) {
-                if (!read_hex(str, *dest))
+                if (!uuid::read_hex(str, *dest))
                     return std::nullopt;
             }
             if (*str++ != tr::dash)
                 return std::nullopt;
             for(int i = 0; i < 3; ++i) {
                 for (int j = 0; j < 2; ++j, str += 2, ++dest) {
-                    if (!read_hex(str, *dest))
+                    if (!uuid::read_hex(str, *dest))
                         return std::nullopt;
                 }
                 if (*str++ != tr::dash)
                     return std::nullopt;
             }
             for (int i = 0; i < 6; ++i, str += 2, ++dest) {
-                if (!read_hex(str, *dest))
+                if (!uuid::read_hex(str, *dest))
                     return std::nullopt;
             }
             return ret;
@@ -547,7 +409,7 @@ namespace muuid
             requires impl::char_like<std::remove_cvref_t<decltype(*std::span{x}.begin())>>; 
         })
         static constexpr auto from_chars(const T & src) noexcept
-            { return from_chars(std::span{src}); }
+            { return uuid::from_chars(std::span{src}); }
 
         /// Formats uuid into a span of characters
         template<impl::char_like T, size_t Extent>
@@ -567,16 +429,16 @@ namespace muuid
             T * out = dest.data();
             const uint8_t * src = this->bytes.data();
             for (int i = 0; i < 4; ++i, ++src, out += 2)
-                write_hex(*src, out, fmt);
+                uuid::write_hex(*src, out, fmt);
             *out++ = tr::dash;
             for (int i = 0; i < 3; ++i) {
                 for (int j = 0; j < 2; ++j, ++src, out += 2) {
-                    write_hex(*src, out, fmt);
+                    uuid::write_hex(*src, out, fmt);
                 }
                 *out++ = tr::dash;
             }
             for (int i = 0; i < 6; ++i, ++src, out += 2) 
-                write_hex(*src, out, fmt);
+                uuid::write_hex(*src, out, fmt);
 
             if constexpr (Extent == std::dynamic_extent)
                 return true;
@@ -591,7 +453,7 @@ namespace muuid
         })
         [[nodiscard]]
         constexpr auto to_chars(T & dest, format fmt = lowercase) const noexcept {
-            return to_chars(std::span{dest}, fmt);
+            return this->to_chars(std::span{dest}, fmt);
         }
 
         /// Returns a character array with formatted uuid
@@ -619,7 +481,7 @@ namespace muuid
         template<impl::char_like T>
         friend std::basic_ostream<T> & operator<<(std::basic_ostream<T> & str, const uuid val) {
             const auto flags = str.flags();
-            const format fmt = (flags & std::ios_base::uppercase ? uppercase : lowercase);
+            const uuid::format fmt = (flags & std::ios_base::uppercase ? uuid::uppercase : uuid::lowercase);
             std::array<T, 36> buf;
             val.to_chars(buf, fmt);
             std::copy(buf.begin(), buf.end(), std::ostreambuf_iterator<T>(str));
@@ -696,11 +558,11 @@ namespace muuid
 
                 auto it = ctx.begin();
                 while(it != ctx.end()) {
-                    if (*it == tr::fmt_l) {
+                    if (*it == tr::l) {
                         this->fmt = uuid::lowercase; ++it;
-                    } else if (*it == tr::fmt_u) {
+                    } else if (*it == tr::u) {
                         this->fmt = uuid::uppercase; ++it;
-                    } else if (*it == tr::fmt_cl_br) {
+                    } else if (*it == tr::cl_br) {
                         break;
                     } else {
                         static_cast<Derived *>(this)->raise_exception("Invalid format args");
@@ -779,91 +641,33 @@ namespace muuid {
      */
     MUUID_EXPORTED void set_node_id(std::span<const uint8_t, 6> id);
 
-    /// Callback interface to handle persistence of clock data for all time based UUID generation
-    class clock_persistence {
-    public:
-        /// Clock persistence data
-        struct data {
-            using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
-            
-            /**
-             * The last known clock reading.
-             *  
-             * You can also use this value to optimize writing to persistent storage
-             */
-            time_point_t when; 
-            /// Opaque value. Save/restore it but do not otherwise depend on its value
-            uint16_t seq;
-            /// Opaque value. Save/restore it but do not otherwise depend on its value
-            int32_t adjustment;
-        };
 
+    /// Clock persistence data for UUID
+    struct uuid_persistence_data {
+        using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
+        
         /**
-         * Per thread persistance callback.
-         * 
-         * All methods of this class are only accessed from a signle thread
+         * The last known clock reading.
+         *  
+         * You can also use this value to optimize writing to persistent storage
          */
-        class per_thread {
-        public:
-            /**
-             * Called when this object is no longer used. 
-             * 
-             * It is safe to dispose of it (e.g. do `delete this` for example) when this is called
-             */
-            virtual void close() noexcept = 0;
-    
-            /// Lock access to persistent data against other threads/processes
-            virtual void lock() = 0;
-            /// Unlock access to persistent data against other threads/processes
-            virtual void unlock() = 0;
-    
-            /**
-             * Load persistent data if any
-             * 
-             * This is called once after this object is returned from get_for_current_thread().
-             * The call happens inside a lock() call.
-             * 
-             * @returns `true` if data was loaded, false otherwise
-             */
-            virtual bool load(data & d) = 0;
-            
-            /**
-             * Save persistent data if desired
-             * 
-             * This can be called multiple times (whenever UUID using the clock is generated).
-             * The call happens inside a lock() call.
-             */
-            virtual void store(const data & d) = 0;
-        protected:
-            per_thread() noexcept = default;
-            ~per_thread() noexcept = default;
-            per_thread(const per_thread &) noexcept = default;
-            per_thread & operator=(const per_thread &) noexcept = default;
-        };
-    public:
-        /**
-         * Return per_thread object for the calling thread.
-         * 
-         * This could be either a newly allocated object or some resused one
-         * depending on your implementation.
-         * 
-         * The return time is reference rather than pointer because you are not
-         * allowed to return nullptr.
-         */
-        virtual per_thread & get_for_current_thread() = 0;
+        time_point_t when; 
+        /// Opaque value. Save/restore it but do not otherwise depend on its value
+        uint16_t seq;
+        /// Opaque value. Save/restore it but do not otherwise depend on its value
+        int32_t adjustment;
+    };
 
-        /**
-         * Increment the reference count for this interface.
-         * 
-         * The object must remain alive as long as reference count is greater than 0
-         */
-        virtual void add_ref() noexcept = 0;
-        /**
-         * Decrement the reference count for this interface.
-         * 
-         * The object must remain alive as long as reference count is greater than 0
-         */
-        virtual void sub_ref() noexcept = 0;
+    /// Callback interface to handle persistence of clock data for all time based ID generations
+    using uuid_clock_persistence = generic_clock_persistence<uuid_persistence_data>;
+
+
+    /**
+     * Deprecated synonym for uuid_clock_persistence
+     * 
+     * It is a derived class rather than typedef for ABI compatibility
+     */ 
+    class [[deprecated("please use uuid_clock_persistence instead")]] clock_persistence : public uuid_clock_persistence {
     protected:
         clock_persistence() noexcept = default;
         ~clock_persistence() noexcept = default;
@@ -872,23 +676,23 @@ namespace muuid {
     };
 
     /**
-     * Set the clock_persistence instance for uuid::generate_time_based()
+     * Set the uuid_clock_persistence instance for uuid::generate_time_based()
      * 
      * Pass `nullptr` to remove.
      */
-    MUUID_EXPORTED void set_time_based_persistence(clock_persistence * persistence);
+    MUUID_EXPORTED void set_time_based_persistence(uuid_clock_persistence * persistence);
     /**
-     * Set the clock_persistence instance for uuid::generate_reordered_time_based()
+     * Set the uuid_clock_persistence instance for uuid::generate_reordered_time_based()
      * 
      * Pass `nullptr` to remove.
      */
-    MUUID_EXPORTED void set_reordered_time_based_persistence(clock_persistence * persistence);
+    MUUID_EXPORTED void set_reordered_time_based_persistence(uuid_clock_persistence * persistence);
     /**
-     * Set the clock_persistence instance for uuid::generate_unix_time_based()
+     * Set the uuid_clock_persistence instance for uuid::generate_unix_time_based()
      * 
      * Pass `nullptr` to remove.
      */
-    MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence * persistence);
+    MUUID_EXPORTED void set_unix_time_based_persistence(uuid_clock_persistence * persistence);
 }
 
 
