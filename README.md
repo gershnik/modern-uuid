@@ -14,12 +14,14 @@ A modern, no-dependencies, portable C++ library for manipulating [UUIDs](https:/
 * ULID: Implements the canonical [spec](https://github.com/ulid/spec) 
 * NanoID: Since there is no formal spec this library implements external textual format identical to the JavaScript library and 
   generation algorithm fully equivalent to it. It also supports custom alphabets and sizes with the same semantics. 
-  The rest of the implementation is is done from first principles - not as a port of JavaScript library. In particular, NanoID 
-  objects are stored and manipulated in packed binary format like UUID and ULID rather than external strings.
+  The rest of the implementation is done from first principles - not as a port of JavaScript library. In particular, NanoID 
+  objects are stored and manipulated in packed binary format like UUID and ULID rather than strings.
 * Self-contained with no dependencies beyond C++ standard library.
-* Works on Mac, Linux, Windows, BSD, Wasm, and even Illumos. Might even work on some embedded systems given a suitable compiler and standard library support.
+* Works on Mac, Linux, Windows, BSD, Wasm, and even Illumos. Might even work on some embedded systems given a suitable compiler 
+  and a standard library support.
 * Requires C++20 but does not require a very recent compiler (GCC is supported from version 10 and clang from version 13).
-* Most operations (with an obvious exception of XXID generation and iostream I/O) are `constexpr` and can be done at compile time. Notably this enables:
+* Most operations (with an obvious exception of XXID generation and iostream I/O) are `constexpr` and can be done at compile time. 
+  Notably this enables:
   * Natural syntax for compile-time XXID literals
   * Using XXIDs as template parameters and in other compile-time contexts
 * Supports `std::format` (if available) for formatting and parsing in addition to iostreams.

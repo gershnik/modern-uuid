@@ -121,36 +121,7 @@ assert(uuid() == uuid("00000000-0000-0000-0000-000000000000"));
 If you need it, there is also `uuid::max()` static method that returns Max UUID: `FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF`
 
 ### Constructing from raw bytes 
-<!-- TOC -->
 
-- [Usage Guide](#usage-guide)
-    - [Basics](#basics)
-        - [Headers and namespaces](#headers-and-namespaces)
-        - [Exceptions and errors](#exceptions-and-errors)
-        - [Thread safety](#thread-safety)
-        - [Multiprocess safety](#multiprocess-safety)
-    - [Usage](#usage)
-        - [uuid class](#uuid-class)
-        - [Literals](#literals)
-        - [Constructing from raw bytes](#constructing-from-raw-bytes)
-        - [Accessing raw bytes](#accessing-raw-bytes)
-        - [Generation](#generation)
-            - [What about UUID versions 2 and 8?](#what-about-uuid-versions-2-and-8)
-        - [Conversions from/to strings](#conversions-fromto-strings)
-        - [Comparisons and hashing](#comparisons-and-hashing)
-        - [Formatting and I/O](#formatting-and-io)
-        - [Interoperability](#interoperability)
-            - [macOS](#macos)
-            - [Windows](#windows)
-            - [__uuidof](#__uuidof)
-        - [Accessing UUID properties](#accessing-uuid-properties)
-        - [Other features](#other-features)
-    - [Advanced](#advanced)
-        - [Controlling MAC address use for UUID version 1](#controlling-mac-address-use-for-uuid-version-1)
-        - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
-    - [Implementation details](#implementation-details)
-
-<!-- /TOC -->
 You can construct a `uuid` from `std::span</*byte-like*/, 16>` or anything convertible to such a span. A _byte_like_ is
 any standard layout type of sizeof 1 that is convertible to `uint8_t`. This includes `uint8_t` itself, `std::byte`, `char`,
 `signed char` and `unsigned char`. 
