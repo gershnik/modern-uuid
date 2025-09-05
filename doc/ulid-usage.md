@@ -12,12 +12,12 @@
     - [ulid class](#ulid-class)
     - [Literals](#literals)
     - [Constructing from raw bytes](#constructing-from-raw-bytes)
-    - [Accessing raw bytes](#accessing-raw-bytes)
     - [Generation](#generation)
     - [Conversions from/to strings](#conversions-fromto-strings)
     - [Comparisons and hashing](#comparisons-and-hashing)
     - [Formatting and I/O](#formatting-and-io)
 - [Advanced](#advanced)
+    - [Accessing raw bytes](#accessing-raw-bytes)
     - [Persisting/synchronizing the clock state](#persistingsynchronizing-the-clock-state)
 
 <!-- /TOC -->
@@ -40,7 +40,7 @@ is assumed in all the examples below.
 
 In general `modern-uuid` itself doesn't use exceptions. 
 
-Most methods are `noexcept` and a few that aren't (notably ULID generation ones)
+Most methods are `noexcept` and a few that aren't (notably ULID generation one)
 can only emit exceptions thrown by standard library facilities they use. Such methods are always strongly exception safe. 
 
 A few methods that can fail (such as ULID parsing) report errors via either a boolean return or returning an `std::optional`. 
@@ -134,23 +134,6 @@ std::vector<uint8_t> vec = {...};
 ulid u2(std::span{vec}.subspan<3, 19>());
 ```
 
-### Accessing raw bytes
-
-You can access raw `ulid` bytes via its `bytes` public data member. Yes this data member is public, which is ok because
-`ulid` class doesn't really have any invariants. *Any* 16 bytes could conceivably represent some kind of ULID and
-`ulid` class isn't enforcing any constraints on that.
-In addition having this member public is required in order to make `ulid` a [_structural type_](https://en.cppreference.com/w/cpp/language/template_parameters).
-
-The `bytes` member is an `std:array<uint8_t, 16>` and can be manipulated using all the usual range machinery
-
-```cpp
-constexpr ulid u("01bx5zzkbkactav9wevgemmvry");
-assert(u.bytes[6] == 83);
-for(auto byte: u.bytes) {
-    ...
-}
-```
-
 ### Generation
 
 To generate a ULID call its static `generate` method.
@@ -170,7 +153,7 @@ Some aspects of ULID generation can be further controlled as explained in the [A
 
 A `ulid` can be parsed from any `std::span<char, /*any extent*/>` or anything convertible to such a span (`char` array, `std::string_view`,
 `std::string` etc.) via `ulid::from_chars`. It returns `std::optional<ulid>` which is empty if the string is not a valid ULID representation.
-Accepted input is not case insensitive. 
+Accepted input is not case sensitive. 
 
 ```cpp
 if (auto maybe_ulid = ulid::from_chars("01k4c0saqt63ntznp3xah01eb3")) {
@@ -178,7 +161,7 @@ if (auto maybe_ulid = ulid::from_chars("01k4c0saqt63ntznp3xah01eb3")) {
 }
 ```
 
-To convert in the opposite direction there is `ulid::to_chars` method that has two main form.
+To convert in the opposite direction there is `ulid::to_chars` method that has two main forms.
 
 1. You can pass the destination buffer as an argument. It must be an `std::span<char, 26>` or anything convertible to it.
 
@@ -197,7 +180,7 @@ u.to_chars(buf, ulid::uppercase);
 
 ```cpp
 ulid u = ...;
-std::array<char, 36> chars;
+std::array<char, 26> chars;
 //use lowercase
 chars = u.to_chars();
 //or explicitly
@@ -300,6 +283,23 @@ assert(ostr.str() == "01K4C3FP5FCFR2SYYB3KQD37YK");
 ```
 
 ## Advanced
+
+### Accessing raw bytes
+
+You can access raw `ulid` bytes via its `bytes` public data member. Yes this data member is public, which is ok because
+`ulid` class doesn't really have any invariants. *Any* 16 bytes could conceivably represent some kind of ULID and
+`ulid` class isn't enforcing any constraints on that.
+In addition having this member public is required in order to make `ulid` a [_structural type_](https://en.cppreference.com/w/cpp/language/template_parameters).
+
+The `bytes` member is an `std:array<uint8_t, 16>` and can be manipulated using all the usual range machinery
+
+```cpp
+constexpr ulid u("01bx5zzkbkactav9wevgemmvry");
+assert(u.bytes[6] == 83);
+for(auto byte: u.bytes) {
+    ...
+}
+```
 
 ### Persisting/synchronizing the clock state
 

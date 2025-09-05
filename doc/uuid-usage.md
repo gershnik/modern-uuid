@@ -223,7 +223,7 @@ if (auto maybe_uuid = uuid::from_chars("7d444840-9dc0-11d1-b245-5ffdce74fad2")) 
 }
 ```
 
-To convert in the opposite direction there is `uuid::to_chars` method that has two main form.
+To convert in the opposite direction there is `uuid::to_chars` method that has two main forms.
 
 1. You can pass the destination buffer as an argument. It must be an `std::span<char, 36>` or anything convertible to it.
 

@@ -111,7 +111,7 @@ namespace muuid {
 
         #define MUUID_DECLARE_NANOID_ALPHABET(name, str) struct name : ::muuid::impl::nanoid_alphabet<str, L##str, u8##str> {}
 
-        MUUID_EXPORTED void generate_nanoid(std::span<uint8_t> dest, uint8_t max);
+        MUUID_EXPORTED void generate_nanoid(std::span<uint8_t> dest, uint8_t max) noexcept;
     }
     
 
@@ -181,7 +181,7 @@ namespace muuid {
         }
 
         /// Generates a nanoid
-        static auto generate() -> basic_nanoid {
+        static auto generate() noexcept -> basic_nanoid {
             std::array<uint8_t, bytes_count> buf;
             if constexpr (Alphabet::is_full) {
                 impl::generate_nanoid(buf, 255);

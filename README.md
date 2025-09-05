@@ -25,8 +25,9 @@ A modern, no-dependencies, portable C++ library for manipulating [UUIDs](https:/
 * ULID: Implements the canonical [spec](https://github.com/ulid/spec) 
 * NanoID: Since there is no formal spec this library implements external textual format identical to the JavaScript library and 
   generation algorithm fully equivalent to it. It also supports custom alphabets and sizes with the same semantics. 
-  The rest of the implementation is done from first principles - not as a port of JavaScript library. In particular, NanoID 
-  objects are stored and manipulated in packed binary format like UUID and ULID rather than strings.
+  The implementation is done from first principles - it is not as a port of the JavaScript library. 
+  * In particular, NanoID objects are internally stored and manipulated in packed binary format rather than strings resulting in much 
+    better memory efficiency
 * Self-contained with no dependencies beyond C++ standard library.
 * Works on Mac, Linux, Windows, BSD, Wasm, and even Illumos. Might even work on some embedded systems given a suitable compiler 
   and a standard library support.
@@ -60,14 +61,8 @@ using namespace muuid;
 //this is a compile time UUID literal
 constexpr uuid u1("e53d37db-e4e0-484f-996f-3ab1d4701abc");
 
-//default constructor creates Nil UUID 00000000-0000-0000-0000-000000000000
-constexpr uuid nil_uuid;
-
-//there is also uuid::max() to get Max UUID: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
-constexpr uuid max_uuid = uuid::max();
-
 //if you want to you can use uuid as a template parameter
-template<uuid U1> class some_class {...};
+template<uuid U> class some_class {...};
 some_class<uuid("bc961bfb-b006-42f4-93ae-206f02658810")> some_object;
 
 //you can generate all non-proprietary versions of UUID from RFC 9562:
@@ -79,7 +74,7 @@ uuid u_v6 = uuid::generate_reordered_time_based();
 uuid u_v7 = uuid::generate_unix_time_based();
 
 //for non-literal strings you can parse uuids from strings using uuid::from_chars
-//the argument to from_chars can be anything convertible to std::span<char, any extent>
+//the argument to from_chars can be anything convertible to std::span<char>
 //the call is constexpr
 std::string some_uuid_str = "7D444840-9DC0-11D1-B245-5FFDCE74FAD2";
 std::optional<uuid> maybe_uuid = uuid::from_chars(some_uuid_str);
@@ -123,28 +118,6 @@ ostr.str("");
 //writing respects std::ios_base::uppercase stream flag
 ostr << std::uppercase << uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2");
 assert(ostr.str() == "7D444840-9DC0-11D1-B245-5FFDCE74FAD2");
-
-//uuid objects can be created from raw bytes
-//you need an std::span<anything byte-like, 16> or anything convertible to 
-//such a span
-std::array<std::byte, 16> arr1 = {...};
-uuid u_from_std_array(arr1);
-
-uint8_t arr2[16] = {...};
-uuid u_from_c_array(arr2);
-
-std::vector<uint8_t> vec = {...};
-uuid u_from_bytes(std::span{vec}.subspan<3, 19>());
-
-//finally you can access raw uuid bytes via bytes public member
-constexpr uuid ua("7d444840-9dc0-11d1-b245-5ffdce74fad2");
-assert(ua.bytes[3] == 0x48);
-
-//bytes is an std::array<uint8_t, 16> so you can use all std::array
-//functionality
-for(auto b: ua.bytes) {
-    ...use the byte...
-}
 ```
 
 ### ULID
@@ -157,21 +130,14 @@ using namespace muuid;
 //this is a compile time ULID literal
 constexpr ulid u1("01BX5ZZKBKACTAV9WEVGEMMVRY");
 
-//default constructor creates Nil ULID 00000000000000000000000000
-constexpr ulid nil_ulid;
-
-//there is also ulid::max() to get Max ULID: 7zzzzzzzzzzzzzzzzzzzzzzzzz
-constexpr ulid max_ulid = ulid::max();
-
 //if you want to you can use ulid as a template parameter
 template<ulid U1> class some_class {...};
 some_class<ulid("01BX5ZZKBKACTAV9WEVGEMMVRY")> some_object;
 
-//generate a ULID:
-ulid ug = ulid::generate();
+ulid u2 = ulid::generate();
 
 //for non-literal strings you can parse ulids from strings using ulid::from_chars
-//the argument to from_chars can be anything convertible to std::span<char, any extent>
+//the argument to from_chars can be anything convertible to std::span<char>
 //the call is constexpr
 std::string some_ulid_str = "01bx5zzkbkactav9wevgemmvry";
 std::optional<ulid> maybe_ulid = ulid::from_chars(some_ulid_str);
@@ -189,7 +155,6 @@ std::strong_ordering res = (ug <=> u1);
 std::unordered_map<ulid, transaction> transaction_map;
 
 //they can be formatted. u and l stand for uppercase and lowercase
-
 std::string str = std::format("{}", u1);
 assert(str == "01bx5zzkbkactav9wevgemmvry");
 
@@ -215,28 +180,6 @@ ostr.str("");
 //writing respects std::ios_base::uppercase stream flag
 ostr << std::uppercase << ulid("01bx5zzkbkactav9wevgemmvry");
 assert(ostr.str() == "01BX5ZZKBKACTAV9WEVGEMMVRY");
-
-//ulid objects can be created from raw bytes
-//you need an std::span<anything byte-like, 16> or anything convertible to 
-//such a span
-std::array<std::byte, 16> arr1 = {...};
-ulid u_from_std_array(arr1);
-
-uint8_t arr2[16] = {...};
-ulid u_from_c_array(arr2);
-
-std::vector<uint8_t> vec = {...};
-ulid u_from_bytes(std::span{vec}.subspan<3, 19>());
-
-//finally you can access raw ulid bytes via bytes public member
-constexpr ulid ua("01bx5zzkbkactav9wevgemmvry");
-assert(ua.bytes[6] == 83);
-
-//bytes is an std::array<uint8_t, 16> so you can use all std::array
-//functionality
-for(auto b: ua.bytes) {
-    ...use the byte...
-}
 ```
 
 ### NanoID
@@ -249,14 +192,8 @@ using namespace muuid;
 //this is a compile time NanoID literal
 constexpr nanoid n1("V1StGXR8_Z5jdHi6B-myT");
 
-//default constructor creates Nil NanoID: uuuuuuuuuuuuuuuuuuuuu
-constexpr nanoid nil_nanoid;
-
-//there is also nanoid::max() to get Max NanoID: ttttttttttttttttttttt
-constexpr nanoid max_nanoid = nanoid::max();
-
 //if you want to you can use nanoid as a template parameter
-template<nanoid N1> class some_class {...};
+template<nanoid N> class some_class {...};
 some_class<nanoid("V1StGXR8_Z5jdHi6B-myT")> some_object;
 
 //generate a NanoID:
@@ -296,30 +233,6 @@ std::ostringstream ostr;
 ostr << nanoid("V1StGXR8_Z5jdHi6B-myT");
 assert(ostr.str() == "V1StGXR8_Z5jdHi6B-myT");
 
-//nanoid objects can be created from raw bytes. 
-//you need an std::span<anything byte-like, 16> or anything convertible to 
-//such a span
-//Because not every 16-byte value is a valid nanoid (21 units of 6 bit = 126 bit)
-//the result is an `std::optional`. It will be empty if the input is invalid.
-std::array<std::byte, 16> arr1 = {...};
-std::optional<nanoid> maybe_n1 = nanoid::from_bytes(arr1);
-
-uint8_t arr2[16] = {...};
-std::optional<nanoid> maybe_n2 = nanoid::from_bytes(arr2);
-
-std::vector<uint8_t> vec = {...};
-std::optional<nanoid> maybe_n3 = nanoid::from_bytes(std::span{vec}.subspan<3, 19>());
-
-//finally you can access raw nanoid bytes via bytes public member
-constexpr nanoid na("V1StGXR8_Z5jdHi6B-myT");
-assert(na.bytes[3] == 237);
-
-//bytes is an std::array<uint8_t, 16> so you can use all std::array
-//functionality
-for(auto b: na.bytes) {
-    ...use the byte...
-}
-
 //You can define different nanoid types that use custom alphabets and sizes
 MUUID_DECLARE_NANOID_ALPHABET(my_alphabet, "1234567890abcdef");
 
@@ -333,7 +246,6 @@ my_id mid2 = my_id::generate();
 //etc.
 //all other nanoid operations are the same (with different string/buffer sizes)
 //as for default nanoid
-
 ```
 
 
