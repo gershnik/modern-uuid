@@ -146,9 +146,9 @@ if (maybe_ulid) {
 }
 
 //ulid objects can be compared in every possible way
-assert(ug > nil_ulid);
-assert(ug != u1);
-std::strong_ordering res = (ug <=> u1);
+assert(u2 > nil_ulid);
+assert(u2 != u1);
+std::strong_ordering res = (u2 <=> u1);
 //etc.
 
 //ulid objects can be hashed
