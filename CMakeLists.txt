@@ -49,6 +49,7 @@ list(APPEND INSTALL_LIBS modern-uuid-header)
 set(PUBLIC_HEADER_NAMES
     common.h
     bit_packer.h
+    cuid2.h
     nanoid.h
     ulid.h
     uuid.h
