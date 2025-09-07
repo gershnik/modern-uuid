@@ -19,15 +19,19 @@ namespace std {
     template<class T, size_t N>
     doctest::String toString(const std::array<T, N> & arr) {
         using doctest::toString;
-        
-        doctest::String ret = "[";
-        for (size_t i = 0; i < N; ++i) {
-            if (i > 0)
-                ret += ", ";
-            ret += toString(arr[i]);
+
+        if constexpr (std::is_same_v<std::remove_const_t<T>, char>) {
+            return toString(std::string_view(arr.data(), arr.size()));
+        } else {
+            doctest::String ret = "[";
+            for (size_t i = 0; i < N; ++i) {
+                if (i > 0)
+                    ret += ", ";
+                ret += toString(arr[i]);
+            }
+            ret += "]";
+            return ret;
         }
-        ret += "]";
-        return ret;
     }
 }
 
