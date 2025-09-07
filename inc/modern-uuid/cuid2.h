@@ -312,8 +312,8 @@ namespace muuid {
             if (src[0] > 25)
                 return {};
             auto max_bytes = cuid2::max().bytes;
-            if (std::lexicographical_compare_three_way(src.begin() + 1, src.end(), 
-                                                       max_bytes.begin() + 1, max_bytes.end()) == std::strong_ordering::greater)
+            if (std::lexicographical_compare(max_bytes.begin() + 1, max_bytes.end(),
+                                             src.begin() + 1, src.end()))
                 return {};
 
             cuid2 ret;
