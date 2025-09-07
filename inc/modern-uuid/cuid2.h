@@ -10,7 +10,11 @@ namespace muuid {
 
     namespace impl {
 
-    #if defined(__SIZEOF_INT128__)
+    
+    #if defined(__SIZEOF_INT128__) && !(defined(__clang__) && defined(_WIN32))
+    #ifdef __GNUC__
+        #define MUUID_CPP_EXTENSION __extension__
+    #endif
         class cuid2_repr {
         public:
             constexpr cuid2_repr() = default;
@@ -23,7 +27,7 @@ namespace muuid {
             }
 
             constexpr void get_bytes(std::span<uint8_t, 15> dst) const {
-                __int128 val = m_data;
+                MUUID_CPP_EXTENSION unsigned __int128 val = m_data;
                 for (int i = 15; i != 0; --i) {
                     dst[i - 1] = val & 0xFF;
                     val >>= 8;
@@ -41,7 +45,7 @@ namespace muuid {
                 return ret;
             }
         private:
-            unsigned __int128 m_data = 0;
+            MUUID_CPP_EXTENSION unsigned __int128 m_data = 0;
         };
 
     #else
