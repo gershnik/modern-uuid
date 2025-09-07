@@ -250,7 +250,7 @@ namespace muuid {
             requires decltype(std::span{x})::extent == bytes_count;
         })
         static constexpr std::optional<basic_nanoid> from_bytes(const T & src) noexcept {
-            return from_bytes(std::span{src});
+            return basic_nanoid::from_bytes(std::span{src});
         }
 
         /// Parses nanoid from a span of characters
@@ -328,7 +328,7 @@ namespace muuid {
 
         /// Prints nanoid into an ostream
         template<impl::char_like T>
-        friend std::basic_ostream<T> & operator<<(std::basic_ostream<T> & str, const basic_nanoid val) {
+        friend std::basic_ostream<T> & operator<<(std::basic_ostream<T> & str, const basic_nanoid & val) {
             std::array<T, CharCount> buf;
             val.to_chars(buf);
             std::copy(buf.begin(), buf.end(), std::ostreambuf_iterator<T>(str));
