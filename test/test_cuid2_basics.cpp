@@ -311,5 +311,19 @@ TEST_CASE("inputw") {
     CHECK(!ibuf.eof());
 }
 
+TEST_CASE("generate") {
+    cuid2 u1 = cuid2::generate();
+    cuid2 u2 = cuid2::generate();
+    
+    CHECK(u1 != u2);
+    CHECK(u1 != cuid2());
+    CHECK(u2 != cuid2());
+    CHECK(u1 < cuid2::max());
+    CHECK(u2 < cuid2::max());
+    
+    std::cout << "cuid2: " << u1 << '\n';
+    std::cout << "cuid2: " << u2 << '\n';
+}
+
 }
 

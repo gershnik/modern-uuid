@@ -297,6 +297,9 @@ namespace muuid {
                 impl::invalid_constexpr_call("invalid cuid2 string");
         }
 
+        /// Generates a cuid2
+        MUUID_EXPORTED static auto generate() -> cuid2;
+
         /// Returns a Max cuid2
         static constexpr cuid2 max() noexcept 
             { return cuid2("ZZZZZZZZZZZZZZZZZZZZZZZZ"); }
@@ -309,7 +312,7 @@ namespace muuid {
         constexpr friend auto operator==(const cuid2 & lhs, const cuid2 & rhs) noexcept -> bool = default;
         constexpr friend auto operator<=>(const cuid2 & lhs, const cuid2 & rhs) noexcept -> std::strong_ordering = default;
 
-        /// Constructs cuid2 from a span of bytes_count byte-like objects
+        /// Constructs cuid2 from a span of 16 byte-like objects
         template<impl::byte_like Byte>
         static constexpr std::optional<cuid2> from_bytes(std::span<Byte, 16> src) noexcept {
 
@@ -325,7 +328,7 @@ namespace muuid {
             return ret;
         }
 
-        /// Constructs cuid2 from anything convertible to a span of bytes_count byte-like objects
+        /// Constructs cuid2 from anything convertible to a span of 16 byte-like objects
         template<class T>
         requires( !impl::is_span<T> && requires(const T & x) { 
             std::span{x}; 
