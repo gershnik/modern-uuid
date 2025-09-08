@@ -60,17 +60,17 @@ auto cuid2::generate() -> cuid2 {
     uint32_t salt[] = {salt_dist(gen), salt_dist(gen), salt_dist(gen), salt_dist(gen)};
     
     muuid_sha3_ctx_t ctx;
-    muuid_sha3_init(&ctx, 512);
+    muuid_sha3_init(&ctx, 64);
     muuid_sha3_update(&ctx, &time, sizeof(time));
     muuid_sha3_update(&ctx, salt, sizeof(salt));
     muuid_sha3_update(&ctx, &count, sizeof(count));
     muuid_sha3_update(&ctx, fingerprint.data(), fingerprint.size());
 
-    std::array<uint8_t, 512> hash;
+    std::array<uint8_t, 64> hash;
     muuid_sha3_final(hash.data(), &ctx);
 
     impl::cuid2_repr repr_out;
-    static_assert(sizeof(repr_out) < 511);
+    static_assert(sizeof(repr_out) < 63);
     memcpy(&repr_out, &hash[1], sizeof(repr_out));
 
     impl::cuid2_repr repr_in;
