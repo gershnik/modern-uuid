@@ -59,15 +59,15 @@ auto cuid2::generate() -> cuid2 {
     std::uniform_int_distribution<uint32_t> salt_dist;
     uint32_t salt[] = {salt_dist(gen), salt_dist(gen), salt_dist(gen), salt_dist(gen)};
     
-    muuid_sha3_ctx_t ctx;
-    muuid_sha3_init(&ctx, 64);
-    muuid_sha3_update(&ctx, &time, sizeof(time));
-    muuid_sha3_update(&ctx, salt, sizeof(salt));
-    muuid_sha3_update(&ctx, &count, sizeof(count));
-    muuid_sha3_update(&ctx, fingerprint.data(), fingerprint.size());
+    muuid_sha3_ctx ctx;
+    muuid_sha3_512_init(&ctx);
+    muuid_sha3_update(&ctx, (const unsigned char *)&time, sizeof(time));
+    muuid_sha3_update(&ctx, (const unsigned char *)salt, sizeof(salt));
+    muuid_sha3_update(&ctx, (const unsigned char *)&count, sizeof(count));
+    muuid_sha3_update(&ctx, (const unsigned char *)fingerprint.data(), fingerprint.size());
 
     std::array<uint8_t, 64> hash;
-    muuid_sha3_final(hash.data(), &ctx);
+    muuid_sha3_final(&ctx, hash.data());
 
     impl::cuid2_repr repr_out;
     static_assert(sizeof(repr_out) < 63);
