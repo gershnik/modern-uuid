@@ -251,6 +251,7 @@ namespace muuid {
             uppercase
         };
 
+        /// Number of characters in string representation of Cuid2
         static constexpr size_t char_length = 24;
     
     private:
