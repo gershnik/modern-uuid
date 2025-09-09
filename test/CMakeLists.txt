@@ -107,14 +107,15 @@ foreach(suffix ${BUILD_SUFFIXES})
 
         main.cpp
         test_basics.cpp
+        test_ulid_basics.cpp
+        test_nanoid_basics.cpp
+        test_cuid2_basics.cpp
+
         test_fmt.cpp
         test_fork.cpp
         test_persistence.cpp
         test_system.cpp
-
-        test_ulid_basics.cpp
-        test_nanoid_basics.cpp
-        test_cuid2_basics.cpp
+        test_sha3.cpp
     )
 
     if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
