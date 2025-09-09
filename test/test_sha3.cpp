@@ -10,6 +10,8 @@
 
 using namespace std::literals;
 
+#if !MUUID_SHARED
+
 TEST_SUITE("sha3") {
 
 TEST_CASE("simple") {
@@ -53,3 +55,5 @@ TEST_CASE("simple") {
     CHECK_EQUAL_SEQ(hash, expected);
 }
 }
+
+#endif
