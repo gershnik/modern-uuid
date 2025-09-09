@@ -192,6 +192,8 @@ static RHASH_INLINE uint64_t bswap_64(uint64_t x)
 #define ROTL64(qword, n) ((qword) << (n) ^ ((qword) >> (64 - (n))))
 #define ROTR64(qword, n) ((qword) >> (n) ^ ((qword) << (64 - (n))))
 
+#if IS_BIG_ENDIAN
+
 /**
  * Copy data from a sequence of 64-bit words to a binary string of given length,
  * while changing byte order.
@@ -200,11 +202,7 @@ static RHASH_INLINE uint64_t bswap_64(uint64_t x)
  * @param from   the source sequence of 64-bit words
  * @param length the size in bytes of the data being copied
  */
-static void 
-#ifdef __GNUC__
-__attribute__((unused)) 
-#endif
-rhash_swap_copy_u64_to_str(void* to, const void* from, size_t length) 
+static void rhash_swap_copy_u64_to_str(void* to, const void* from, size_t length) 
 {
 	/* if all pointers and length are 64-bits aligned */
 	if ( 0 == (( (uintptr_t)to | (uintptr_t)from | length ) & 7) ) {
@@ -219,6 +217,8 @@ rhash_swap_copy_u64_to_str(void* to, const void* from, size_t length)
 		for (index = 0; index < length; index++) *(dst++) = ((char*)from)[index ^ 7];
 	}
 }
+
+#endif 
 
 
 /* constants */
