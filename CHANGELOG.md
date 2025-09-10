@@ -1,9 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
+
+### Added
+- Experimental support for [Cuid2](https://github.com/paralleldrive/cuid2)
+- Performance improvements for ULID and Nano ID conversion from/to strings
+- Added `char_length` static constant to all ID types that indicates how long they
+  are in string form
 
 ## [1.9] - 2025-09-05
 
