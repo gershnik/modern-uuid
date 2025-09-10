@@ -69,8 +69,10 @@ auto cuid2::generate() -> cuid2 {
     std::array<uint8_t, 64> hash;
     muuid_sha3_final(&ctx, hash.data());
 
+    //we could do: impl::cuid2_repr repr_out(std::span<const uint8_t, 15>(&hash[1], 15));
+    //but there is no real reason to preserve byte order - it's just random
     impl::cuid2_repr repr_out;
-    static_assert(sizeof(repr_out) < 63);
+    static_assert(sizeof(repr_out) <= hash.size() - 1);
     memcpy(&repr_out, &hash[1], sizeof(repr_out));
 
     impl::cuid2_repr repr_in;
