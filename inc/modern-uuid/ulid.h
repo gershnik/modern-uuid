@@ -5,7 +5,6 @@
 #define HEADER_MODERN_UUID_ULID_H_INCLUDED
 
 #include <modern-uuid/common.h>
-#include <modern-uuid/bit_packer.h>
 
 namespace muuid {
     namespace impl {
