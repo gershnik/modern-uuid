@@ -144,29 +144,34 @@ namespace muuid {
             lowercase,
             uppercase
         };
+
+        /// Number of characters in string representation of ULID
+        static constexpr size_t char_length = 26;
     private:
         template<impl::char_like T>
         static constexpr bool read(const T * str, std::span<uint8_t, 16> dest) noexcept {
-            uint8_t buf[26];
-            for(int i = 0; i < 26; ++i) {
+            impl::bit_packer<5, 16> packer;
+            uint8_t val = impl::ulid_alphabet::decode(str[0]);
+            if (val > 7)
+                return false;
+            packer.push(val);
+            for(size_t i = 1; i < ulid::char_length; ++i) {
                 T c = str[i];
-                uint8_t val = impl::ulid_alphabet::decode(c);
+                val = impl::ulid_alphabet::decode(c);
                 if (val >= impl::ulid_alphabet::size)
                     return false;
-                buf[i] = val;
+                packer.push(val);
             }
-            if (buf[0] > 7)
-                return false;
-            impl::bit_packer<5, 16>::pack_bits(std::span(buf), dest);
+            packer.drain(dest);
             return true;
         }
 
         template<impl::char_like T>
         static constexpr void write(std::span<const uint8_t, 16> src, T * str, format fmt) noexcept {
-            uint8_t buf[26];
-            impl::bit_packer<5, 16>::unpack_bits(src, std::span(buf));
-            for(uint8_t val: buf) {
-                *str++ = impl::ulid_alphabet::encode<T>(fmt, val);
+            impl::bit_packer<5, 16> packer(src);
+            for (size_t i = ulid::char_length; i != 0; --i) {
+                uint8_t val = packer.pop();
+                str[i - 1] = impl::ulid_alphabet::encode<T>(fmt, val);
             }
         }
     public:
@@ -178,8 +183,8 @@ namespace muuid {
 
         ///Constructs ulid from a string literal
         template<impl::char_like T>
-        consteval ulid(const T (&src)[27]) noexcept {            
-            if (!ulid::read(src, this->bytes) || src[26] != 0)
+        consteval ulid(const T (&src)[ulid::char_length + 1]) noexcept {            
+            if (!ulid::read(src, this->bytes) || src[ulid::char_length] != 0)
                 impl::invalid_constexpr_call("invalid ulid string");
         }
 
@@ -219,7 +224,7 @@ namespace muuid {
         /// Parses ulid from a span of characters
         template<impl::char_like T, size_t Extent>
         static constexpr std::optional<ulid> from_chars(std::span<const T, Extent> src) noexcept {
-            if (src.size() < 26)
+            if (src.size() < ulid::char_length)
                 return std::nullopt;
             ulid ret;
             if (!ulid::read(src.data(), ret.bytes))
@@ -244,10 +249,10 @@ namespace muuid {
             std::conditional_t<Extent == std::dynamic_extent, bool, void> {
             
             if constexpr (Extent == std::dynamic_extent) {
-                if (dest.size() < 26)
+                if (dest.size() < ulid::char_length)
                     return false;
             } else {
-                static_assert(Extent >= 26, "destination is too small");
+                static_assert(Extent >= ulid::char_length, "destination is too small");
             }
 
             ulid::write(this->bytes, dest.data(), fmt);
@@ -270,8 +275,8 @@ namespace muuid {
 
         /// Returns a character array with formatted ulid
         template<impl::char_like T = char>
-        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<T, 26> {
-            std::array<T, 26> ret;
+        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<T, ulid::char_length> {
+            std::array<T, ulid::char_length> ret;
             this->to_chars(ret, fmt);
             return ret;
         }
@@ -284,7 +289,7 @@ namespace muuid {
         /// Returns a string with formatted ulid
         auto to_string(format fmt = lowercase) const -> std::basic_string<T>
         {
-            std::basic_string<T> ret(26, T(0));
+            std::basic_string<T> ret(ulid::char_length, T(0));
             (void)to_chars(ret, fmt);
             return ret;
         }
@@ -294,7 +299,7 @@ namespace muuid {
         friend std::basic_ostream<T> & operator<<(std::basic_ostream<T> & str, const ulid val) {
             const auto flags = str.flags();
             const ulid::format fmt = (flags & std::ios_base::uppercase ? ulid::uppercase : ulid::lowercase);
-            std::array<T, 26> buf;
+            std::array<T, ulid::char_length> buf;
             val.to_chars(buf, fmt);
             std::copy(buf.begin(), buf.end(), std::ostreambuf_iterator<T>(str));
             return str;
@@ -303,7 +308,7 @@ namespace muuid {
         /// Reads ulid from an istream
         template<impl::char_like T>
         friend std::basic_istream<T> & operator>>(std::basic_istream<T> & str, ulid & val) {
-            std::array<T, 26> buf;
+            std::array<T, ulid::char_length> buf;
             auto * strbuf = str.rdbuf();
             for(T & c: buf) {
                 auto res = strbuf->sbumpc();
@@ -363,7 +368,7 @@ namespace muuid {
 
             template <typename FormatContext>
             auto format(ulid val, FormatContext & ctx) const -> decltype(ctx.out())  {
-                std::array<CharT, 26> buf;
+                std::array<CharT, ulid::char_length> buf;
                 val.to_chars(buf, this->fmt);
                 return std::copy(buf.begin(), buf.end(), ctx.out());
             }

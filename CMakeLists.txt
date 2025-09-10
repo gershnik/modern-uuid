@@ -49,6 +49,7 @@ list(APPEND INSTALL_LIBS modern-uuid-header)
 set(PUBLIC_HEADER_NAMES
     common.h
     bit_packer.h
+    cuid2.h
     nanoid.h
     ulid.h
     uuid.h
@@ -147,6 +148,8 @@ foreach(suffix ${BUILD_SUFFIXES})
         ${SRCDIR}/external/md5.c
         ${SRCDIR}/external/sha1.h
         ${SRCDIR}/external/sha1.c
+        ${SRCDIR}/external/sha3.h
+        ${SRCDIR}/external/sha3.c
         ${SRCDIR}/external/randutils.hpp
         ${SRCDIR}/external/chacha20.hpp
 
@@ -159,6 +162,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         ${SRCDIR}/random_generator.cpp
         ${SRCDIR}/threading.h
 
+        ${SRCDIR}/cuid2.cpp
         ${SRCDIR}/nanoid.cpp
         ${SRCDIR}/ulid.cpp
         ${SRCDIR}/uuid.cpp

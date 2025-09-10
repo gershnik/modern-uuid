@@ -177,6 +177,9 @@ namespace muuid {
             uppercase
         };
 
+        /// Number of characters in string representation of UUID
+        static constexpr size_t char_length = 36;
+
         struct namespaces;
     private:
         template<impl::char_like T>
@@ -208,7 +211,7 @@ namespace muuid {
 
         ///Constructs uuid from a string literal
         template<impl::char_like T>
-        consteval uuid(const T (&src)[37]) noexcept {
+        consteval uuid(const T (&src)[uuid::char_length + 1]) noexcept {
             using tr = impl::uuid_char_traits<T>;
 
             const T * str = src;
@@ -373,7 +376,7 @@ namespace muuid {
         /// Parses uuid from a span of characters
         template<impl::char_like T, size_t Extent>
         static constexpr std::optional<uuid> from_chars(std::span<const T, Extent> src) noexcept {
-            if (src.size() < 36)
+            if (src.size() < uuid::char_length)
                 return std::nullopt;
 
             using tr = impl::uuid_char_traits<T>;
@@ -418,10 +421,10 @@ namespace muuid {
             std::conditional_t<Extent == std::dynamic_extent, bool, void> {
             
             if constexpr (Extent == std::dynamic_extent) {
-                if (dest.size() < 36)
+                if (dest.size() < uuid::char_length)
                     return false;
             } else {
-                static_assert(Extent >= 36, "destination is too small");
+                static_assert(Extent >= uuid::char_length, "destination is too small");
             }
 
             using tr = impl::uuid_char_traits<T>;
@@ -458,8 +461,8 @@ namespace muuid {
 
         /// Returns a character array with formatted uuid
         template<impl::char_like T = char>
-        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<T, 36> {
-            std::array<T, 36> ret;
+        constexpr auto to_chars(format fmt = lowercase) const noexcept -> std::array<T, uuid::char_length> {
+            std::array<T, uuid::char_length> ret;
             to_chars(ret, fmt);
             return ret;
         }
@@ -472,7 +475,7 @@ namespace muuid {
         /// Returns a string with formatted uuid
         auto to_string(format fmt = lowercase) const -> std::basic_string<T>
         {
-            std::basic_string<T> ret(36, T(0));
+            std::basic_string<T> ret(uuid::char_length, T(0));
             (void)to_chars(ret, fmt);
             return ret;
         }
@@ -482,7 +485,7 @@ namespace muuid {
         friend std::basic_ostream<T> & operator<<(std::basic_ostream<T> & str, const uuid val) {
             const auto flags = str.flags();
             const uuid::format fmt = (flags & std::ios_base::uppercase ? uuid::uppercase : uuid::lowercase);
-            std::array<T, 36> buf;
+            std::array<T, uuid::char_length> buf;
             val.to_chars(buf, fmt);
             std::copy(buf.begin(), buf.end(), std::ostreambuf_iterator<T>(str));
             return str;
@@ -491,7 +494,7 @@ namespace muuid {
         /// Reads uuid from an istream
         template<impl::char_like T>
         friend std::basic_istream<T> & operator>>(std::basic_istream<T> & str, uuid & val) {
-            std::array<T, 36> buf;
+            std::array<T, uuid::char_length> buf;
             auto * strbuf = str.rdbuf();
             for(T & c: buf) {
                 auto res = strbuf->sbumpc();
@@ -574,7 +577,7 @@ namespace muuid {
             template <typename FormatContext>
             auto format(uuid val, FormatContext & ctx) const -> decltype(ctx.out()) 
             {
-                std::array<CharT, 36> buf;
+                std::array<CharT, uuid::char_length> buf;
                 val.to_chars(buf, this->fmt);
                 return std::copy(buf.begin(), buf.end(), ctx.out());
             }

@@ -8,6 +8,7 @@
 
 #include <iterator>
 #include <array>
+#include <string_view>
 
 template<class T>
 auto get_ends(const T & seq) {

@@ -8,6 +8,8 @@ For your convenience here is the index by license type:
 * Public Domain
   * [MD5 message-digest algorithm by Colin Plumb](#md5-message-digest-algorithm-by-colin-plumb)
   * [SHA-1 in C by Steve Reid](#sha-1-in-c-by-steve-reid)
+* BSD Zero Clause License
+  * [SHA-3 implementation from RHash](#sha-3-implementation-from-rhash)
 * MIT License
   * [Random-Number Utilities (randutil)](#random-number-utilities-randutil)
 * Boost Software License - Version 1.0
@@ -105,6 +107,30 @@ it what you wish.
 SHA-1 in C by Steve Reid <steve@edmweb.com>
 100% Public Domain
 ```
+----
+
+## SHA-3 implementation from RHash
+
+Distributed under BSD Zero Clause License
+
+----
+```
+                           BSD Zero Clause License
+
+Copyright (c) 2005, Aleksey Kravchenko <rhash.admin@gmail.com>
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE  INCLUDING ALL IMPLIED WARRANTIES OF  MERCHANTABILITY
+AND FITNESS.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT,  OR CONSEQUENTIAL DAMAGES  OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE,  DATA OR PROFITS,  WHETHER IN AN ACTION OF CONTRACT,  NEGLIGENCE
+OR OTHER TORTIOUS ACTION,  ARISING OUT OF  OR IN CONNECTION  WITH THE USE  OR
+PERFORMANCE OF THIS SOFTWARE.
+```
+
 ----
 
 

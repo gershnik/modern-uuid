@@ -121,6 +121,9 @@ namespace muuid {
 
     template<class Alphabet, size_t CharCount>
     class basic_nanoid {
+    public:
+        /// Number of characters in string representation of NanoID
+        static constexpr size_t char_length = CharCount;
     private:
         static constexpr size_t bits_in_string = Alphabet::bits_per_char * CharCount;
         static constexpr size_t bytes_count = bits_in_string / 8 + (bits_in_string % 8 != 0);
@@ -129,37 +132,30 @@ namespace muuid {
 
 
         template<impl::char_like T>
-        static constexpr bool read(const T * str, std::span<uint8_t, bytes_count> dest) noexcept {
-            uint8_t buf[unpack_buf_size];
-            constexpr size_t padding = unpack_buf_size - CharCount;
-            
-            size_t i = 0; 
-            for(; i < padding; ++i)
-                buf[i] = 0;
+        static constexpr bool read(const T * str, std::span<uint8_t, basic_nanoid::bytes_count> dest) noexcept {
+            impl::bit_packer<Alphabet::bits_per_char, basic_nanoid::bytes_count> packer;
 
-            for(; i < unpack_buf_size; ++i) {
-                auto c = str[i - padding];
+            for(size_t i = 0; i < CharCount; ++i) {
+                T c = str[i];
                 uint8_t val = Alphabet::decode(c);
                 if (val >= Alphabet::size)
                     return false;
-                buf[i] = val;
+                packer.push(val);
             }
-            impl::bit_packer<Alphabet::bits_per_char, bytes_count>::pack_bits(std::span(buf), dest);
+            packer.drain(dest);
             return true;
         }
 
         template<impl::char_like T>
-        static constexpr void write(std::span<const uint8_t, bytes_count> src, T * str) noexcept {
-            uint8_t buf[unpack_buf_size];
-            constexpr size_t padding = unpack_buf_size - CharCount;
-
-            impl::bit_packer<Alphabet::bits_per_char, bytes_count>::unpack_bits(src, std::span(buf));
-            for(size_t i = padding; i < std::size(buf); ++i) {
-                *str++ = Alphabet::template encode<T>(buf[i]);
+        static constexpr void write(std::span<const uint8_t, basic_nanoid::bytes_count> src, T * str) noexcept {
+            impl::bit_packer<Alphabet::bits_per_char, basic_nanoid::bytes_count> packer(src);
+            for (size_t i = CharCount; i != 0; --i) {
+                uint8_t val = packer.pop();
+                str[i - 1] = Alphabet::template encode<T>(val);
             }
         }
 
-        static constexpr void sanitize_first_byte(std::array<uint8_t, bytes_count> & bytes) {
+        static constexpr void sanitize_first_byte(std::array<uint8_t, basic_nanoid::bytes_count> & bytes) {
             if constexpr (basic_nanoid::bits_in_string <  basic_nanoid::bits_count) {
                 constexpr uint8_t mask = uint8_t((1u << (basic_nanoid::bits_in_string % 8)) - 1);
                 bytes[0] &= mask;
@@ -167,7 +163,7 @@ namespace muuid {
         }
 
     public:
-        std::array<uint8_t, bytes_count> bytes{};
+        std::array<uint8_t, basic_nanoid::bytes_count> bytes{};
 
     public:
         ///Constructs a zeroed out nanoid
@@ -182,21 +178,17 @@ namespace muuid {
 
         /// Generates a nanoid
         static auto generate() noexcept -> basic_nanoid {
-            std::array<uint8_t, bytes_count> buf;
+            std::array<uint8_t, basic_nanoid::bytes_count> buf;
             if constexpr (Alphabet::is_full) {
                 impl::generate_nanoid(buf, 255);
                 basic_nanoid::sanitize_first_byte(buf);
             } else {
-                uint8_t unpacked[unpack_buf_size];
-                std::span<uint8_t> unpacked_span(unpacked);
-                constexpr size_t padding = unpack_buf_size - CharCount;
-                
-                for(size_t i = 0; i < padding; ++i)
-                    unpacked_span[i] = 0;
-                
-                unpacked_span = unpacked_span.subspan(padding);
-                impl::generate_nanoid(unpacked_span, Alphabet::size - 1);
-                impl::bit_packer<Alphabet::bits_per_char, bytes_count>::pack_bits(std::span(unpacked), buf);
+                uint8_t unpacked[basic_nanoid::unpack_buf_size];
+                impl::generate_nanoid(unpacked, Alphabet::size - 1);
+                impl::bit_packer<Alphabet::bits_per_char, basic_nanoid::bytes_count> packer;
+                for(auto val: unpacked)
+                    packer.push(val);
+                packer.drain(buf);
             }
             return *reinterpret_cast<basic_nanoid *>(&buf);
         }
@@ -218,18 +210,15 @@ namespace muuid {
 
         /// Constructs nanoid from a span of bytes_count byte-like objects
         template<impl::byte_like Byte>
-        static constexpr std::optional<basic_nanoid> from_bytes(std::span<Byte, bytes_count> src) noexcept {
+        static constexpr std::optional<basic_nanoid> from_bytes(std::span<Byte, basic_nanoid::bytes_count> src) noexcept {
 
             basic_nanoid ret;
             std::copy(src.begin(), src.end(), ret.bytes.data());
 
             if constexpr (!Alphabet::is_full) {
-                uint8_t buf[unpack_buf_size];
-                constexpr size_t padding = unpack_buf_size - CharCount;
-
-                impl::bit_packer<Alphabet::bits_per_char, bytes_count>::unpack_bits(ret.bytes, std::span(buf));
-                for(size_t i = padding; i < std::size(buf); ++i) {
-                    if (buf[i] >= Alphabet::size)
+                impl::bit_packer<Alphabet::bits_per_char, basic_nanoid::bytes_count> packer(src);
+                for(size_t i = 0; i < CharCount; ++i) {
+                    if (packer.pop() >= Alphabet::size)
                         return {};
                 }
 
@@ -247,7 +236,7 @@ namespace muuid {
         requires( !impl::is_span<T> && requires(const T & x) { 
             std::span{x}; 
             requires impl::byte_like<std::remove_reference_t<decltype(*std::span{x}.begin())>>; 
-            requires decltype(std::span{x})::extent == bytes_count;
+            requires decltype(std::span{x})::extent == basic_nanoid::bytes_count;
         })
         static constexpr std::optional<basic_nanoid> from_bytes(const T & src) noexcept {
             return basic_nanoid::from_bytes(std::span{src});
