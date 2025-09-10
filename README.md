@@ -253,10 +253,10 @@ my_id mid2 = my_id::generate();
 ### Cuid2
 
 Note that Cuid2 support is currently experimental. The Cuid2 format has no spec and its 
-[canonical implementation](https://github.com/paralleldrive/cuid2/blob/main/src/index.js) is
-being actively developed. Accordingly the implementation in this library is the best-effort
-attempt to implement its current format and generation algorithm in C++. Both might change 
-in the future. 
+[canonical implementation](https://github.com/paralleldrive/cuid2/blob/main/src/index.js) has
+many features only relevant to JavaScript and its engines. Accordingly the implementation in this 
+library is the best-effort attempt to implement its current format and generation algorithm 
+as applicable to native code and C++. Both might conceivably change though this is unlikely.
 
 
 ```cpp
