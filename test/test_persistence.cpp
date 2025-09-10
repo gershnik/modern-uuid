@@ -42,6 +42,7 @@
 #endif
 
 using namespace muuid;
+using namespace std::literals;
 
 class file_clock_persistence final : public uuid_clock_persistence {
 private:
@@ -203,6 +204,7 @@ TEST_CASE("clock time_based") {
         uuid u2;
 
         std::thread([&]() {
+            std::this_thread::sleep_for(1ms);
             u2 = uuid::generate_time_based();
         }).join();
 
@@ -217,6 +219,7 @@ TEST_CASE("clock time_based") {
         set_time_based_persistence(nullptr);
 
         std::thread([&]() {
+            std::this_thread::sleep_for(1ms);
             u2 = uuid::generate_time_based();
         }).join();
 
@@ -225,6 +228,7 @@ TEST_CASE("clock time_based") {
 
         set_time_based_persistence(&pers);
         std::thread([&]() {
+            std::this_thread::sleep_for(1ms);
             u2 = uuid::generate_time_based();
         }).join();
 
@@ -254,6 +258,7 @@ TEST_CASE("clock reordered_time_based") {
         uuid u2;
 
         std::thread([&]() {
+            std::this_thread::sleep_for(1ms);
             u2 = uuid::generate_reordered_time_based();
         }).join();
 
@@ -265,6 +270,7 @@ TEST_CASE("clock reordered_time_based") {
         set_reordered_time_based_persistence(nullptr);
 
         std::thread([&]() {
+            std::this_thread::sleep_for(1ms);
             u2 = uuid::generate_reordered_time_based();
         }).join();
 
@@ -273,6 +279,7 @@ TEST_CASE("clock reordered_time_based") {
 
         set_reordered_time_based_persistence(&pers);
         std::thread([&]() {
+            std::this_thread::sleep_for(1ms);
             u2 = uuid::generate_reordered_time_based();
         }).join();
 
