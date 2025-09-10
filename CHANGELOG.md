@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## [1.10] - 2025-09-10
+
 ### Added
 - Experimental support for [Cuid2](https://github.com/paralleldrive/cuid2)
 - Performance improvements for ULID and Nano ID conversion from/to strings
@@ -115,3 +117,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 [1.7]: https://github.com/gershnik/modern-uuid/releases/v1.7
 [1.8]: https://github.com/gershnik/modern-uuid/releases/v1.8
 [1.9]: https://github.com/gershnik/modern-uuid/releases/v1.9
+[1.10]: https://github.com/gershnik/modern-uuid/releases/v1.10
