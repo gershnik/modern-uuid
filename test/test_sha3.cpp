@@ -31,7 +31,7 @@ TEST_CASE("simple") {
 
     std::vector<uint8_t> buf;
     for(size_t i = 0; i != std::size(input) - 1; i += 2) {
-        uint8_t val;
+        uint8_t val = 0;
         auto result = std::from_chars(input + i, input + i + 2, val, 16);
         REQUIRE(result.ec == std::errc{});
         buf.push_back(val);
@@ -39,7 +39,7 @@ TEST_CASE("simple") {
 
     std::vector<uint8_t> expected;
     for(size_t i = 0; i != std::size(output) - 1; i += 2) {
-        uint8_t val;
+        uint8_t val = 0;
         auto result = std::from_chars(output + i, output + i + 2, val, 16);
         REQUIRE(result.ec == std::errc{});
         expected.push_back(val);
