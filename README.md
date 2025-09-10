@@ -6,7 +6,7 @@
 [![Tests](https://github.com/gershnik/modern-uuid/actions/workflows/test.yml/badge.svg)](https://github.com/gershnik/modern-uuid/actions/workflows/test.yml)
 
 A modern, no-dependencies, portable C++ library for manipulating [UUIDs](https://en.wikipedia.org/wiki/Universally_unique_identifier), 
-[ULIDs](https://github.com/ulid/spec) and [NanoIDs](https://github.com/ai/nanoid).
+[ULIDs](https://github.com/ulid/spec), [NanoIDs](https://github.com/ai/nanoid) and (currently experimental) [Cuid2](https://github.com/paralleldrive/cuid2).
 
 <!-- TOC depthfrom:2 -->
 
@@ -15,6 +15,7 @@ A modern, no-dependencies, portable C++ library for manipulating [UUIDs](https:/
     - [UUID](#uuid)
     - [ULID](#ulid)
     - [NanoID](#nanoid)
+    - [Cuid2](#cuid2)
 - [Building/Integrating](#buildingintegrating)
 
 <!-- /TOC -->
@@ -83,7 +84,7 @@ if (maybe_uuid) {
 }
 
 //uuid objects can be compared in every possible way
-assert(u_v1 > nil_uuid);
+assert(u_v1 > uuid());
 assert(u_v1 != u_v2);
 std::strong_ordering res = (u_v6 <=> u_v7);
 //etc.
@@ -97,10 +98,10 @@ std::string str = std::format("{}", u1);
 assert(str == "e53d37db-e4e0-484f-996f-3ab1d4701abc");
 
 str = std::format("{:u}", u1);
-assert(str == "E53D37DB-E4E0-484F-996F-3AB1D4701ABC")
+assert(str == "E53D37DB-E4E0-484F-996F-3AB1D4701ABC");
 
 str = std::format("{:l}", u1);
-assert(str == "e53d37db-e4e0-484f-996f-3ab1d4701abc")
+assert(str == "e53d37db-e4e0-484f-996f-3ab1d4701abc");
 
 //uuids can be read/written from/to iostream 
 
@@ -146,7 +147,7 @@ if (maybe_ulid) {
 }
 
 //ulid objects can be compared in every possible way
-assert(u2 > nil_ulid);
+assert(u2 > ulid());
 assert(u2 != u1);
 std::strong_ordering res = (u2 <=> u1);
 //etc.
@@ -159,10 +160,10 @@ std::string str = std::format("{}", u1);
 assert(str == "01bx5zzkbkactav9wevgemmvry");
 
 str = std::format("{:u}", u1);
-assert(str == "01BX5ZZKBKACTAV9WEVGEMMVRY")
+assert(str == "01BX5ZZKBKACTAV9WEVGEMMVRY");
 
 str = std::format("{:l}", u1);
-assert(str == "01bx5zzkbkactav9wevgemmvry")
+assert(str == "01bx5zzkbkactav9wevgemmvry");
 
 //ulids can be read/written from/to iostream 
 
@@ -209,7 +210,7 @@ if (maybe_nanoid) {
 }
 
 //nanoid objects can be compared in every possible way
-assert(ng > nil_nanoid);
+assert(ng > nanoid());
 assert(ng != u1);
 std::strong_ordering res = (ng <=> n1);
 //etc.
@@ -239,7 +240,7 @@ MUUID_DECLARE_NANOID_ALPHABET(my_alphabet, "1234567890abcdef");
 using my_id = basic_nanoid<my_alphabet, 10>;
 
 //Note that the size of such ID might be different from default nanoid
-static_assert(sizeof(fooid) == 5);
+static_assert(sizeof(my_id) == 5);
 
 constexpr my_id mid1("4f90d13a42");
 my_id mid2 = my_id::generate();
@@ -248,6 +249,76 @@ my_id mid2 = my_id::generate();
 //as for default nanoid
 ```
 
+
+### Cuid2
+
+Note that Cuid2 support is currently experimental. The Cuid2 format has no spec and its 
+[canonical implementation](https://github.com/paralleldrive/cuid2/blob/main/src/index.js) is
+being actively developed. Accordingly the implementation in this library is the best-effort
+attempt to implement its current format and generation algorithm in C++. Both might change 
+in the future. 
+
+
+```cpp
+#include <modern-uuid/cuid2.h>
+
+using namespace muuid;
+
+//this is a compile time Cuid2 literal
+constexpr cuid2 c1("kgiupd0rsg67b97553xdrg2f");
+
+//if you want to you can use cuid2 as a template parameter
+template<cuid2 C> class some_class {...};
+some_class<cuid2("kgiupd0rsg67b97553xdrg2f")> some_object;
+
+//generate a Cuid2:
+cuid2 cg = cuid2::generate();
+
+//for non-literal strings you can parse cuid2 from strings using cuid2::from_chars
+//the argument to from_chars can be anything convertible to std::span<char, any extent>
+//the call is constexpr
+std::string some_cuid2_str = "a96dz76vcu55q6aorin51oqo";
+std::optional<cuid2> maybe_cuid2 = cuid2::from_chars(some_cuid2_str);
+if (maybe_cuid2) {
+    cuid2 parsed = *maybe_cuid2;
+}
+
+//cuid2 objects can be compared in every possible way
+assert(cg > cuid2());
+assert(cg != c1);
+std::strong_ordering res = (cg <=> c1);
+//etc.
+
+//cuid2 objects can be hashed
+std::unordered_map<cuid2, transaction> transaction_map;
+
+//they can be formatted. u and l stand for uppercase and lowercase
+std::string str = std::format("{}", c1);
+assert(str == "kgiupd0rsg67b97553xdrg2f");
+
+str = std::format("{:u}", c1);
+assert(str == "KGIUPD0RSG67B97553XDRG2F");
+
+str = std::format("{:l}", c1);
+assert(str == "kgiupd0rsg67b97553xdrg2f");
+
+//cuid2s can be read/written from/to iostream 
+
+//when reading case doesn't matter
+std::istringstream istr("kgiupd0rsg67b97553xdrg2f");
+cuid2 cr;
+istr >> cr;
+assert(cr = cuid2("kgiupd0rsg67b97553xdrg2f"));
+
+std::ostringstream ostr;
+ostr << cuid2("kgiupd0rsg67b97553xdrg2f");
+assert(ostr.str() == "kgiupd0rsg67b97553xdrg2f");
+ostr.str("");
+
+//writing respects std::ios_base::uppercase stream flag
+ostr << std::uppercase << cuid2("kgiupd0rsg67b97553xdrg2f");
+assert(ostr.str() == "KGIUPD0RSG67B97553XDRG2F");
+```
 
 ## Building/Integrating
 
