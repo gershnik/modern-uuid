@@ -94,47 +94,47 @@ namespace {
     public:
         persistence_holder() noexcept = default;
         ~persistence_holder() noexcept {
-            if (m_per_thread)
-                m_per_thread->close();
-            if (m_persistence)
-                m_persistence->sub_ref();
+            if (this->m_per_thread)
+                this->m_per_thread->close();
+            if (this->m_persistence)
+                this->m_persistence->sub_ref();
         }
         persistence_holder(const persistence_holder &) noexcept = delete;
         persistence_holder & operator=(const persistence_holder &) noexcept = delete;
 
         bool set(generic_clock_persistence<Data> * persistence) {
-            if (m_persistence == persistence)
+            if (this->m_persistence == persistence)
                 return false;
-            if (m_per_thread) {
-                m_per_thread->close();
-                m_per_thread = nullptr;
+            if (this->m_per_thread) {
+                this->m_per_thread->close();
+                this->m_per_thread = nullptr;
             }
             if (persistence)
                 persistence->add_ref();
-            if (m_persistence)
-                m_persistence->sub_ref();
-            m_persistence = persistence;
-            if (m_persistence)
-                m_per_thread = &m_persistence->get_for_current_thread();
+            if (this->m_persistence)
+                this->m_persistence->sub_ref();
+            this->m_persistence = persistence;
+            if (this->m_persistence)
+                this->m_per_thread = &this->m_persistence->get_for_current_thread();
             return true;
         }
 
         void lock() {
-            if (m_per_thread)
-                m_per_thread->lock();
+            if (this->m_per_thread)
+                this->m_per_thread->lock();
         }
         void unlock() {
-            if (m_per_thread)
-                m_per_thread->unlock();
+            if (this->m_per_thread)
+                this->m_per_thread->unlock();
         }
 
         void save(const Data & data) {
-            if (m_per_thread)
-                m_per_thread->store(data);
+            if (this->m_per_thread)
+                this->m_per_thread->store(data);
         }
 
         bool load(Data & data) {
-            return m_per_thread && m_per_thread->load(data);
+            return this->m_per_thread && this->m_per_thread->load(data);
         }
         
     private:
@@ -155,44 +155,43 @@ namespace {
 
         ~clock_state_base() {
             if (this->m_locked_for_fork)
-                this->m_persistance.unlock();
+                this->m_holder.unlock();
         }
 
         void set_persistence(generic_clock_persistence<PersData> * pers) {
             
-            if (this->m_persistance.set(pers) || !m_initialized) {
-                std::lock_guard guard{this->m_persistance};
+            if (this->m_holder.set(pers) || !this->m_initialized) {
+                std::lock_guard guard{this->m_holder};
 
                 PersData data;
 
-                if (!m_persistance.load(data))
-                {
+                if (!m_holder.load(data)) {
                     static_cast<Derived *>(this)->init_new(data);
-                    this->m_persistance.save(data);
+                    this->m_holder.save(data);
                 } else {
                     static_cast<Derived *>(this)->load_existing(data);
                 }
 
-                m_initialized = true;
+                this->m_initialized = true;
             }
         }
 
         void prepare_fork_in_parent() {
-            this->m_persistance.lock();
+            this->m_holder.lock();
             this->m_locked_for_fork = true;
         }
         void after_fork_in_parent() {
-            this->m_persistance.unlock();
+            this->m_holder.unlock();
             this->m_locked_for_fork = false;
         }
 
     protected:
         template<class Func>
         void mutate(Func && func) {
-            std::lock_guard guard{this->m_persistance};
+            std::lock_guard guard{this->m_holder};
             PersData data;
             func(data);
-            this->m_persistance.save(data);
+            this->m_holder.save(data);
         }
 
     private:
@@ -207,7 +206,7 @@ namespace {
         const typename max_unit_duration::rep m_max_adjustment;
 
     private:
-        persistence_holder<PersData> m_persistance;
+        persistence_holder<PersData> m_holder;
         bool m_initialized = false;
         bool m_locked_for_fork = false;
     };
@@ -290,7 +289,7 @@ namespace {
             return true;
         }
     private:
-        uint16_t m_clock_seq;
+        uint16_t m_clock_seq = 0;
     };
 
     template<class UnitDuration, class MaxUnitDuration>
@@ -389,7 +388,7 @@ namespace {
             return true;
         }
     private:
-        uint16_t m_clock_seq;
+        uint16_t m_clock_seq = 0;
     };
 
     class ulid_clock_state : public clock_state_base<ulid_clock_state,
@@ -473,8 +472,8 @@ namespace {
         }
     private:
         struct tail_t {
-            uint64_t low;
-            uint16_t high;
+            uint64_t low = 0;
+            uint16_t high = 0;
 
             void fill_random() {
                 auto & gen = get_random_generator();
