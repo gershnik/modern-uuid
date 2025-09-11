@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Fixed
+- Rare race condition in setting UUID/ULID clock persistence handlers
+
 ## [1.10] - 2025-09-10
 
 ### Added
