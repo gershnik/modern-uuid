@@ -29,7 +29,7 @@ namespace muuid::impl {
             atomic_if_multithreaded(T value): m_value{value} {}
             T get() { return this->m_value.load(std::memory_order_acquire); }
             void set(T val) { this->m_value.store(val, std::memory_order_release); }
-            T exchange(T val) { return this->m_value.exchange(val, std::memory_order_acq_rel); }
+            T exchange(T val) { return this->m_value.exchange(val, std::memory_order_seq_cst); }
         private:
             std::atomic<T> m_value;
         };
