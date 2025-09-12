@@ -23,6 +23,7 @@
     #define sys_write ::write
     #define sys_lseek ::lseek
     #define sys_ftruncate ::ftruncate
+    #define sys_getpid getpid
     #define posix_category system_category
 #elif defined(_WIN32) 
     #include <Windows.h>
@@ -35,6 +36,7 @@
     #define sys_write ::_write
     #define sys_lseek ::_lseek
     #define sys_ftruncate ::_chsize
+    #define sys_getpid _getpid
     #define posix_category generic_category
 #else
     #error "Don't know how to access files"
@@ -146,6 +148,9 @@ template<class PerThread>
 class file_clock_persistence final : public muuid::generic_clock_persistence<typename PerThread::data> {
 public:
     file_clock_persistence(const std::filesystem::path & path): m_path(path) {}
+    ~file_clock_persistence() {
+        remove(m_path);
+    }
 
     void add_ref() noexcept override 
         { ++m_ref_count; }

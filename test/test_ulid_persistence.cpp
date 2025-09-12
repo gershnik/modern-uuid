@@ -62,7 +62,7 @@ public:
 };
 
 
-static auto g_path = std::filesystem::path("pers.bin");
+static auto g_path = std::filesystem::path("pers" + std::to_string(sys_getpid()) + ".bin");
 static file_clock_persistence<ulid_per_thread> pers(g_path);
 
 TEST_SUITE("ulid persistence") {
@@ -95,16 +95,20 @@ TEST_CASE("basic") {
             std::thread t1([&]() {
                 while (start != 0);
                 u1 = ulid::generate();
+                std::atomic_thread_fence(std::memory_order_release);
             });
             std::thread t2([&]() {
                 while (start != 0);
                 u2 = ulid::generate();
+                std::atomic_thread_fence(std::memory_order_release);
             });
 
             start = 0;
 
             t1.join();
             t2.join();
+
+            std::atomic_thread_fence(std::memory_order_acquire);
 
             auto time1 = std::span(u1.bytes).subspan(0, 6);
             auto time2 = std::span(u2.bytes).subspan(0, 6);

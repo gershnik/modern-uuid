@@ -60,7 +60,7 @@ public:
 };
 
 
-static auto g_path = std::filesystem::path("pers.bin");
+static auto g_path = std::filesystem::path("pers" + std::to_string(sys_getpid()) + ".bin");
 static file_clock_persistence<uuid_per_thread> pers(g_path);
 
 TEST_SUITE("persistence") {
@@ -84,7 +84,9 @@ TEST_CASE("clock time_based") {
 
         std::thread([&]() {
             u2 = uuid::generate_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         auto parts1 = u1.to_parts();
         auto parts2 = u2.to_parts();
@@ -98,7 +100,9 @@ TEST_CASE("clock time_based") {
 
         std::thread([&]() {
             u2 = uuid::generate_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         parts2 = u2.to_parts();
         CHECK(parts1.clock_seq != parts2.clock_seq);
@@ -106,7 +110,9 @@ TEST_CASE("clock time_based") {
         set_time_based_persistence(&pers);
         std::thread([&]() {
             u2 = uuid::generate_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         parts2 = u2.to_parts();
         CHECK(parts1.clock_seq == parts2.clock_seq);
@@ -135,7 +141,9 @@ TEST_CASE("clock reordered_time_based") {
 
         std::thread([&]() {
             u2 = uuid::generate_reordered_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         auto parts1 = u1.to_parts();
         auto parts2 = u2.to_parts();
@@ -146,7 +154,9 @@ TEST_CASE("clock reordered_time_based") {
 
         std::thread([&]() {
             u2 = uuid::generate_reordered_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         parts2 = u2.to_parts();
         CHECK(parts1.clock_seq != parts2.clock_seq);
@@ -154,7 +164,9 @@ TEST_CASE("clock reordered_time_based") {
         set_reordered_time_based_persistence(&pers);
         std::thread([&]() {
             u2 = uuid::generate_reordered_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         parts2 = u2.to_parts();
         CHECK(parts1.clock_seq == parts2.clock_seq);
@@ -183,7 +195,9 @@ TEST_CASE("clock unix_time_based") {
 
         std::thread([&]() {
             u2 = uuid::generate_unix_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         auto parts1 = u1.to_parts();
         auto parts2 = u2.to_parts();
@@ -199,7 +213,9 @@ TEST_CASE("clock unix_time_based") {
 
         std::thread([&]() {
             u2 = uuid::generate_unix_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         parts2 = u2.to_parts();
         CHECK(parts1.clock_seq != parts2.clock_seq);
@@ -207,7 +223,9 @@ TEST_CASE("clock unix_time_based") {
         set_unix_time_based_persistence(&pers);
         std::thread([&]() {
             u2 = uuid::generate_unix_time_based();
+            std::atomic_thread_fence(std::memory_order_release);
         }).join();
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         parts2 = u2.to_parts();
         if (parts1.time_hi_and_version != parts2.time_hi_and_version || parts1.time_mid != parts2.time_mid)
