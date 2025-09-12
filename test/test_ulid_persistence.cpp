@@ -10,7 +10,7 @@
 #if MUUID_MULTITHREADED
 
 #include <thread>
-#include <latch>
+#include <signal.h>
 
 using namespace muuid;
 using namespace std::literals;
@@ -40,6 +40,7 @@ public:
         memcpy(&d.adjustment, current, sizeof(d.adjustment));
         current += sizeof(d.adjustment);
         memcpy(&d.random, current, sizeof(d.random));
+        //printf("load\n");
         return true;
     }
 
@@ -55,6 +56,7 @@ public:
         memcpy(current, &d.adjustment, sizeof(d.adjustment));
         current += sizeof(d.adjustment);
         memcpy(current, &d.random, sizeof(d.random));
+        //printf("store\n");
         
         super::write(buf);
     }
@@ -82,23 +84,25 @@ TEST_CASE("basic") {
 
         ulid::generate();
 
+        CHECK(is_regular_file(g_path));
+
         int check_count = 0;
         for(int i = 0; i < 50; ++i) {
 
             ulid u1,u2;
 
-            std::latch start{1};
+            volatile sig_atomic_t start = 1;
 
             std::thread t1([&]() {
-                start.wait();
+                while (start != 0);
                 u1 = ulid::generate();
             });
             std::thread t2([&]() {
-                start.wait();
+                while (start != 0);
                 u2 = ulid::generate();
             });
 
-            start.count_down();
+            start = 0;
 
             t1.join();
             t2.join();
@@ -107,7 +111,11 @@ TEST_CASE("basic") {
             auto time2 = std::span(u2.bytes).subspan(0, 6);
 
             if (std::equal(time1.begin(), time1.end(), time2.begin(), time2.end())) {
+                ++check_count;
+
                 CHECK(u1 != u2);
+                if (u1 == u2)
+                    break;
                 uint64_t ran1_high = (uint64_t(u1.bytes[6 ]) << 56) | (uint64_t(u1.bytes[7 ]) << 48) |
                                      (uint64_t(u1.bytes[8 ]) << 40) | (uint64_t(u1.bytes[9 ]) << 32) |
                                      (uint64_t(u1.bytes[10]) << 24) | (uint64_t(u1.bytes[11]) << 16) |
@@ -120,10 +128,21 @@ TEST_CASE("basic") {
                                      (uint64_t(u2.bytes[12]) << 8 ) |           u2.bytes[13];
                 uint16_t ran2_low = (u2.bytes[14] << 8) | u2.bytes[15];
 
-                if (ran1_high != ran2_high)
-                    CHECK(abs(int64_t(ran1_high) - int64_t(ran1_high)) == 1);
-                CHECK(abs(int16_t(ran1_low) - int16_t(ran2_low)) == 1);
-                ++check_count;
+                CAPTURE(ran1_high);
+                CAPTURE(ran1_low);
+                CAPTURE(ran2_high);
+                CAPTURE(ran2_low);
+
+                if (ran1_high != ran2_high) {
+                    if (abs(int64_t(ran1_high) - int64_t(ran2_high)) != 1) {
+                        CHECK(false);
+                        break;
+                    }
+                }
+                if (abs(int16_t(ran1_low) - int16_t(ran2_low)) != 1) {
+                    CHECK(false);
+                    break;
+                }
             }
 
         }

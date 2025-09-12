@@ -136,12 +136,12 @@ foreach(suffix ${BUILD_SUFFIXES})
             COMMAND ${ADB} shell cd ${ANDROID_TEST_DIR} \"&&\" LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH}:${ANDROID_TEST_DIR} ./test-${suffix} -ni
         )
 
-    elseif (DEFINED EMSCRIPTEN)
+    elseif (CMAKE_CROSSCOMPILING)
 
         add_custom_target(run-test-${suffix}
             DEPENDS test-${suffix}
             COMMAND echo "Running test-${suffix}"
-            COMMAND node $<TARGET_FILE:test-${suffix}> -ni
+            COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:test-${suffix}> -ni
         )
 
     else()

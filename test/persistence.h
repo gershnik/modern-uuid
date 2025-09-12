@@ -5,6 +5,7 @@
 #define HEADER_PERSISTENCE_H_INCLUDED
 
 #include <filesystem>
+#include <exception>
 
 #if MUUID_MULTITHREADED
     #include <atomic>
