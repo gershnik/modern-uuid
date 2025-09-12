@@ -54,7 +54,14 @@ namespace muuid::impl {
                 void clear([[maybe_unused]] std::memory_order order=std::memory_order_seq_cst) noexcept
                     { m_impl.clear(); }
             private:
+#if defined(__clang__) && (__clang_major__ == 14)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-pragma"
+#endif
                 std::atomic_flag m_impl = ATOMIC_FLAG_INIT;
+#if defined(__clang__) && (__clang_major__ == 14)
+    #pragma clang diagnostic pop
+#endif
             };
 
         #else
