@@ -135,12 +135,12 @@ TEST_CASE("basic") {
                 CAPTURE(ran2_low);
 
                 if (ran1_high != ran2_high) {
-                    if (abs(int64_t(ran1_high) - int64_t(ran2_high)) != 1) {
+                    if (std::max(ran1_high, ran2_high) - std::min(ran1_high, ran2_high) != 1) {
                         CHECK(false);
                         break;
                     }
                 }
-                if (abs(int16_t(ran1_low) - int16_t(ran2_low)) != 1) {
+                if (std::max(ran1_low, ran2_low) - std::min(ran1_low, ran2_low) != 1) {
                     CHECK(false);
                     break;
                 }

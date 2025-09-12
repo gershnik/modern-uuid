@@ -73,7 +73,8 @@ foreach(suffix ${BUILD_SUFFIXES})
 
     target_compile_definitions(test-${suffix}
     PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>
+        $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS;NOMINMAX>
+        $<$<PLATFORM_ID:Windows>:NOMINMAX>
     )
 
     target_compile_options(test-${suffix}
