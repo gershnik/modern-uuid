@@ -148,18 +148,10 @@ namespace {
         using unit_duration = UnitDuration;
         using max_unit_duration = MaxUnitDuration;
 
-    protected:
-        clock_state_base():
-            m_max_adjustment(clock_state_base::get_max_adjustment()) 
-        {}
-
-        ~clock_state_base() {
-            if (this->m_locked_for_fork)
-                this->m_holder.unlock();
-        }
+    public:
 
         void set_persistence(generic_clock_persistence<PersData> * pers) {
-            
+
             if constexpr (Derived::load_once) {
                 if (this->m_holder.set(pers) || !this->m_initialized) {
                     std::lock_guard guard{this->m_holder};
@@ -185,6 +177,17 @@ namespace {
             }
         }
 
+    protected:
+        clock_state_base():
+            m_max_adjustment(clock_state_base::get_max_adjustment()) 
+        {}
+
+    #if MUUID_HANDLE_FORK
+        ~clock_state_base() {
+            if (this->m_locked_for_fork)
+                this->m_holder.unlock();
+        }
+
         void prepare_fork_in_parent() {
             this->m_holder.lock();
             this->m_locked_for_fork = true;
@@ -193,6 +196,9 @@ namespace {
             this->m_holder.unlock();
             this->m_locked_for_fork = false;
         }
+    #else
+        ~clock_state_base() = default;
+    #endif
 
     protected:
         template<class Func>
@@ -221,7 +227,9 @@ namespace {
     private:
         persistence_holder<PersData> m_holder;
         bool m_initialized = false;
+    #if MUUID_HANDLE_FORK
         bool m_locked_for_fork = false;
+    #endif
     };
 
     template<class UnitDuration, class MaxUnitDuration>
@@ -235,13 +243,6 @@ namespace {
         static constexpr bool load_once = true;
                             
     public:
-        template<int PersistanceId>
-        static non_repeatable_clock_state & instance(uuid_clock_persistence * pers) { 
-            auto & ret = reset_on_fork_thread_local<non_repeatable_clock_state, PersistanceId>::instance(); 
-            ret.set_persistence(pers);
-            return ret;
-        }
-        
         void get(time_point<system_clock, MaxUnitDuration> & adjusted_now, uint16_t & clock_seq) {
             this->mutate([&](uuid_persistence_data & data) {
                 for (auto now = system_clock::now(); ; now = next_distinct_now(now)) {
@@ -512,13 +513,17 @@ namespace {
 
 }
 
-template<class State>
-requires(std::is_same_v<typename State::unit_duration, hundred_nanoseconds> && 
-         std::is_same_v<typename State::max_unit_duration, hundred_nanoseconds>)
-static clock_result_v1 get_clock(State & state) {
+
+clock_result_v1 muuid::impl::get_clock_v1() {
+    using state_type = non_repeatable_clock_state<hundred_nanoseconds, hundred_nanoseconds>;
+
+    auto * current_pers = g_clock_persistence_v1.get();
+    auto & per_thread_state = reset_on_fork_thread_local<state_type, 1>::instance();
+    per_thread_state.set_persistence(current_pers);
+
     time_point<system_clock, hundred_nanoseconds> adjusted_now;
     uint16_t clock_seq;
-    state.get(adjusted_now, clock_seq);
+    per_thread_state.get(adjusted_now, clock_seq);
 
     uint64_t clock = adjusted_now.time_since_epoch().count();
     //gregorian offset of Unix epoch
@@ -527,18 +532,38 @@ static clock_result_v1 get_clock(State & state) {
     return {clock, clock_seq};
 }
 
+clock_result_v6 muuid::impl::get_clock_v6() {
+    using state_type = monotonic_clock_state<hundred_nanoseconds, hundred_nanoseconds>;
 
-template<class State>
-requires(std::is_same_v<typename State::unit_duration, milliseconds> && 
-         std::is_same_v<typename State::max_unit_duration, microseconds>)
-static clock_result_v7 get_unix_clock(State & state) {
+    auto * current_pers = g_clock_persistence_v6.get();
+    auto & per_thread_state = reset_on_fork_thread_local<state_type, 6>::instance();
+    per_thread_state.set_persistence(current_pers);
+
+    time_point<system_clock, hundred_nanoseconds> adjusted_now;
+    uint16_t clock_seq;
+    per_thread_state.get(adjusted_now, clock_seq);
+
+    uint64_t clock = adjusted_now.time_since_epoch().count();
+    //gregorian offset of Unix epoch
+    clock += ((uint64_t(0x01B21DD2)) << 32) + 0x13814000;
+
+    return {clock, clock_seq};
+}
+
+clock_result_v7 muuid::impl::get_clock_v7() {
+    using state_type = monotonic_clock_state<milliseconds, microseconds>;
+
+    auto * current_pers = g_clock_persistence_v7.get();
+    auto & per_thread_state = reset_on_fork_thread_local<state_type, 7>::instance();
+    per_thread_state.set_persistence(current_pers);
+
     time_point<system_clock, microseconds> adjusted_now;
     uint16_t clock_seq;
-    state.get(adjusted_now, clock_seq);
+    per_thread_state.get(adjusted_now, clock_seq);
 
     auto interval = adjusted_now.time_since_epoch();
     auto interval_ms = duration_cast<milliseconds>(interval);
-    
+
     uint64_t clock = interval_ms.count();
     uint64_t remainder = (interval - duration_cast<microseconds>(interval_ms)).count();
     uint64_t frac = remainder * 4096;
@@ -546,44 +571,19 @@ static clock_result_v7 get_unix_clock(State & state) {
     return {clock, extra, clock_seq};
 }
 
-static clock_result_ulid get_ulid_clock(ulid_clock_state & state) {
+clock_result_ulid muuid::impl::get_clock_ulid() {
+
+    auto * current_pers = g_clock_persistence_ulid.get();
+    auto & per_thread_state = reset_on_fork_thread_local<ulid_clock_state>::instance();
+    per_thread_state.set_persistence(current_pers);
+
     time_point<system_clock, milliseconds> adjusted_now;
     uint64_t tail_low;
     uint16_t tail_high;
-    state.get(adjusted_now, tail_low, tail_high);
+    per_thread_state.get(adjusted_now, tail_low, tail_high);
 
     auto interval = adjusted_now.time_since_epoch();
     return {uint64_t(interval.count()), tail_low, tail_high};
-}
-
-clock_result_v1 muuid::impl::get_clock_v1() {
-    using state_type = non_repeatable_clock_state<hundred_nanoseconds, hundred_nanoseconds>;
-
-    auto * pers = g_clock_persistence_v1.get();
-    auto & state = state_type::instance<1>(pers);
-    return get_clock(state);
-}
-
-clock_result_v6 muuid::impl::get_clock_v6() {
-    using state_type = monotonic_clock_state<hundred_nanoseconds, hundred_nanoseconds>;
-
-    auto * pers = g_clock_persistence_v6.get();
-    auto & state = state_type::instance<6>(pers);
-    return get_clock(state);
-}
-
-clock_result_v7 muuid::impl::get_clock_v7() {
-    using state_type = monotonic_clock_state<milliseconds, microseconds>;
-
-    auto * pers = g_clock_persistence_v7.get();
-    auto & state = state_type::instance<7>(pers);
-    return get_unix_clock(state);
-}
-
-clock_result_ulid muuid::impl::get_clock_ulid() {
-    auto * pers = g_clock_persistence_ulid.get();
-    auto & state = ulid_clock_state::instance(pers);
-    return get_ulid_clock(state);
 }
 
 void muuid::set_time_based_persistence(uuid_clock_persistence * pers) {
