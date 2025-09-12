@@ -339,8 +339,8 @@ and `close()` calls.
 The `lock()`/`unlock()` pair are called to lock access to persistent data against other threads or processes. Note that you can use these
 methods to simply lock a mutex without having any persistent data - this will simply provide synchronization without persistence.
 
-Finally the `load()`/`store()` are called to load the initial persistent data (it is called only once) and store and changes to it
-(this is called every time data changes). All calls to `load()`/`store()` will be within `lock()`/`unlock()` bracket.
+Finally the `load()`/`store()` are called to load persistent data and store any changes to it
+All calls to `load()`/`store()` will be within `lock()`/`unlock()` bracket. 
 
 The `load()` method should return `false` if the persistent data is not available. 
 
