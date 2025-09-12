@@ -176,6 +176,12 @@ namespace {
                 }
             } else {
                 this->m_holder.set(pers);
+                if (!this->m_initialized) {
+                    PersData data;
+                    static_cast<Derived *>(this)->init_new(data);
+                    //do not save!
+                    m_initialized = true;
+                }
             }
         }
 
@@ -194,13 +200,8 @@ namespace {
             std::lock_guard guard{this->m_holder};
             PersData data;
             if constexpr (!Derived::load_once) {
-                if (m_holder.load(data)) {
+                if (m_holder.load(data))
                     static_cast<Derived *>(this)->load_existing(data);
-                } else if (!this->m_initialized) {
-                    static_cast<Derived *>(this)->init_new(data);
-                    this->m_holder.save(data);
-                    m_initialized = true;
-                }
             }
             func(data);
             this->m_holder.save(data);
