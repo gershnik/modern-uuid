@@ -9,6 +9,7 @@
 
 #if MUUID_MULTITHREADED
     #include <atomic>
+    #include <mutex>
 #endif
 
 #if __has_include(<unistd.h>) && __has_include(<sys/file.h>) && !defined(__MINGW32__)
