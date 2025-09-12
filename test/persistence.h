@@ -70,7 +70,9 @@ public:
         { delete this; }
 
     void lock() final {
-    #ifdef USE_POSIX_PERSISTENCE
+    #if defined(__EMSCRIPTEN__)
+        s_file_mutex.lock();
+    #elif defined(USE_POSIX_PERSISTENCE)
         while (flock(m_desc, LOCK_EX) < 0) {
             int err = errno;
             if ((err == EAGAIN) || (err == EINTR))
@@ -85,7 +87,9 @@ public:
     #endif
     }
     void unlock() final {
-    #ifdef USE_POSIX_PERSISTENCE
+    #if defined(__EMSCRIPTEN__)
+        s_file_mutex.unlock();
+    #elif defined(USE_POSIX_PERSISTENCE)
         if (flock(m_desc, LOCK_UN) < 0)
             std::terminate();
     #else
@@ -132,6 +136,9 @@ protected:
     
 private:
     int m_desc = -1;
+#if defined(__EMSCRIPTEN__) //flock doesn't work on emscripten
+    static inline std::mutex s_file_mutex{};
+#endif
 };
 
 template<class PerThread>

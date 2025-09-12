@@ -40,7 +40,7 @@ public:
         memcpy(&d.adjustment, current, sizeof(d.adjustment));
         current += sizeof(d.adjustment);
         memcpy(&d.random, current, sizeof(d.random));
-        //printf("load\n");
+        
         return true;
     }
 
@@ -56,7 +56,6 @@ public:
         memcpy(current, &d.adjustment, sizeof(d.adjustment));
         current += sizeof(d.adjustment);
         memcpy(current, &d.random, sizeof(d.random));
-        //printf("store\n");
         
         super::write(buf);
     }
@@ -128,6 +127,8 @@ TEST_CASE("basic") {
                                      (uint64_t(u2.bytes[12]) << 8 ) |           u2.bytes[13];
                 uint16_t ran2_low = (u2.bytes[14] << 8) | u2.bytes[15];
 
+                CAPTURE(u1);
+                CAPTURE(u2);
                 CAPTURE(ran1_high);
                 CAPTURE(ran1_low);
                 CAPTURE(ran2_high);
