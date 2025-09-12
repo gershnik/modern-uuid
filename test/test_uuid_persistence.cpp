@@ -191,9 +191,9 @@ TEST_CASE("clock unix_time_based") {
         CAPTURE(u1);
         CAPTURE(u2);
         if (parts1.time_hi_and_version != parts2.time_hi_and_version || parts1.time_mid != parts2.time_mid)
-            CHECK(parts1.clock_seq == parts2.clock_seq); //THIS MIGHT supuriously fail once in a while
+            CHECK(parts1.clock_seq == parts2.clock_seq); 
         else
-            CHECK(parts1.clock_seq != parts2.clock_seq); //THIS MIGHT supuriously fail once in a while
+            CHECK(parts1.clock_seq != parts2.clock_seq); 
         
         set_unix_time_based_persistence(nullptr);
 
