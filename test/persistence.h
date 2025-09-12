@@ -6,6 +6,10 @@
 
 #include <filesystem>
 
+#if MUUID_MULTITHREADED
+    #include <atomic>
+#endif
+
 #if __has_include(<unistd.h>) && __has_include(<sys/file.h>) && !defined(__MINGW32__)
     #include <unistd.h>
     #include <sys/file.h>

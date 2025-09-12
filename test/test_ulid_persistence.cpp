@@ -61,8 +61,8 @@ public:
 };
 
 
-static auto path = std::filesystem::path("pers.bin");
-static file_clock_persistence<ulid_per_thread> pers(path);
+static auto g_path = std::filesystem::path("pers.bin");
+static file_clock_persistence<ulid_per_thread> pers(g_path);
 
 TEST_SUITE("ulid persistence") {
 
@@ -75,7 +75,7 @@ TEST_CASE("basic") {
             }
         } restore_pers;
 
-        remove(path);
+        remove(g_path);
         set_ulid_persistence(&pers);
 
         CHECK(pers.ref_count() != 0);

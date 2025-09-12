@@ -60,8 +60,8 @@ public:
 };
 
 
-static auto path = std::filesystem::path("pers.bin");
-static file_clock_persistence<uuid_per_thread> pers(path);
+static auto g_path = std::filesystem::path("pers.bin");
+static file_clock_persistence<uuid_per_thread> pers(g_path);
 
 TEST_SUITE("persistence") {
 
@@ -74,7 +74,7 @@ TEST_CASE("clock time_based") {
             }
         } restore_pers;
 
-        remove(path);
+        remove(g_path);
         set_time_based_persistence(&pers);
 
         CHECK(pers.ref_count() != 0);
@@ -124,7 +124,7 @@ TEST_CASE("clock reordered_time_based") {
             }
         } restore_pers;
 
-        remove(path);
+        remove(g_path);
         
         set_reordered_time_based_persistence(&pers);
 
@@ -172,7 +172,7 @@ TEST_CASE("clock unix_time_based") {
             }
         } restore_pers;
 
-        remove(path);
+        remove(g_path);
         
         set_unix_time_based_persistence(&pers);
 
