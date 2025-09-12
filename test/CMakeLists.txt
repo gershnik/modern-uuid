@@ -104,6 +104,7 @@ foreach(suffix ${BUILD_SUFFIXES})
     target_sources(test-${suffix}
     PRIVATE
         test_util.h
+        persistence.h
 
         main.cpp
         test_basics.cpp
@@ -114,6 +115,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         test_fmt.cpp
         test_fork.cpp
         test_persistence.cpp
+        test_ulid_persistence.cpp
         test_system.cpp
         test_sha3.cpp
     )

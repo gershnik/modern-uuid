@@ -160,19 +160,22 @@ namespace {
 
         void set_persistence(generic_clock_persistence<PersData> * pers) {
             
-            if (this->m_holder.set(pers) || !this->m_initialized) {
-                std::lock_guard guard{this->m_holder};
+            if constexpr (Derived::load_once) {
+                if (this->m_holder.set(pers) || !this->m_initialized) {
+                    std::lock_guard guard{this->m_holder};
 
-                PersData data;
+                    PersData data;
+                    if (!m_holder.load(data)) {
+                        static_cast<Derived *>(this)->init_new(data);
+                        this->m_holder.save(data);
+                    } else {
+                        static_cast<Derived *>(this)->load_existing(data);
+                    }
 
-                if (!m_holder.load(data)) {
-                    static_cast<Derived *>(this)->init_new(data);
-                    this->m_holder.save(data);
-                } else {
-                    static_cast<Derived *>(this)->load_existing(data);
+                    this->m_initialized = true;
                 }
-
-                this->m_initialized = true;
+            } else {
+                this->m_holder.set(pers);
             }
         }
 
@@ -190,6 +193,15 @@ namespace {
         void mutate(Func && func) {
             std::lock_guard guard{this->m_holder};
             PersData data;
+            if constexpr (!Derived::load_once) {
+                if (m_holder.load(data)) {
+                    static_cast<Derived *>(this)->load_existing(data);
+                } else if (!this->m_initialized) {
+                    static_cast<Derived *>(this)->init_new(data);
+                    this->m_holder.save(data);
+                    m_initialized = true;
+                }
+            }
             func(data);
             this->m_holder.save(data);
         }
@@ -218,6 +230,8 @@ namespace {
         friend clock_state_base<non_repeatable_clock_state, uuid_persistence_data, UnitDuration, MaxUnitDuration>;
         friend muuid::impl::singleton_holder<non_repeatable_clock_state>;
         friend muuid::impl::reset_on_fork_thread_local<non_repeatable_clock_state, 1>;
+
+        static constexpr bool load_once = true;
                             
     public:
         template<int PersistanceId>
@@ -299,7 +313,10 @@ namespace {
         friend clock_state_base<monotonic_clock_state, uuid_persistence_data, UnitDuration, MaxUnitDuration>;
         friend muuid::impl::singleton_holder<monotonic_clock_state>;
         friend muuid::impl::reset_on_fork_thread_local<monotonic_clock_state, 6>;
-        friend muuid::impl::reset_on_fork_thread_local<monotonic_clock_state, 7>;                    
+        friend muuid::impl::reset_on_fork_thread_local<monotonic_clock_state, 7>;
+        
+        
+        static constexpr bool load_once = true;
     public:
         template<int PersistanceId>
         static monotonic_clock_state & instance(uuid_clock_persistence * pers) { 
@@ -397,6 +414,8 @@ namespace {
         friend clock_state_base<ulid_clock_state, ulid_persistence_data, milliseconds, milliseconds>;
         friend muuid::impl::singleton_holder<ulid_clock_state>;
         friend muuid::impl::reset_on_fork_thread_local<ulid_clock_state>;
+
+        static constexpr bool load_once = false;
     public:
         static ulid_clock_state & instance(ulid_clock_persistence * pers) { 
             auto & ret = reset_on_fork_thread_local<ulid_clock_state>::instance(); 
