@@ -147,10 +147,8 @@ TEST_CASE("basic") {
             }
 
         }
-        if (!check_count) {
-            WARN("No ulid persistence checks made - generation too slow");
-        }
-
+        WARN_MESSAGE(check_count, "No ulid persistence checks made - generation too slow");
+        
         set_ulid_persistence(nullptr);
     }
     ulid::generate();
