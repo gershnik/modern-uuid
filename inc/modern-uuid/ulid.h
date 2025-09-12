@@ -418,7 +418,7 @@ namespace muuid {
 
     /// Clock persistence data for ULID
     struct ulid_persistence_data {
-        using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
+        using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>;
         
         /**
          * The last known clock reading.

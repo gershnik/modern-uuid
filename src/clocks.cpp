@@ -429,7 +429,7 @@ namespace {
                 adjust(now, adjusted_now);
                 tail_low = m_tail.low;
                 tail_high = m_tail.high;
-                data.when = time_point_cast<nanoseconds>(m_last_time);
+                data.when = m_last_time;
                 assert(m_adjustment <= std::numeric_limits<int32_t>::max());
                 data.adjustment = int32_t(this->m_adjustment);
                 memcpy(data.random, &m_tail, sizeof(m_tail));
@@ -443,13 +443,13 @@ namespace {
             m_last_time = round<milliseconds>(system_clock::now()) - 1s;
             m_tail.fill_random();
             m_adjustment = 0;
-            data.when = time_point_cast<nanoseconds>(m_last_time);
+            data.when = m_last_time;
             data.adjustment = int32_t(m_adjustment);
             memcpy(data.random, &m_tail, sizeof(m_tail));
         }
 
         void load_existing(const ulid_persistence_data & data) {
-            m_last_time = std::chrono::time_point_cast<milliseconds>(data.when);
+            m_last_time = data.when;
             memcpy(&m_tail, data.random, sizeof(m_tail));
             if (data.adjustment < 0)
                 m_adjustment = 0;
