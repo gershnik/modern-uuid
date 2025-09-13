@@ -454,13 +454,7 @@ namespace {
                 adjusted = time_point<system_clock, milliseconds>(val);
             }
             
-            if (adjusted < m_last_time) {
-                //we lost monotonicity
-                //reset everything to current time and base state
-                m_tail.fill_random();
-                m_adjustment = 0;
-                m_last_time = adjusted;
-            } else if (adjusted == m_last_time) {
+            if (adjusted == m_last_time) {
                 if (m_adjustment >= m_max_adjustment) {
                     m_tail.increment();
                 } else {
