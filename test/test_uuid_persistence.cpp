@@ -10,6 +10,7 @@
 #if MUUID_MULTITHREADED
 
 #include <thread>
+#include <signal.h>
 
 using namespace muuid;
 using namespace std::literals;
@@ -71,6 +72,7 @@ TEST_CASE("clock time_based") {
         struct restore_pers {
             ~restore_pers() {
                 set_time_based_persistence(nullptr);
+                uuid::generate_time_based();
             }
         } restore_pers;
 
@@ -79,43 +81,74 @@ TEST_CASE("clock time_based") {
 
         CHECK(pers.ref_count() != 0);
 
-        uuid u1 = uuid::generate_time_based();
-        uuid u2;
+        auto u0 = uuid::generate_time_based();
+        auto parts0 = u0.to_parts();
 
-        std::thread([&]() {
-            u2 = uuid::generate_time_based();
-            std::atomic_thread_fence(std::memory_order_release);
-        }).join();
-        std::atomic_thread_fence(std::memory_order_acquire);
+        for(int i = 0; i < 50; ++i) {
+            uuid u1,u2;
 
-        auto parts1 = u1.to_parts();
-        auto parts2 = u2.to_parts();
+            volatile sig_atomic_t start = 1;
 
-        CHECK(parts1.clock_seq == parts2.clock_seq);
-        CHECK(parts1.time_hi_and_version == parts2.time_hi_and_version);
-        CHECK(parts1.time_mid == parts2.time_mid);
-        CHECK(parts1.time_low < parts2.time_low);
+            std::thread t1([&]() {
+                while (start != 0);
+                u1 = uuid::generate_time_based();
+                std::atomic_thread_fence(std::memory_order_release);
+            });
+            std::thread t2([&]() {
+                while (start != 0);
+                u2 = uuid::generate_time_based();
+                std::atomic_thread_fence(std::memory_order_release);
+            });
 
+            start = 0;
+
+            t1.join();
+            t2.join();
+
+            std::atomic_thread_fence(std::memory_order_acquire);
+
+            auto parts1 = u1.to_parts();
+            auto parts2 = u2.to_parts();
+
+            CAPTURE(u0);
+            CAPTURE(u1);
+            CAPTURE(u2);
+
+            REQUIRE(parts1.clock_seq == parts0.clock_seq);
+            REQUIRE(parts1.clock_seq == parts2.clock_seq);
+            
+            REQUIRE(parts1.time_hi_and_version == parts0.time_hi_and_version);
+            REQUIRE(parts1.time_hi_and_version == parts2.time_hi_and_version);
+            
+            REQUIRE(parts1.time_mid == parts0.time_mid);
+            REQUIRE(parts1.time_mid == parts2.time_mid);
+            
+            REQUIRE(parts0.time_low < parts1.time_low);
+            REQUIRE(parts0.time_low < parts2.time_low);
+            REQUIRE(parts1.time_low != parts2.time_low);
+        }
+        
         set_time_based_persistence(nullptr);
 
+        uuid u4;
         std::thread([&]() {
-            u2 = uuid::generate_time_based();
+            u4 = uuid::generate_time_based();
             std::atomic_thread_fence(std::memory_order_release);
         }).join();
         std::atomic_thread_fence(std::memory_order_acquire);
 
-        parts2 = u2.to_parts();
-        CHECK(parts1.clock_seq != parts2.clock_seq);
+        auto parts4 = u4.to_parts();
+        CHECK(parts0.clock_seq != parts4.clock_seq);
 
         set_time_based_persistence(&pers);
         std::thread([&]() {
-            u2 = uuid::generate_time_based();
+            u4 = uuid::generate_time_based();
             std::atomic_thread_fence(std::memory_order_release);
         }).join();
         std::atomic_thread_fence(std::memory_order_acquire);
 
-        parts2 = u2.to_parts();
-        CHECK(parts1.clock_seq == parts2.clock_seq);
+        parts4 = u4.to_parts();
+        CHECK(parts0.clock_seq == parts4.clock_seq);
     }
     uuid::generate_time_based();
     CHECK(pers.ref_count() == 0);
@@ -127,6 +160,7 @@ TEST_CASE("clock reordered_time_based") {
         struct restore_pers {
             ~restore_pers() {
                 set_reordered_time_based_persistence(nullptr);
+                uuid::generate_reordered_time_based();
             }
         } restore_pers;
 
@@ -136,40 +170,66 @@ TEST_CASE("clock reordered_time_based") {
 
         CHECK(pers.ref_count() != 0);
 
-        uuid u1 = uuid::generate_reordered_time_based();
-        uuid u2;
-
-        std::thread([&]() {
-            u2 = uuid::generate_reordered_time_based();
-            std::atomic_thread_fence(std::memory_order_release);
-        }).join();
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        auto parts1 = u1.to_parts();
-        auto parts2 = u2.to_parts();
-
-        CHECK(parts1.clock_seq == parts2.clock_seq);
+        uuid u0 = uuid::generate_reordered_time_based();
+        auto parts0 = u0.to_parts();
         
+        for(int i = 0; i < 50; ++i) {
+            uuid u1,u2;
+
+            volatile sig_atomic_t start = 1;
+
+            std::thread t1([&]() {
+                while (start != 0);
+                u1 = uuid::generate_reordered_time_based();
+                std::atomic_thread_fence(std::memory_order_release);
+            });
+            std::thread t2([&]() {
+                while (start != 0);
+                u2 = uuid::generate_reordered_time_based();
+                std::atomic_thread_fence(std::memory_order_release);
+            });
+
+            start = 0;
+
+            t1.join();
+            t2.join();
+
+            std::atomic_thread_fence(std::memory_order_acquire);
+
+            CAPTURE(u0);
+            CAPTURE(u1);
+            CAPTURE(u2);
+
+            REQUIRE(u1 != u2);
+            REQUIRE(u0 < u1);
+            REQUIRE(u0 < u2);
+
+            REQUIRE(memcmp(u0.bytes.data(), u1.bytes.data(), 10) < 0);
+            REQUIRE(memcmp(u0.bytes.data(), u2.bytes.data(), 10) < 0);
+            REQUIRE(memcmp(u1.bytes.data(), u2.bytes.data(), 10) != 0);
+        }
+
         set_reordered_time_based_persistence(nullptr);
 
+        uuid u4;
         std::thread([&]() {
-            u2 = uuid::generate_reordered_time_based();
+            u4 = uuid::generate_reordered_time_based();
             std::atomic_thread_fence(std::memory_order_release);
         }).join();
         std::atomic_thread_fence(std::memory_order_acquire);
 
-        parts2 = u2.to_parts();
-        CHECK(parts1.clock_seq != parts2.clock_seq);
+        auto parts4 = u4.to_parts();
+        CHECK(parts0.clock_seq != parts4.clock_seq);
 
         set_reordered_time_based_persistence(&pers);
         std::thread([&]() {
-            u2 = uuid::generate_reordered_time_based();
+            u4 = uuid::generate_reordered_time_based();
             std::atomic_thread_fence(std::memory_order_release);
         }).join();
         std::atomic_thread_fence(std::memory_order_acquire);
 
-        parts2 = u2.to_parts();
-        CHECK(parts1.clock_seq == parts2.clock_seq);
+        parts4 = u4.to_parts();
+        CHECK(parts0.clock_seq == parts4.clock_seq);
     }
     uuid::generate_reordered_time_based();
     CHECK(pers.ref_count() == 0);
@@ -181,6 +241,7 @@ TEST_CASE("clock unix_time_based") {
         struct restore_pers {
             ~restore_pers() {
                 set_unix_time_based_persistence(nullptr);
+                uuid::generate_unix_time_based();
             }
         } restore_pers;
 
@@ -190,48 +251,65 @@ TEST_CASE("clock unix_time_based") {
 
         CHECK(pers.ref_count() != 0);
 
-        uuid u1 = uuid::generate_unix_time_based();
-        uuid u2;
+        uuid u0 = uuid::generate_unix_time_based();
+        auto parts0 = u0.to_parts();
+        
+        for(int i = 0; i < 50; ++i) {
+            uuid u1,u2;
 
-        std::thread([&]() {
-            u2 = uuid::generate_unix_time_based();
-            std::atomic_thread_fence(std::memory_order_release);
-        }).join();
-        std::atomic_thread_fence(std::memory_order_acquire);
+            volatile sig_atomic_t start = 1;
 
-        auto parts1 = u1.to_parts();
-        auto parts2 = u2.to_parts();
+            std::thread t1([&]() {
+                while (start != 0);
+                u1 = uuid::generate_unix_time_based();
+                std::atomic_thread_fence(std::memory_order_release);
+            });
+            std::thread t2([&]() {
+                while (start != 0);
+                u2 = uuid::generate_unix_time_based();
+                std::atomic_thread_fence(std::memory_order_release);
+            });
 
-        CAPTURE(u1);
-        CAPTURE(u2);
-        if (parts1.time_hi_and_version != parts2.time_hi_and_version || parts1.time_mid != parts2.time_mid)
-            CHECK(parts1.clock_seq == parts2.clock_seq); 
-        else
-            CHECK(parts1.clock_seq != parts2.clock_seq); 
+            start = 0;
+
+            t1.join();
+            t2.join();
+
+            std::atomic_thread_fence(std::memory_order_acquire);
+
+            CAPTURE(u0);
+            CAPTURE(u1);
+            CAPTURE(u2);
+
+            REQUIRE(u1 != u2);
+            REQUIRE(u0 < u1);
+            REQUIRE(u0 < u2);
+
+            REQUIRE(memcmp(u0.bytes.data(), u1.bytes.data(), 10) < 0);
+            REQUIRE(memcmp(u0.bytes.data(), u2.bytes.data(), 10) < 0);
+            REQUIRE(memcmp(u1.bytes.data(), u2.bytes.data(), 10) != 0);
+        }
         
         set_unix_time_based_persistence(nullptr);
 
+        uuid u4;
         std::thread([&]() {
-            u2 = uuid::generate_unix_time_based();
+            u4 = uuid::generate_unix_time_based();
             std::atomic_thread_fence(std::memory_order_release);
         }).join();
         std::atomic_thread_fence(std::memory_order_acquire);
 
-        parts2 = u2.to_parts();
-        CHECK(parts1.clock_seq != parts2.clock_seq);
+        auto parts4 = u4.to_parts();
+        CHECK(parts0.clock_seq != parts4.clock_seq);
 
         set_unix_time_based_persistence(&pers);
         std::thread([&]() {
-            u2 = uuid::generate_unix_time_based();
+            u4 = uuid::generate_unix_time_based();
             std::atomic_thread_fence(std::memory_order_release);
         }).join();
         std::atomic_thread_fence(std::memory_order_acquire);
 
-        parts2 = u2.to_parts();
-        if (parts1.time_hi_and_version != parts2.time_hi_and_version || parts1.time_mid != parts2.time_mid)
-            CHECK(parts1.clock_seq == parts2.clock_seq);
-        else
-            CHECK(parts1.clock_seq != parts2.clock_seq);
+        REQUIRE(memcmp(u0.bytes.data(), u4.bytes.data(), 10) < 0);
     }
     uuid::generate_unix_time_based();
     CHECK(pers.ref_count() == 0);
