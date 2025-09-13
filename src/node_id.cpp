@@ -245,10 +245,11 @@ static std::array<uint8_t, 6> generate_node_id(node_id type) {
 }
 
 
-auto muuid::set_node_id(node_id type) -> std::span<const uint8_t, 6> {
+auto muuid::set_node_id(node_id type) -> std::array<uint8_t, 6> {
     std::lock_guard guard{get_node_id_mutex()};
 
     g_node_id = generate_node_id(type);
+    g_node_id_set = true;
     return g_node_id;
 }
     
@@ -256,9 +257,10 @@ void muuid::set_node_id(std::span<const uint8_t, 6> id) {
     std::lock_guard guard{get_node_id_mutex()};
 
     memcpy(&g_node_id, id.data(), id.size());
+    g_node_id_set = true;
 }
 
-std::span<const uint8_t, 6> muuid::impl::get_node_id() {
+std::array<uint8_t, 6> muuid::impl::get_node_id() {
 
     std::lock_guard guard{get_node_id_mutex()};
 

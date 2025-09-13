@@ -5,11 +5,11 @@
 #define HEADER_MODERN_UUID_NODE_ID_H_INCLUDED
 
 #include <cstdint>
-#include <span>
+#include <array>
 
 namespace muuid::impl {
 
-    std::span<const uint8_t, 6> get_node_id();
+    std::array<uint8_t, 6> get_node_id();
 }
 
 #endif

@@ -623,28 +623,6 @@ struct fmt::formatter<::muuid::uuid, CharT> : public ::muuid::impl::formatter_ba
 
 namespace muuid {
 
-    /// How to generate node id for uuid::generate_time_based()
-    enum class node_id {
-        detect_system,
-        generate_random
-    };
-    /**
-     * Sets how to generate node id for uuid::generate_time_based()
-     * 
-     * This call affects all subsequent calls to those functions
-     * 
-     * @returns the generated node id. You can save it somewhere and then use the other overload of
-     * set_node_id on subsequent runs to ensure one fixed node_id
-     */
-    MUUID_EXPORTED auto set_node_id(node_id type) -> std::span<const uint8_t, 6>;
-    /** 
-     * Sets a specific node id to use for uuid::generate_time_based()
-     * 
-     * This call affects all subsequent calls to those functions
-     */
-    MUUID_EXPORTED void set_node_id(std::span<const uint8_t, 6> id);
-
-
     /// Clock persistence data for UUID
     struct uuid_persistence_data {
         using time_point_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;

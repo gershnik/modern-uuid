@@ -4,6 +4,7 @@
 #include <modern-uuid/cuid2.h>
 
 #include "random_generator.h"
+#include "node_id.h"
 #include "fork_handler.h"
 
 extern "C" {
@@ -19,10 +20,12 @@ namespace {
     public:
         cuid2_state() {
             auto & gen = impl::get_random_generator();
-            std::uniform_int_distribution<uint32_t> dist;
-            m_counter = dist(gen);
-            for (auto & val: m_fingerprint)
-                val = dist(gen);
+            std::uniform_int_distribution<uint32_t> dist32;
+            std::uniform_int_distribution<unsigned> dist8(0, 255);
+
+            m_counter = dist32(gen);
+            for (auto & b: m_fingerprint)
+                b = dist8(gen);
         }
 
         uint32_t count() {
@@ -30,12 +33,15 @@ namespace {
         }
 
         std::span<const uint8_t, 16> fingerprint() const {
+
+            auto node_id = impl::get_node_id();
+            memcpy(m_fingerprint, node_id.data(), node_id.size());
             return std::span<const uint8_t, 16>(reinterpret_cast<const uint8_t *>(m_fingerprint), 16);
         }
 
     private:
         uint32_t m_counter;
-        uint32_t m_fingerprint[4];
+        mutable uint8_t m_fingerprint[16];
     };
 
 }

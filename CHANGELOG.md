@@ -5,10 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Changed
+- Speed improvements to UUID/ULID generation
+- CUID2 is out of experiment mode
+- CUID2 generation now mixes system MAC address (if available) to the
+  host fingerprint hash.
+
 ### Fixed
-- A few rare/corner case bugs
-  - A race condition in setting UUID/ULID clock persistence handlers
-  - Incorrect loading of ULID persistence data
+- A few rare/corner case bugs in UUID/ULID clock persistence handlers
+- Potential thread safety issues in `set_node_id`
 
 ## [1.10] - 2025-09-10
 

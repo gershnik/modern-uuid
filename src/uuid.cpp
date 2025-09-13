@@ -69,7 +69,7 @@ auto uuid::generate_sha1(uuid ns, std::string_view name) noexcept -> uuid {
 }
 
 auto uuid::generate_time_based() -> uuid {    
-    std::span<const uint8_t, 6> node_id = impl::get_node_id();
+    auto node_id = impl::get_node_id();
     auto [clock, clock_seq] = impl::get_clock_v1();
 
     uint32_t clock_high = uint32_t(clock >> 32);

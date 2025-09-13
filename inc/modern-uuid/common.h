@@ -295,6 +295,33 @@ namespace muuid
         };
     }
 
+
+    /// How to generate node_id
+    enum class node_id {
+        /// Try to obtain system MAC address and fall back on random value otherwise
+        detect_system,
+        /// Generate random value
+        generate_random
+    };
+    
+    /**
+     * Sets how to generate node id values 
+     * 
+     * Node ID is used in uuid::generate_time_based() and cuid2::generate() 
+     * (to provide host fingerprint).
+     * This call affects all subsequent calls to those functions.
+     * 
+     * @returns the generated node id. You can save it somewhere and then use the other overload of
+     * set_node_id on subsequent runs to ensure one fixed node_id
+     */
+    MUUID_EXPORTED auto set_node_id(node_id type) -> std::array<uint8_t, 6>;
+    /** 
+     * Sets a specific node id to use for uuid::generate_time_based()
+     * 
+     * This call affects all subsequent calls to those functions
+     */
+    MUUID_EXPORTED void set_node_id(std::span<const uint8_t, 6> id);
+
     /// Callback interface to handle persistence of clock data
     template<class Data>
     class generic_clock_persistence {
