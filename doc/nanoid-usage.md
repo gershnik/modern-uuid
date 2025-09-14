@@ -9,7 +9,7 @@
     - [Thread safety](#thread-safety)
     - [Multiprocess safety](#multiprocess-safety)
 - [Usage](#usage)
-    - [nanoid class and basic_nanoid class template](#nanoid-class-and-basic_nanoid-class-template)
+    - [`nanoid` class and `basic_nanoid` class template](#nanoid-class-and-basic_nanoid-class-template)
     - [Literals](#literals)
     - [Generation](#generation)
     - [Conversions from/to strings](#conversions-fromto-strings)
@@ -149,7 +149,8 @@ A `nanoid` can be parsed from any `std::span<char, /*any extent*/>` or anything 
 `std::string` etc.) via `nanoid::from_chars`. It returns `std::optional<nanoid>` which is empty if the string is not a valid NanoID representation.
 
 ```cpp
-if (auto maybe_nanoid = nanoid::from_chars("HPTI4DZV5qieFysheU5_f")) {
+std::string str = "HPTI4DZV5qieFysheU5_f";
+if (auto maybe_nanoid = nanoid::from_chars(str)) {
     // use *maybe_nanoid
 }
 ```
@@ -286,7 +287,7 @@ The `bytes` member is an `std:array<uint8_t, 16>` and can be manipulated using a
 ```cpp
 constexpr nanoid n("V1StGXR8_Z5jdHi6B-myT");
 assert(n.bytes[3] == 237);
-for(auto byte: u.bytes) {
+for(auto byte: n.bytes) {
     ...
 }
 ```

@@ -9,7 +9,7 @@
     - [Thread safety](#thread-safety)
     - [Multiprocess safety](#multiprocess-safety)
 - [Usage](#usage)
-    - [ulid class](#ulid-class)
+    - [`ulid` class](#ulid-class)
     - [Literals](#literals)
     - [Constructing from raw bytes](#constructing-from-raw-bytes)
     - [Generation](#generation)
@@ -74,7 +74,7 @@ guarantees as ULIDs generated from completely unrelated processes - negligible p
 It is [trivially copyable](https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable) and has a 
 [standard layout](https://en.cppreference.com/w/cpp/named_req/StandardLayoutType). Its size is 16 bytes and it has the same alignment as an `unsigned char`. 
 
-Internally `ulid` stores ULID bytes in as an array in their natural order. 
+Internally `ulid` stores ULID bytes as an array in their natural order. 
 
 ### Literals
 
@@ -97,7 +97,7 @@ constexpr auto u2 = ulid("01k4c0saqszycn0jwbrb3kan9n");
 Note that since ULIDs can be compile-time literals they can be used as template parameters:
 
 ```cpp
-template<ulid U1> class some_class {...};
+template<ulid U> class some_class {...};
 
 some_class<ulid("01k4c0saqt63ntznp3xah01eb3")> some_object;
 ```
@@ -131,7 +131,7 @@ uint8_t arr2[16] = {...};
 ulid u2(arr2);
 
 std::vector<uint8_t> vec = {...};
-ulid u2(std::span{vec}.subspan<3, 19>());
+ulid u3(std::span{vec}.subspan<3, 19>());
 ```
 
 ### Generation
@@ -156,7 +156,8 @@ A `ulid` can be parsed from any `std::span<char, /*any extent*/>` or anything co
 Accepted input is not case sensitive. 
 
 ```cpp
-if (auto maybe_ulid = ulid::from_chars("01k4c0saqt63ntznp3xah01eb3")) {
+std::string str = "01k4c0saqt63ntznp3xah01eb3";
+if (auto maybe_ulid = ulid::from_chars(str)) {
     // use *maybe_ulid
 }
 ```

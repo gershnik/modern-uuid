@@ -51,6 +51,7 @@ A quick intro to the library is given below. For more details see:
 * [UUID Usage Guide](/doc/uuid-usage.md)
 * [ULID Usage Guide](/doc/ulid-usage.md)
 * [NanoID Usage Guide](/doc/nanoid-usage.md)
+* [CUID2 Usage Guide](/doc/cuid2-usage.md)
 
 ### UUID
 
@@ -251,13 +252,6 @@ my_id mid2 = my_id::generate();
 
 
 ### Cuid2
-
-Note that Cuid2 support is currently experimental. The Cuid2 format has no spec and its 
-[canonical implementation](https://github.com/paralleldrive/cuid2/blob/main/src/index.js) has
-many features only relevant to JavaScript and its engines. Accordingly the implementation in this 
-library is the best-effort attempt to implement its current format and generation algorithm 
-as applicable to native code and C++. Both might conceivably change though this is unlikely.
-
 
 ```cpp
 #include <modern-uuid/cuid2.h>

@@ -1,7 +1,7 @@
 
 # UUID Usage Guide
 
-<!-- TOC -->
+<!-- TOC tocDepthTo:4 -->
 
 - [Basics](#basics)
     - [Headers and namespaces](#headers-and-namespaces)
@@ -9,7 +9,7 @@
     - [Thread safety](#thread-safety)
     - [Multiprocess safety](#multiprocess-safety)
 - [Usage](#usage)
-    - [uuid class](#uuid-class)
+    - [`uuid` class](#uuid-class)
     - [Literals](#literals)
     - [Constructing from raw bytes](#constructing-from-raw-bytes)
     - [Accessing raw bytes](#accessing-raw-bytes)
@@ -218,7 +218,8 @@ A `uuid` can be parsed from any `std::span<char, /*any extent*/>` or anything co
 Accepted format is `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` case insensitive. 
 
 ```cpp
-if (auto maybe_uuid = uuid::from_chars("7d444840-9dc0-11d1-b245-5ffdce74fad2")) {
+std::string str = "7d444840-9dc0-11d1-b245-5ffdce74fad2";
+if (auto maybe_uuid = uuid::from_chars(str)) {
     // use *maybe_uuid
 }
 ```
@@ -480,7 +481,7 @@ You can use it to force random `node_id`:
 ```cpp
 //this will generate a random node_id and use it in all subsequent generate_time_based() calls
 //the generated value is returned in case you want to save it for later use
-std::span<const uint8_t, 6> node_id = set_node_id(node_id::generate_random);
+std::array<uint8_t, 6> node_id = set_node_id(node_id::generate_random);
 ```
 
 The generated random value is returned to you so you can save it to use again in later invocations of your program.
@@ -498,7 +499,7 @@ Finally, you can specify the default behavior and obtain the detected `node_id` 
 //this will attempt to detect a MAC address (falling back on generating a random value)
 //for node_id and use it in all subsequent generate_time_based() calls
 //the generated value is returned in case you want to save it for later use
-std::span<const uint8_t, 6> node_id = set_node_id(node_id::detect_system);
+std::array<uint8_t, 6> node_id = set_node_id(node_id::detect_system);
 ```
 
 ### Persisting/synchronizing the clock state
@@ -540,8 +541,8 @@ and `close()` calls.
 The `lock()`/`unlock()` pair are called to lock access to persistent data against other threads or processes. Note that you can use these
 methods to simply lock a mutex without having any persistent data - this will simply provide synchronization without persistence.
 
-Finally the `load()`/`store()` are called to load the initial persistent data (it is called only once) and store any changes to it
-(this is called every time data changes). All calls to `load()`/`store()` will be within `lock()`/`unlock()` bracket.
+Finally the `load()`/`store()` are called to load the current persistent data and store any changes to it. All calls to 
+`load()`/`store()` will be within `lock()`/`unlock()` bracket.
 
 The `load()` method should return `false` if the persistent data is not available. 
 
