@@ -6,8 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## Unreleased
 
 ### Changed
+- Small incompatible changes to `set_node_id` API
+- Removal of all deprecated APIs
 - Speed improvements to UUID/ULID generation
-- CUID2 is out of experiment mode
+- CUID2 is out of experimental mode
 - CUID2 generation now mixes system MAC address (if available) to the
   host fingerprint hash.
 
