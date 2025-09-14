@@ -596,36 +596,3 @@ void muuid::set_ulid_persistence(ulid_clock_persistence * pers) {
     if (old)
         old->sub_ref();
 }
-
-namespace muuid {
-
-    //ABI compat functions
-
-// The [[deprecated]] attribute on functions silences deprecation warnings for type usage
-// on most compilers these days.
-// Except for very old gccs and MSVC (of course)
- #ifdef __GNUC__
-     #pragma GCC diagnostic push
-     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
- #elif defined(_MSC_VER)
-     #pragma warning(push)
-     #pragma warning(disable: 4996)
- #endif
-
-    [[deprecated]] MUUID_EXPORTED void set_time_based_persistence(clock_persistence * persistence) {
-        return set_time_based_persistence(static_cast<uuid_clock_persistence *>(persistence));
-    }
-    [[deprecated]] MUUID_EXPORTED void set_reordered_time_based_persistence(clock_persistence * persistence) {
-        return set_reordered_time_based_persistence(static_cast<uuid_clock_persistence *>(persistence));
-    }
-    [[deprecated]] MUUID_EXPORTED void set_unix_time_based_persistence(clock_persistence * persistence) {
-        return set_unix_time_based_persistence(static_cast<uuid_clock_persistence *>(persistence));
-    }
-
- #ifdef __GNUC__
-     #pragma GCC diagnostic pop
- #elif defined(_MSC_VER)
-     #pragma warning(pop)
- #endif
-
-}

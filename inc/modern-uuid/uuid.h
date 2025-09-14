@@ -644,19 +644,6 @@ namespace muuid {
 
 
     /**
-     * Deprecated synonym for uuid_clock_persistence
-     * 
-     * It is a derived class rather than typedef for ABI compatibility
-     */ 
-    class [[deprecated("please use uuid_clock_persistence instead")]] clock_persistence : public uuid_clock_persistence {
-    protected:
-        clock_persistence() noexcept = default;
-        ~clock_persistence() noexcept = default;
-        clock_persistence(const clock_persistence &) noexcept = default;
-        clock_persistence & operator=(const clock_persistence &) noexcept = default;
-    };
-
-    /**
      * Set the uuid_clock_persistence instance for uuid::generate_time_based()
      * 
      * Pass `nullptr` to remove.
