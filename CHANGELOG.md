@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## [2.0] - 2025-09-13
+
 ### Changed
 - Small incompatible changes to `set_node_id` API
 - Removal of all deprecated APIs
@@ -130,3 +132,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 [1.8]: https://github.com/gershnik/modern-uuid/releases/v1.8
 [1.9]: https://github.com/gershnik/modern-uuid/releases/v1.9
 [1.10]: https://github.com/gershnik/modern-uuid/releases/v1.10
+[2.0]: https://github.com/gershnik/modern-uuid/releases/v2.0
