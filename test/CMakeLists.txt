@@ -25,7 +25,7 @@ set(FMT_INSTALL OFF)
 
 FetchContent_Declare(fmt
     GIT_REPOSITORY  https://github.com/fmtlib/fmt
-    GIT_TAG         11.1.4
+    GIT_TAG         12.0.0
     GIT_SHALLOW     TRUE
     GIT_SUBMODULES_RECURSE FALSE
 )
