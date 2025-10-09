@@ -98,6 +98,11 @@ using namespace muuid;
         return T{};
     }
 
+    template<class R, class FD, class T, class... Rest>
+    auto ioctl_type_helper(R (*)(FD, T, Rest...)) {
+        return T{};
+    }
+
     using ioctl_type = decltype(ioctl_type_helper(ioctl));
 #endif
 
