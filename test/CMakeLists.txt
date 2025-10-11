@@ -52,7 +52,6 @@ foreach(suffix ${BUILD_SUFFIXES})
     set_target_properties(test-${suffix} PROPERTIES 
         CXX_VISIBILITY_PRESET hidden
         VISIBILITY_INLINES_HIDDEN ON
-        POSITION_INDEPENDENT_CODE ON
         RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:modern-uuid-${suffix}>
         XCODE_GENERATE_SCHEME TRUE
         XCODE_SCHEME_ARGUMENTS "-ni;-nc"
@@ -64,6 +63,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         fmt::fmt
         "$<$<PLATFORM_ID:Darwin>:-framework CoreFoundation>"
         $<$<AND:$<NOT:$<BOOL:${WIN32}>>,$<NOT:$<BOOL:${ANDROID}>>>:pthread>
+        $<$<PLATFORM_ID:Haiku>:network>
     )
 
     target_include_directories(test-${suffix}
