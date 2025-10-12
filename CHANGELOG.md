@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Added
+- Code portability improvements
+- This library now builds and works properly on Haiku OS
+
 ## [2.0] - 2025-09-13
 
 ### Changed
