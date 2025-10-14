@@ -30,7 +30,7 @@ A modern, no-dependencies, portable C++ library for manipulating [UUIDs](https:/
   * In particular, NanoID objects are internally stored and manipulated in packed binary format rather than strings resulting in much 
     better memory efficiency
 * Self-contained with no dependencies beyond C++ standard library.
-* Works on Mac, Linux, Windows, BSD, Wasm, and even Illumos. Might even work on some embedded systems given a suitable compiler 
+* Works on Mac, Linux, Windows, BSD, Wasm, Illumos and even Haiku OS. Might even work on some embedded systems given a suitable compiler 
   and a standard library support.
 * Requires C++20 but does not require a very recent compiler (GCC is supported from version 10 and clang from version 13).
 * Most operations (with an obvious exception of XXID generation and iostream I/O) are `constexpr` and can be done at compile time. 
