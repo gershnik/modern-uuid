@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## [2.1] - 2025-10-14
+
 ### Added
 - Code portability improvements
 - This library now builds and works properly on Haiku OS
@@ -140,3 +142,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 [1.9]: https://github.com/gershnik/modern-uuid/releases/v1.9
 [1.10]: https://github.com/gershnik/modern-uuid/releases/v1.10
 [2.0]: https://github.com/gershnik/modern-uuid/releases/v2.0
+[2.1]: https://github.com/gershnik/modern-uuid/releases/v2.1
