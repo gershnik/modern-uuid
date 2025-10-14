@@ -195,6 +195,14 @@ if (MUUID_SHARED)
         SOVERSION 1
     )
 
+    #The only way to prevent brain-dead GCC from popping up warnings 
+    #suppressed in code (src/external/sha1.c) during LTO
+    #https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80922
+    target_link_options(modern-uuid-shared
+    PRIVATE
+	    $<$<CXX_COMPILER_ID:GNU>:-Wno-unknown-warning-option;-Wno-stringop-overread>
+    )
+
     target_compile_definitions(modern-uuid-shared
     PUBLIC
         MUUID_SHARED=1

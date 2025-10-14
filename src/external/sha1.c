@@ -19,6 +19,15 @@
 
 #include "sha1.h"
 
+/* 
+   This also needs to be suppressed for linking because brain-dead 
+   GCC doesn't track pragmas during LTO
+   https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80922
+*/
+#if defined(__GNUC__) && !defined(__clang__)
+    #pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif
+
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
 /* blk0() and blk() perform the initial expand. */
