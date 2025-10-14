@@ -24,7 +24,7 @@
    GCC doesn't track pragmas during LTO
    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80922
 */
-#if defined(__GNUC__) && !defined(__clang__)
+#if __GNUC__ > 10 && !defined(__clang__)
     #pragma GCC diagnostic ignored "-Wstringop-overread"
 #endif
 
