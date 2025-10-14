@@ -13,13 +13,13 @@
 
 #include "stdint.h"
 
-#define MUUID_SHA1LENGTH		20
+#define MUUID_SHA1LENGTH        20
 
 typedef struct
 {
-    uint32_t	state[5];
-    uint32_t	count[2];
-    unsigned	char buffer[64];
+    uint32_t    state[5];
+    uint32_t    count[2];
+    unsigned    char buffer[64];
 } MUUID_SHA1_CTX;
 
 void muuid_SHA1Transform(uint32_t state[5], const unsigned char buffer[64]);

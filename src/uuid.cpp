@@ -30,24 +30,24 @@ auto uuid::generate_random() noexcept -> uuid {
 }
 
 auto uuid::generate_md5(uuid ns, std::string_view name) noexcept -> uuid {
-	
-	static_assert(sizeof(uuid) == MUUID_MD5LENGTH);
+    
+    static_assert(sizeof(uuid) == MUUID_MD5LENGTH);
     
     MUUID_MD5_CTX ctx;
-	muuid_MD5Init(&ctx);
-	muuid_MD5Update(&ctx, ns.bytes.data(), unsigned(ns.bytes.size()));
-	muuid_MD5Update(&ctx, (const uint8_t *)name.data(), unsigned(name.size()));
+    muuid_MD5Init(&ctx);
+    muuid_MD5Update(&ctx, ns.bytes.data(), unsigned(ns.bytes.size()));
+    muuid_MD5Update(&ctx, (const uint8_t *)name.data(), unsigned(name.size()));
     uuid ret;
-	muuid_MD5Final(ret.bytes.data(), &ctx);
+    muuid_MD5Final(ret.bytes.data(), &ctx);
 
-	ret.bytes[8] = (ret.bytes[8] & 0x3F) | 0x80;
-	ret.bytes[6] = (ret.bytes[6] & 0x0F) | 0x30;
-	return ret;
+    ret.bytes[8] = (ret.bytes[8] & 0x3F) | 0x80;
+    ret.bytes[6] = (ret.bytes[6] & 0x0F) | 0x30;
+    return ret;
 }
 
 auto uuid::generate_sha1(uuid ns, std::string_view name) noexcept -> uuid {
     
-	static_assert(sizeof(uuid) < MUUID_SHA1LENGTH);
+    static_assert(sizeof(uuid) < MUUID_SHA1LENGTH);
 
     struct buffer {
         uuid ret;
@@ -57,14 +57,14 @@ auto uuid::generate_sha1(uuid ns, std::string_view name) noexcept -> uuid {
     static_assert(sizeof(buffer) == MUUID_SHA1LENGTH);
     
     MUUID_SHA1_CTX ctx;
-	muuid_SHA1Init(&ctx);
-	muuid_SHA1Update(&ctx, ns.bytes.data(), uint32_t(ns.bytes.size()));
-	muuid_SHA1Update(&ctx, (const uint8_t *)name.data(), uint32_t(name.size()));
+    muuid_SHA1Init(&ctx);
+    muuid_SHA1Update(&ctx, ns.bytes.data(), uint32_t(ns.bytes.size()));
+    muuid_SHA1Update(&ctx, (const uint8_t *)name.data(), uint32_t(name.size()));
     buffer buf;
     muuid_SHA1Final(buf.ret.bytes.data(), &ctx);
 
     buf.ret.bytes[8] = (buf.ret.bytes[8] & 0x3F) | 0x80;
-	buf.ret.bytes[6] = (buf.ret.bytes[6] & 0x0F) | 0x50;
+    buf.ret.bytes[6] = (buf.ret.bytes[6] & 0x0F) | 0x50;
     return buf.ret;
 }
 

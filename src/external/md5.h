@@ -10,9 +10,9 @@
 #define MUUID_MD5LENGTH 16
 
 struct MUUID_MD5Context {
-	uint32_t buf[4];
-	uint32_t bits[2];
-	unsigned char in[64];
+    uint32_t buf[4];
+    uint32_t bits[2];
+    unsigned char in[64];
 };
 
 void muuid_MD5Init(struct MUUID_MD5Context *ctx);

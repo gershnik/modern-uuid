@@ -110,14 +110,14 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
 
 #if defined(HAVE_NET_IF_H) && (defined(SIOCGIFHWADDR) || defined(SIOCGENADDR) || defined(HAVE_NET_IF_DL_H))
     auto sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-	if (sd < 0)
-		return false;
+    if (sd < 0)
+        return false;
 
     struct autoclose_sd_t {
         decltype(sd) s;
         ~autoclose_sd_t() { close(s); }
     } autoclose_sd{sd};
-	
+    
     std::vector<char> buf(1024);
 
     struct ifconf ifc;
@@ -130,40 +130,40 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
             break;
         buf.resize(buf.size() + 1024);
     }
-	
+    
     if (ioctl(sd, static_cast<ioctl_type>(SIOCGIFCONF), &ifc) < 0)
-		return false;
+        return false;
     
     struct ifreq * ifrp;
-	for (size_t i = 0; i < size_t(ifc.ifc_len); i+= ifreq_size(*ifrp)) {
-		ifrp = (struct ifreq *)((uint8_t *)ifc.ifc_buf + i);
+    for (size_t i = 0; i < size_t(ifc.ifc_len); i+= ifreq_size(*ifrp)) {
+        ifrp = (struct ifreq *)((uint8_t *)ifc.ifc_buf + i);
 
         struct ifreq ifr;
-		strncpy(ifr.ifr_name, ifrp->ifr_name, IFNAMSIZ);
+        strncpy(ifr.ifr_name, ifrp->ifr_name, IFNAMSIZ);
 
         uint8_t * res = nullptr;
 #if defined(SIOCGIFHWADDR)
         if (ioctl(sd, static_cast<ioctl_type>(SIOCGIFHWADDR), &ifr) < 0)
-			continue;
+            continue;
         res = (uint8_t *)&ifreq_hwaddr(ifr).sa_data;
 #elif defined(SIOCGENADDR)
         if (ioctl(sd, static_cast<ioctl_type>(SIOCGENADDR), &ifr) < 0)
-			continue;
-		res = (uint8_t *) ifr.ifr_enaddr;
+            continue;
+        res = (uint8_t *) ifr.ifr_enaddr;
 #elif defined(HAVE_NET_IF_DL_H)
         auto sdlp = (struct sockaddr_dl *) &ifrp->ifr_addr;
-		if ((sdlp->sdl_family != AF_LINK) || (sdlp->sdl_alen != 6))
-			continue;
-		res = (uint8_t *) &sdlp->sdl_data[sdlp->sdl_nlen];
+        if ((sdlp->sdl_family != AF_LINK) || (sdlp->sdl_alen != 6))
+            continue;
+        res = (uint8_t *) &sdlp->sdl_data[sdlp->sdl_nlen];
 #else
-		static_assert(false);
+        static_assert(false);
 #endif 
-		if (res == nullptr || (!res[0] && !res[1] && !res[2] && !res[3] && !res[4] && !res[5]))
-			continue;
-		
+        if (res == nullptr || (!res[0] && !res[1] && !res[2] && !res[3] && !res[4] && !res[5]))
+            continue;
+        
         memcpy(dest.data(), res, 6);
         return true;
-	}
+    }
 
 #elif defined(_WIN32) || defined(_WIN64)
 

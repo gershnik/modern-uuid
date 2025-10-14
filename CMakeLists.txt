@@ -200,7 +200,7 @@ if (MUUID_SHARED)
     #https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80922
     target_link_options(modern-uuid-shared
     PRIVATE
-	    $<$<CXX_COMPILER_ID:GNU>:-Wno-unknown-warning-option;-Wno-stringop-overread>
+        $<$<CXX_COMPILER_ID:GNU>:-Wno-unknown-warning-option;-Wno-stringop-overread>
     )
 
     target_compile_definitions(modern-uuid-shared

@@ -21,14 +21,14 @@ extern "C" {
  */
 typedef struct muuid_sha3_ctx
 {
-	/* 1600 bits algorithm hashing state */
-	uint64_t hash[sha3_max_permutation_size];
-	/* 1536-bit buffer for leftovers */
-	uint64_t message[sha3_max_rate_in_qwords];
-	/* count of bytes in the message[] buffer */
-	unsigned rest;
-	/* size of a message block processed at once */
-	unsigned block_size;
+    /* 1600 bits algorithm hashing state */
+    uint64_t hash[sha3_max_permutation_size];
+    /* 1536-bit buffer for leftovers */
+    uint64_t message[sha3_max_rate_in_qwords];
+    /* count of bytes in the message[] buffer */
+    unsigned rest;
+    /* size of a message block processed at once */
+    unsigned block_size;
 } muuid_sha3_ctx;
 
 /* methods for calculating the hash function */

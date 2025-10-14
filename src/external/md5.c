@@ -14,12 +14,12 @@
  * needed on buffers full of bytes, and then call MD5Final, which
  * will fill a supplied 16-byte array with the digest.
  */
-#include <string.h>		/* for memcpy() */
+#include <string.h>        /* for memcpy() */
 
 #include "md5.h"
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-# define byteReverse(buf, len)	/* Nothing */
+# define byteReverse(buf, len)    /* Nothing */
 #else
 static void byteReverse(unsigned char *buf, unsigned longs);
 
@@ -31,10 +31,10 @@ static void byteReverse(unsigned char *buf, unsigned longs)
 {
     uint32_t t;
     do {
-	t = (uint32_t) ((unsigned) buf[3] << 8 | buf[2]) << 16 |
-	    ((unsigned) buf[1] << 8 | buf[0]);
-	*(uint32_t *) buf = t;
-	buf += 4;
+    t = (uint32_t) ((unsigned) buf[3] << 8 | buf[2]) << 16 |
+        ((unsigned) buf[1] << 8 | buf[0]);
+    *(uint32_t *) buf = t;
+    buf += 4;
     } while (--longs);
 }
 #endif /* !ASM_MD5 */
@@ -67,35 +67,35 @@ void muuid_MD5Update(struct MUUID_MD5Context *ctx, unsigned char const *buf, uns
 
     t = ctx->bits[0];
     if ((ctx->bits[0] = t + ((uint32_t) len << 3)) < t)
-	ctx->bits[1]++;		/* Carry from low to high */
+    ctx->bits[1]++;        /* Carry from low to high */
     ctx->bits[1] += len >> 29;
 
-    t = (t >> 3) & 0x3f;	/* Bytes already in shsInfo->data */
+    t = (t >> 3) & 0x3f;    /* Bytes already in shsInfo->data */
 
     /* Handle any leading odd-sized chunks */
 
     if (t) {
-	unsigned char *p = (unsigned char *) ctx->in + t;
+    unsigned char *p = (unsigned char *) ctx->in + t;
 
-	t = 64 - t;
-	if (len < t) {
-	    memcpy(p, buf, len);
-	    return;
-	}
-	memcpy(p, buf, t);
-	byteReverse(ctx->in, 16);
-	muuid_MD5Transform(ctx->buf, (uint32_t *) ctx->in);
-	buf += t;
-	len -= t;
+    t = 64 - t;
+    if (len < t) {
+        memcpy(p, buf, len);
+        return;
+    }
+    memcpy(p, buf, t);
+    byteReverse(ctx->in, 16);
+    muuid_MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    buf += t;
+    len -= t;
     }
     /* Process data in 64-byte chunks */
 
     while (len >= 64) {
-	memcpy(ctx->in, buf, 64);
-	byteReverse(ctx->in, 16);
-	muuid_MD5Transform(ctx->buf, (uint32_t *) ctx->in);
-	buf += 64;
-	len -= 64;
+    memcpy(ctx->in, buf, 64);
+    byteReverse(ctx->in, 16);
+    muuid_MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    buf += 64;
+    len -= 64;
     }
 
     /* Handle any remaining bytes of data. */
@@ -125,16 +125,16 @@ void muuid_MD5Final(unsigned char digest[MUUID_MD5LENGTH], struct MUUID_MD5Conte
 
     /* Pad out to 56 mod 64 */
     if (count < 8) {
-	/* Two lots of padding:  Pad the first block to 64 bytes */
-	memset(p, 0, count);
-	byteReverse(ctx->in, 16);
-	muuid_MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    /* Two lots of padding:  Pad the first block to 64 bytes */
+    memset(p, 0, count);
+    byteReverse(ctx->in, 16);
+    muuid_MD5Transform(ctx->buf, (uint32_t *) ctx->in);
 
-	/* Now fill the next block with 56 bytes */
-	memset(ctx->in, 0, 56);
+    /* Now fill the next block with 56 bytes */
+    memset(ctx->in, 0, 56);
     } else {
-	/* Pad block to 56 bytes */
-	memset(p, 0, count - 8);
+    /* Pad block to 56 bytes */
+    memset(p, 0, count - 8);
     }
     byteReverse(ctx->in, 14);
 
@@ -148,7 +148,7 @@ void muuid_MD5Final(unsigned char digest[MUUID_MD5LENGTH], struct MUUID_MD5Conte
     muuid_MD5Transform(ctx->buf, (uint32_t *) ctx->in);
     byteReverse((unsigned char *) ctx->buf, 4);
     memcpy(digest, ctx->buf, MUUID_MD5LENGTH);
-    memset(ctx, 0, sizeof(*ctx));	/* In case it's sensitive */
+    memset(ctx, 0, sizeof(*ctx));    /* In case it's sensitive */
 }
 
 #ifndef ASM_MD5
@@ -163,7 +163,7 @@ void muuid_MD5Final(unsigned char digest[MUUID_MD5LENGTH], struct MUUID_MD5Conte
 
 /* This is the central step in the MD5 algorithm. */
 #define MD5STEP(f, w, x, y, z, data, s) \
-	( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
+    ( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
 
 /*
  * The core of the MD5 algorithm, this alters an existing MD5 hash to
