@@ -154,7 +154,7 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
         auto sdlp = (struct sockaddr_dl *) &ifrp->ifr_addr;
         if ((sdlp->sdl_family != AF_LINK) || (sdlp->sdl_alen != 6))
             continue;
-        res = (uint8_t *) &sdlp->sdl_data[sdlp->sdl_nlen];
+        res = (uint8_t *)LLADDR(sdlp);
 #else
         static_assert(false);
 #endif 
