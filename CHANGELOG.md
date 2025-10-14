@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Code portability improvements
 - This library now builds and works properly on Haiku OS
 
+### Fixed
+- Suppressed bogus GCC warning in SHA1 code (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106709)
+
 ## [2.0] - 2025-09-13
 
 ### Changed
