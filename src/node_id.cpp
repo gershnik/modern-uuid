@@ -109,7 +109,12 @@ using namespace muuid;
 static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
 
 #if defined(HAVE_NET_IF_H) && (defined(SIOCGIFHWADDR) || defined(SIOCGENADDR) || defined(HAVE_NET_IF_DL_H))
-    auto sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+#ifdef __HAIKU__
+    int sock_af = AF_LINK;
+#else
+    int sock_af = AF_INET;
+#endif 
+    auto sd = socket(sock_af, SOCK_DGRAM, IPPROTO_IP);
     if (sd < 0)
         return false;
 
