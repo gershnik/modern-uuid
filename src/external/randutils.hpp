@@ -110,7 +110,7 @@
 // Ugly platform-specific code for auto_seeded
 
 #if !defined(RANDUTILS_CPU_ENTROPY) && defined(__has_builtin)
-    #if __has_builtin(__builtin_readcyclecounter) && !defined(__aarch64__)
+    #if __has_builtin(__builtin_readcyclecounter) && !defined(__aarch64__) && !defined(__arm__)
         #define RANDUTILS_CPU_ENTROPY __builtin_readcyclecounter()
     #endif
 #endif
