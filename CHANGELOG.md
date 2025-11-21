@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## [2.2] - 2025-11-21
+
 ### Fixed
 - Invalid instruction crash on Apple's old armv7 devices (iPhone 5 and below).
 
@@ -146,3 +148,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 [1.10]: https://github.com/gershnik/modern-uuid/releases/v1.10
 [2.0]: https://github.com/gershnik/modern-uuid/releases/v2.0
 [2.1]: https://github.com/gershnik/modern-uuid/releases/v2.1
+[2.2]: https://github.com/gershnik/modern-uuid/releases/v2.2
