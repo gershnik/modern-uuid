@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Fixed
+- Invalid instruction crash on Apple's old armv7 devices (iPhone 5 and below).
+
 ## [2.1] - 2025-10-14
 
 ### Added
