@@ -6,7 +6,7 @@
 [![Tests](https://github.com/gershnik/modern-uuid/actions/workflows/test.yml/badge.svg)](https://github.com/gershnik/modern-uuid/actions/workflows/test.yml)
 
 A modern, no-dependencies, portable C++ library for manipulating [UUIDs](https://en.wikipedia.org/wiki/Universally_unique_identifier), 
-[ULIDs](https://github.com/ulid/spec), [NanoIDs](https://github.com/ai/nanoid) and [Cuid2](https://github.com/paralleldrive/cuid2).
+[ULIDs](https://github.com/ulid/spec), [NanoIDs](https://github.com/ai/nanoid) and [Cuid2s](https://github.com/paralleldrive/cuid2).
 
 <!-- TOC depthfrom:2 -->
 
