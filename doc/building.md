@@ -4,7 +4,7 @@
 
 ### CMake via FetchContent
 
-With modern CMake the easiest way to use this library is
+With modern CMake, the easiest way to use this library is
 
 ```cmake
 include(FetchContent)
@@ -25,16 +25,17 @@ PRIVATE
   #modern-uuid::modern-uuid-shared
 )
 ```
-> ℹ&#xFE0F; _[What is FetchContent?](https://cmake.org/cmake/help/latest/module/FetchContent.html)_
+> ℹ&#xFE0F; _[What is FetchContent?][cmake-FetchContent]_
 
-See [CMake settings and targets](#cmake-settings-and-targets) for information about CMake settings that affect the above and available targets.
+See [CMake settings and targets](#cmake-settings-and-targets) for information about CMake settings 
+that affect the above and available targets.
 
 ### CMake from download
 
 Alternatively, you can clone this repository somewhere and do this:
 
 ```cmake
-add_subdirectory(PATH_WHERE_YOU_DOWNALODED_IT_TO, modern-uuid)
+add_subdirectory(PATH_WHERE_YOU_DOWNLOADED_IT_TO, modern-uuid)
 ...
 target_link_libraries(mytarget
 PRIVATE
@@ -47,16 +48,17 @@ PRIVATE
 )
 ```
 
-Note that you need to have your compiler to support at least C++20 in order for build to succeed.
+Note that your compiler needs to support at least C++20 in order for the build to succeed.
 
-See [CMake settings and targets](#cmake-settings-and-targets) for information about CMake settings that affect the above and available targets.
+See [CMake settings and targets](#cmake-settings-and-targets) for information about CMake 
+settings that affect the above and available targets.
 
 ### Building and installing on your system
 
 You can also build and install this library on your system using CMake.
 
 1. Download or clone this repository into SOME_PATH
-2. On command line:
+2. On the command line:
 ```bash
 cd SOME_PATH
 cmake -S . -B out 
@@ -71,14 +73,16 @@ sudo cmake --install out
 #cmake --install out --prefix /usr
 ```
 
-See [CMake settings and targets](#cmake-settings-and-targets) for information about CMake settings you can pass to configuration step.
+See [CMake settings and targets](#cmake-settings-and-targets) for information about CMake 
+settings you can pass to the configuration step.
 
-Once the library has been installed it can be used in the following ways:
+Once the library has been installed, it can be used in the following ways:
 
 #### Basic use 
 
-Set the include directory to `<prefix>/include` where `<prefix>` is the install prefix from above.
-Add `<prefix>/lib/libmodern-uuid.a` or `<prefix>/lib/libmodern-uuid.so` (`.dylib` on Mac) to your link libraries.
+Set the include directory to `<prefix>/include`, where `<prefix>` is the install prefix from above.
+Add `<prefix>/lib/libmodern-uuid.a` or `<prefix>/lib/libmodern-uuid.so` (`.dylib` on Mac) 
+to your link libraries.
 
 #### CMake package
 
@@ -101,60 +105,76 @@ PRIVATE
 Add the output of `pkg-config --cflags --libs modern-uuid` to your compiler flags.
 
 Note that the default installation prefix `/usr/local` might not be in the list of places your
-`pkg-config` looks into. If so you might need to do:
+`pkg-config` looks into. If so, you might need to do:
 ```bash
 export PKG_CONFIG_PATH=/usr/local/share/pkgconfig
 ```
-before running `pkg-config`
+before running `pkg-config`.
 
 ### CMake settings and targets
  
 There are 3 variables that affect the type of library built:
 
-* `MUUID_SHARED` - if set enables shared library target even if it otherwise wouldn't be enabled
-* `MUUID_STATIC` - if set enables static library target even if it otherwise wouldn't be enabled
-* [BUILD_SHARED_LIBS](https://cmake.org/cmake/help/latest/variable/BUILD_SHARED_LIBS.html) - see below
-* [TARGET_SUPPORTS_SHARED_LIBS](https://cmake.org/cmake/help/latest/prop_gbl/TARGET_SUPPORTS_SHARED_LIBS.html) - see below
+* `MUUID_SHARED` - if set, enables shared library target even if it otherwise wouldn't be enabled
+* `MUUID_STATIC` - if set, enables static library target even if it otherwise wouldn't be enabled
+* [BUILD_SHARED_LIBS][cmake-BUILD_SHARED_LIBS] - see below
+* [TARGET_SUPPORTS_SHARED_LIBS][cmake-TARGET_SUPPORTS_SHARED_LIBS] - see below
 
-If you don't explicitly set either `MUUID_SHARED` or `MUUID_STATIC` the behavior is as follows:
+If you don't explicitly set either `MUUID_SHARED` or `MUUID_STATIC`, the behavior is as follows:
 
-* If `TARGET_SUPPORTS_SHARED_LIBS` is `FALSE` shared lib is not enabled regardless of the following. 
-* If the modern-uuid project is a top level project then both variants are enabled.
-* Otherwise the enabled variant depends on `BUILD_SHARED_LIBS`.
-  If `BUILD_SHARED_LIBS` is `ON` then the shared library target will be enabled. Otherwise - the static one.
+* If `TARGET_SUPPORTS_SHARED_LIBS` is `FALSE`, shared lib is not enabled regardless of the following. 
+* If the modern-uuid project is a top-level project, then both variants are enabled.
+* Otherwise, the enabled variant depends on `BUILD_SHARED_LIBS`.
+  If `BUILD_SHARED_LIBS` is `ON`, then the shared library target will be enabled. Otherwise - the static one.
 
 
-You can [set()](https://cmake.org/cmake/help/latest/command/set.html) `MUUID_SHARED`, `MUUID_STATIC` and `BUILD_SHARED_LIBS` in your CMake script prior to 
-adding modern-uuid or specify them on CMake command line.
+You can [set()][cmake-set] `MUUID_SHARED`, `MUUID_STATIC` and `BUILD_SHARED_LIBS` in your CMake script prior to 
+adding modern-uuid or specify them on the CMake command line.
 
 The exposed targets can be:
 
 * `modern-uuid::modern-uuid-static` - the static library
 * `modern-uuid::modern-uuid-shared` - the shared library
 * `modern-uuid::modern-uuid` - the "default" one. If only one of static/shared variants is enabled, this one points to it. 
-  If both variants are enabled then this alias points to `modern-uuid::modern-uuid-shared` if `BUILD_SHARED_LIBS` is `ON` or 
+  If both variants are enabled, then this alias points to `modern-uuid::modern-uuid-shared` if `BUILD_SHARED_LIBS` is `ON` or 
   `modern-uuid::modern-uuid-static` otherwise.  
 
 
 ### Other build systems
 
-If you use a different build system then:
+If you use a different build system, then:
 
 * Set your include path to `inc` 
 * Set `MUUID_BUILDING_MUUID` preprocessor macro to 1.
-* If building a shared library set `MUUID_SHARED` preprocessor macro to 1.
-* Compile the sources under `src` into a static/shared library and add it to your link step
-* On some platforms you will need to link with additional libraries:
+* If building a shared library, set `MUUID_SHARED` preprocessor macro to 1.
+* Compile the sources under `src` into a static/shared library and add it to your link step.
+* On some platforms, you will need to link with additional libraries:
   * Illumos: `socket`
   * MinGW: `iphlpapi.lib`
 
-Note that you need to have your compiler to use at least C++20 mode in order for build to succeed.
+Note that you need your compiler to use at least C++20 mode in order for the build to succeed.
 
 ## Configuration options
 
-Whichever method you use you can set the following macros to control the library behavior. These must be set identically when using and building the library.
+Whichever method you use, you can set the following macros to control the library behavior. 
+These must be set identically when using and building the library.
 
 * `MUUID_SHARED` - set it to 1 if using/building a shared version of the library.
-* `MUUID_MULTITHREADED` - set it to 1 or 0 to control support for multiple threads. Normally threading support is detected automatically but setting this macro manually allows you to override automatic detection.
-* `MUUID_USE_EXCEPTIONS` - set it to 1 or 0 to control usage of exceptions. Normally exception support is detected automatically but setting this manually allows you to override automatic detection.
-* `MUUID_USE_FMT` - set it to 1 to force support for `fmt` library. You must include `<fmt/format.h>` prior to any `modern-uuid` headers - otherwise the compilation will fail. (For backward compatibility, if this flag is not set, support for `fmt` will be automatically enabled if `<fmt/format.h>` was included prior to this library headers and disabled otherwise.)
+* `MUUID_MULTITHREADED` - set it to 1 or 0 to control support for multiple threads. 
+  Normally threading support is detected automatically, but setting this macro manually allows 
+  you to override automatic detection.
+* `MUUID_USE_EXCEPTIONS` - set it to 1 or 0 to control usage of exceptions. Normally exception 
+  support is detected automatically, but setting this manually allows you to override automatic detection.
+* `MUUID_USE_FMT` - set it to 1 to force support for the `fmt` library. You must include 
+  `<fmt/format.h>` prior to any `modern-uuid` headers - otherwise the compilation will fail. 
+  (For backward compatibility, if this flag is not set, support for `fmt` will be automatically 
+  enabled if `<fmt/format.h>` was included prior to the library's headers and disabled otherwise.)
+
+<!-- Links -->
+
+[cmake-FetchContent]: https://cmake.org/cmake/help/latest/module/FetchContent.html
+[cmake-BUILD_SHARED_LIBS]: https://cmake.org/cmake/help/latest/variable/BUILD_SHARED_LIBS.html
+[cmake-TARGET_SUPPORTS_SHARED_LIBS]: https://cmake.org/cmake/help/latest/prop_gbl/TARGET_SUPPORTS_SHARED_LIBS.html
+[cmake-set]: https://cmake.org/cmake/help/latest/command/set.html
+
+<!-- End Links -->
