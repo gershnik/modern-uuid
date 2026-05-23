@@ -213,8 +213,8 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
 }
 
 
-std::array<uint8_t, 6> g_node_id;
-bool g_node_id_set = false;
+static std::array<uint8_t, 6> g_node_id;
+static bool g_node_id_set = false;
 
 #if MUUID_MULTITHREADED
 
