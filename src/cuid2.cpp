@@ -25,7 +25,7 @@ namespace {
 
             m_counter = dist32(gen);
             for (auto & b: m_fingerprint)
-                b = dist8(gen);
+                b = uint8_t(dist8(gen));
         }
 
         uint32_t count() {
