@@ -110,7 +110,7 @@ jobs:
 
           #windows arm
           for cxx_standard in cxx_standards:
-            hosts.append({'os': 'windows-11-arm', 'cxx_standard': cxx_standard, 'jobname': 'Windows - arm64'})
+            hosts.append({'os': 'windows-11-arm', 'cxx_standard': cxx_standard, 'jobname': 'Windows - arm64 - C++{cxx_standard}'})
 
               
           for cxx_standard in cxx_standards:
