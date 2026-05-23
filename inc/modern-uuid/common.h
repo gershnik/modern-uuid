@@ -93,7 +93,7 @@
 
 #if MUUID_USE_FMT && !MUUID_SUPPORTS_FMT_FORMAT
 
-    #error "MUUID_USE_FMT is requested but fmt library (of version >= 5.0) is not detected. Did you forget to include <fmt/format.h> before this header?"
+    #error "MUUID_USE_FMT is requested but fmt library (of version >= 6.0) is not detected. Did you forget to include <fmt/format.h> before this header?"
 
 #endif
 
