@@ -136,9 +136,6 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
         buf.resize(buf.size() + 1024);
     }
     
-    if (ioctl(sd, static_cast<ioctl_type>(SIOCGIFCONF), &ifc) < 0)
-        return false;
-    
     struct ifreq * ifrp;
     for (size_t i = 0; i < size_t(ifc.ifc_len); i+= ifreq_size(*ifrp)) {
         ifrp = (struct ifreq *)((uint8_t *)ifc.ifc_buf + i);
