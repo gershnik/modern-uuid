@@ -7,8 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 - `MUUID_USE_FMT` now actually works properly
-- UUIDv1, v6 and CUID2: 
-  - Garbage node id on Windows if the main network adapter has a physical address shorter than 6 bytes
+- UUIDv1 and CUID2: 
+  - Garbage node id used on Windows if the main network adapter has a physical address not 6 bytes long.
   - Extremely unlikely race condition on Unixes if an adapter is added in the middle of node id detection.
 - MSVC warnings when building with Visual Studio CMake generator
 - Minor internal typos and code hygiene issues.
