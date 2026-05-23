@@ -196,7 +196,9 @@ static auto get_hardware_node_id(std::span<uint8_t, 6> dest) -> bool {
     }
 
     for (auto cur = addresses; cur; cur = cur->Next) {
-        uint8_t * res = cur->PhysicalAddress + (cur->PhysicalAddressLength - 6);
+        if (cur->PhysicalAddressLength != 6)
+            continue;
+        uint8_t * res = cur->PhysicalAddress;
         if (!res[0] && !res[1] && !res[2] && !res[3] && !res[4] && !res[5])
             continue;
         memcpy(dest.data(), res, 6);
