@@ -60,9 +60,9 @@ jobs:
           cxx_standards = [20, 23]
 
           macos_map = {
-            'macos-13': "14.3.1",
-            'macos-14': "15.4",
-            'macos-15': "16.2"
+            "15.4": 'macos-14',
+            "16.4": 'macos-15',
+            "26.3": 'macos-26',
           }
 
           win_paltforms = ["x64", "Win32"]
@@ -75,7 +75,8 @@ jobs:
             14: 'ubuntu-24.04'
           }
           gcc_cont_map = {
-            15: 'gcc:15.1'
+            15: 'gcc:15.1',
+            16: 'gcc:15.1'
           }
           clang_map = {
             13: 'ubuntu-22.04', 
@@ -86,7 +87,8 @@ jobs:
             18: 'ubuntu-latest', 
             19: 'ubuntu-latest', 
             20: 'ubuntu-latest',
-            21: 'ubuntu-latest'
+            21: 'ubuntu-latest',
+            22: 'ubuntu-latest'
           }
           emscripten_versions = [
             '3.1.70'
@@ -98,13 +100,17 @@ jobs:
 
           #macOS
           for cxx_standard in cxx_standards:
-            for runon, xcode in macos_map.items():
+            for xcode, runon in macos_map.items():
               hosts.append({'os': runon, 'version': xcode, 'cxx_standard': cxx_standard, 'jobname': f'macOS - Xcode{xcode} - C++{cxx_standard}'})
           
-          #windows
+          #windows amd
           for cxx_standard in cxx_standards:
             for platform in win_paltforms:
               hosts.append({'os': 'windows-latest', 'platform': platform, 'cxx_standard': cxx_standard, 'jobname': f'Windows - {platform} - C++{cxx_standard}'})
+
+          #windows arm
+          hosts.append({'os': 'windows-11-arm', 'jobname': 'Windows - arm64'})
+
               
           for cxx_standard in cxx_standards:
             for arch in win_clang_archs:
@@ -157,7 +163,7 @@ jobs:
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: System Setup
       shell: bash
@@ -186,7 +192,7 @@ jobs:
             echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.version }}.app" >> $GITHUB_ENV
         fi
 
-        if [[ '${{ matrix.os }}' == windows-* ]]; then
+        if [[ '${{ matrix.os }}' == windows-latest ]]; then
             if [[ '${{ matrix.compiler }}' != '' ]]; then
                 if [[ '${{ matrix.arch }}' == "x64" ]]; then
                     VCPREFIX="C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\Llvm\\x64\\bin"
@@ -224,7 +230,7 @@ jobs:
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: System Setup
       shell: bash
@@ -248,7 +254,7 @@ jobs:
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Configure
       shell: cmd
@@ -267,7 +273,7 @@ jobs:
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Install Cygwin
       uses: egor-tensin/setup-cygwin@v4
@@ -286,6 +292,31 @@ jobs:
           cd ${GITHUB_WORKSPACE}
           cmake --build out --target run-tests
 
+  big-endian:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build gcc-powerpc-linux-gnu g++-powerpc-linux-gnu qemu-user-binfmt
+
+    - name: Configure
+      run: |
+        export CC=powerpc-linux-gnu-gcc
+        export CXX=powerpc-linux-gnu-g++
+        export QEMU_LD_PREFIX=/usr/powerpc-linux-gnu/
+        cmake -GNinja -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_SYSTEM_PROCESSOR=powerpc
+
+    - name: Build and Test
+      shell: bash
+      run: |
+        export QEMU_LD_PREFIX=/usr/powerpc-linux-gnu/
+        cmake --build out --target run-tests
+
   android:
     runs-on: ubuntu-latest
     strategy:
@@ -296,7 +327,7 @@ jobs:
         arch: [x86_64]
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Enable KVM
       run: |
@@ -305,7 +336,7 @@ jobs:
         sudo udevadm trigger --name-match=kvm
 
     - name: AVD cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: avd-cache
       with:
         path: |
@@ -353,7 +384,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Install pre-requisites
       run: |
