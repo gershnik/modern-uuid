@@ -330,9 +330,9 @@ namespace muuid
         using data = Data;
 
         /**
-         * Per thread persistance callback.
+         * Per thread persistence callback.
          * 
-         * All methods of this class are only accessed from a signle thread
+         * All methods of this class are only accessed from a single thread
          */
         class per_thread {
         public:
@@ -378,7 +378,7 @@ namespace muuid
          * This could be either a newly allocated object or some resused one
          * depending on your implementation.
          * 
-         * The return time is reference rather than pointer because you are not
+         * The return type is reference rather than pointer because you are not
          * allowed to return nullptr.
          */
         virtual per_thread & get_for_current_thread() = 0;
