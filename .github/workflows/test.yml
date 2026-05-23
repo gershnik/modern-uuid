@@ -65,7 +65,7 @@ jobs:
             "26.3": 'macos-26',
           }
 
-          win_paltforms = ["x64", "Win32"]
+          win_platforms = ["x64", "Win32"]
           win_clang_archs = ["x64", "x86"]
 
           gcc_map = {
@@ -105,11 +105,12 @@ jobs:
           
           #windows amd
           for cxx_standard in cxx_standards:
-            for platform in win_paltforms:
+            for platform in win_platforms:
               hosts.append({'os': 'windows-latest', 'platform': platform, 'cxx_standard': cxx_standard, 'jobname': f'Windows - {platform} - C++{cxx_standard}'})
 
           #windows arm
-          hosts.append({'os': 'windows-11-arm', 'jobname': 'Windows - arm64'})
+          for cxx_standard in cxx_standards:
+            hosts.append({'os': 'windows-11-arm', 'cxx_standard': cxx_standard, 'jobname': 'Windows - arm64'})
 
               
           for cxx_standard in cxx_standards:
