@@ -36,7 +36,7 @@ namespace {
 
             auto node_id = impl::get_node_id();
             memcpy(m_fingerprint, node_id.data(), node_id.size());
-            return std::span<const uint8_t, 16>(reinterpret_cast<const uint8_t *>(m_fingerprint), 16);
+            return std::span<const uint8_t, 16>(m_fingerprint, 16);
         }
 
     private:
