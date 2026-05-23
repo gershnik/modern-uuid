@@ -210,7 +210,7 @@ namespace muuid
         }
 
         template<impl::byte_like Byte, class T>
-        constexpr const uint8_t * read_bytes(const Byte * bytes, T & val) noexcept {
+        constexpr const Byte * read_bytes(const Byte * bytes, T & val) noexcept {
             T tmp = uint8_t(*bytes++);
             for(unsigned i = 0; i < sizeof(T) - 1; ++i)
                 tmp = (tmp << 8) | uint8_t(*bytes++);
@@ -219,7 +219,7 @@ namespace muuid
         }
 
         template<impl::byte_like Byte, class T>
-        constexpr uint8_t * write_bytes(T val, Byte * bytes) noexcept {
+        constexpr Byte * write_bytes(T val, Byte * bytes) noexcept {
             bytes[sizeof(T) - 1] = Byte(static_cast<uint8_t>(val));
             if constexpr (sizeof(T) > 1) {
                 for(unsigned i = 1; i != sizeof(T); ++i) {
