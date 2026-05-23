@@ -169,4 +169,4 @@ public:
 
 } // namespace
 
-#endif // #ifndef BOOST_UUID_DETAIL_SHA1_HPP_INCLUDED
+#endif // #ifndef BOOST_UUID_DETAIL_CHACHA20_HPP_INCLUDED
