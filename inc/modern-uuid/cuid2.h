@@ -449,7 +449,7 @@ namespace muuid {
             return str;
         }
 
-        /// Returns hash code for the uuid
+        /// Returns hash code for the cuid2
         friend constexpr size_t hash_value(const cuid2 & val) noexcept {
             static_assert(sizeof(cuid2) > sizeof(size_t) && sizeof(cuid2) % sizeof(size_t) == 0);
             size_t temp;
