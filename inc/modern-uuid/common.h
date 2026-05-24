@@ -109,6 +109,26 @@
     #endif
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__)
+
+    #if defined(_M_ARM64) || defined(_M_ARM) || defined(_M_ARM64EC)
+        #include <intrin.h>
+        #define MUUID_THREAD_YIELD __yield()
+    #elif defined(_M_X64) || defined(_M_IX86)
+        #include <emmintrin.h>
+        #define MUUID_THREAD_YIELD _mm_pause()
+    #endif
+
+#elif defined(__clang__) || defined(__GNUC__)
+
+    #if defined(__x86_64__) || defined(__i386__)
+        #define MUUID_THREAD_YIELD __builtin_ia32_pause()
+    #elif defined(__aarch64__) || defined(__arm__)
+        #define MUUID_THREAD_YIELD  asm volatile("yield" ::: "memory")
+    #endif
+
+#endif
+
 namespace muuid
 {
     namespace impl {

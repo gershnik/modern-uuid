@@ -34,6 +34,36 @@ namespace muuid::impl {
             std::atomic<T> m_value;
         };
 
+        class spinlock_if_multithreaded {
+        public:
+            void lock() noexcept 
+            {
+                for ( ; ; ) {
+                    
+                    while (m_value.load(std::memory_order_relaxed)) 
+                        yield();
+                    
+                    unsigned current = 0;
+                    if (m_value.compare_exchange_strong(current, 1, std::memory_order_acquire, std::memory_order_relaxed))
+                        return;
+                
+                    yield();
+                }
+            }
+
+            void unlock() noexcept 
+                { m_value.store(0, std::memory_order_release); }
+
+        private:
+            static void yield() noexcept {
+                #ifdef MUUID_THREAD_YIELD
+                    MUUID_THREAD_YIELD;
+                #endif
+            }
+        private:
+            std::atomic<unsigned> m_value{0};
+        };
+
         using mutex_if_multithreaded = std::mutex;
 
         #if __cpp_lib_atomic_flag_test >= 201907L
@@ -104,6 +134,12 @@ namespace muuid::impl {
             }
         private:
             T m_value;
+        };
+
+        class spinlock_if_multithreaded {
+        public:
+            void lock() noexcept {}
+            void unlock() noexcept {}
         };
 
         using mutex_if_multithreaded = null_mutex;

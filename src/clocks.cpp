@@ -20,10 +20,65 @@ using namespace muuid::impl;
 
 using hundred_nanoseconds = duration<int64_t, std::ratio<int64_t(1), int64_t(10'000'000)>>;
 
-static atomic_if_multithreaded<uuid_clock_persistence *> g_clock_persistence_v1{};
-static atomic_if_multithreaded<uuid_clock_persistence *> g_clock_persistence_v6{};
-static atomic_if_multithreaded<uuid_clock_persistence *> g_clock_persistence_v7{};
-static atomic_if_multithreaded<ulid_clock_persistence *> g_clock_persistence_ulid{};
+namespace {
+
+    template<class T>
+    class atomic_refcounted {
+    public:
+        constexpr atomic_refcounted() noexcept = default;
+        atomic_refcounted(T * desired) noexcept : m_p(desired) { 
+            if (this->m_p)
+                this->m_p->add_ref();
+        }
+        
+        atomic_refcounted(const atomic_refcounted&) = delete;
+        atomic_refcounted & operator=(const atomic_refcounted&) = delete;
+        
+        ~atomic_refcounted() noexcept { 
+            if (this->m_p)
+                this->m_p->sub_ref();
+        }
+
+        T * load() {
+            std::lock_guard guard(this->m_lock);
+            if (this->m_p)
+                this->m_p->add_ref();
+            return this->m_p;
+        }
+
+        void store(T * desired) noexcept { 
+            std::lock_guard guard(this->m_lock);
+            std::swap(this->m_p, desired);
+            if (this->m_p)
+                this->m_p->add_ref();
+            if (desired)
+                desired->sub_ref();
+        }
+
+        T * exchange(T * desired) noexcept {
+            std::lock_guard guard(this->m_lock);
+            std::swap(this->m_p, desired);
+            return desired;
+        }
+    private:
+        mutable spinlock_if_multithreaded m_lock;
+        T * m_p = nullptr;
+    };
+
+    template<class T>
+    struct ref_release {
+        T * p;
+        ~ref_release() { if (p) p->sub_ref(); }
+    };
+
+    template<class T>
+    ref_release(T *) -> ref_release<T>;
+}
+
+static atomic_refcounted<uuid_clock_persistence> g_clock_persistence_v1 = nullptr;
+static atomic_refcounted<uuid_clock_persistence> g_clock_persistence_v6 = nullptr;
+static atomic_refcounted<uuid_clock_persistence> g_clock_persistence_v7 = nullptr;
+static atomic_refcounted<ulid_clock_persistence> g_clock_persistence_ulid = nullptr;
 
 template<class T>
 static inline T detect_roundness_to_pow10_impl(T val) {
@@ -495,10 +550,11 @@ namespace {
 clock_result_v1 muuid::impl::get_clock_v1() {
     using state_type = non_repeatable_clock_state<hundred_nanoseconds, hundred_nanoseconds>;
 
-    auto * current_pers = g_clock_persistence_v1.get();
+    auto * current_pers = g_clock_persistence_v1.load();
+    ref_release rel{current_pers};
     auto & per_thread_state = reset_on_fork_thread_local<state_type, 1>::instance();
     per_thread_state.set_persistence(current_pers);
-
+    
     time_point<system_clock, hundred_nanoseconds> adjusted_now;
     uint16_t clock_seq;
     per_thread_state.get(adjusted_now, clock_seq);
@@ -513,10 +569,11 @@ clock_result_v1 muuid::impl::get_clock_v1() {
 clock_result_v6 muuid::impl::get_clock_v6() {
     using state_type = monotonic_clock_state<hundred_nanoseconds, hundred_nanoseconds>;
 
-    auto * current_pers = g_clock_persistence_v6.get();
+    auto * current_pers = g_clock_persistence_v6.load();
+    ref_release rel{current_pers};
     auto & per_thread_state = reset_on_fork_thread_local<state_type, 6>::instance();
     per_thread_state.set_persistence(current_pers);
-
+    
     time_point<system_clock, hundred_nanoseconds> adjusted_now;
     uint16_t clock_seq;
     per_thread_state.get(adjusted_now, clock_seq);
@@ -531,10 +588,11 @@ clock_result_v6 muuid::impl::get_clock_v6() {
 clock_result_v7 muuid::impl::get_clock_v7() {
     using state_type = monotonic_clock_state<milliseconds, microseconds>;
 
-    auto * current_pers = g_clock_persistence_v7.get();
+    auto * current_pers = g_clock_persistence_v7.load();
+    ref_release rel{current_pers};
     auto & per_thread_state = reset_on_fork_thread_local<state_type, 7>::instance();
     per_thread_state.set_persistence(current_pers);
-
+    
     time_point<system_clock, microseconds> adjusted_now;
     uint16_t clock_seq;
     per_thread_state.get(adjusted_now, clock_seq);
@@ -551,7 +609,8 @@ clock_result_v7 muuid::impl::get_clock_v7() {
 
 clock_result_ulid muuid::impl::get_clock_ulid() {
 
-    auto * current_pers = g_clock_persistence_ulid.get();
+    auto * current_pers = g_clock_persistence_ulid.load();
+    ref_release rel{current_pers};
     auto & per_thread_state = reset_on_fork_thread_local<ulid_clock_state>::instance();
     per_thread_state.set_persistence(current_pers);
 
