@@ -347,7 +347,7 @@ namespace muuid {
     #ifdef __APPLE__
         /// Converts uuid to Apple's CFUUIDBytes
         constexpr auto to_CFUUIDBytes() const noexcept -> CFUUIDBytes {
-            static_assert(sizeof(this->bytes) == sizeof(bytes));
+            static_assert(sizeof(this->bytes) == sizeof(CFUUIDBytes));
 
             CFUUIDBytes ret;
             std::copy(this->bytes.begin(), this->bytes.end(), &ret.byte0);
