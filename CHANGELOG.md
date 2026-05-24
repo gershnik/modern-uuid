@@ -7,9 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 - `MUUID_USE_FMT` now actually works properly
+- Obtaining hash values from all ids is now actually constexpr
+- Input from iostreams now handles whitespace properly
+- Constructors/`from_bytes` methods now actually accept any byte-like objects, not just `uint8_t`
 - UUIDv1 and CUID2: 
   - Garbage node id used on Windows if the main network adapter has a physical address not 6 bytes long.
   - Extremely unlikely race condition on Unixes if an adapter is added in the middle of node id detection.
+- Concurrency issues in setting custom persistence for UUIDv1,v6 and ULID clocks
 - MSVC warnings when building with Visual Studio CMake generator
 - Minor internal typos and code hygiene issues.
 
