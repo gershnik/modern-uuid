@@ -332,6 +332,9 @@ TEST_CASE("custom2") {
     CHECK(f1.to_string() == "4f90d13a42");
 
     std::cout << "nanoid('1234567890abcdefqm', 10): " << fooid::generate() << '\n';
+
+    constexpr std::array<std::byte, 7> raw{};
+    CHECK(fooid::from_bytes(raw));
 }
 
 TEST_CASE("custom3") {

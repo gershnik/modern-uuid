@@ -93,17 +93,20 @@ TEST_CASE("max") {
 TEST_CASE("bytes") {
     constexpr std::array<uint8_t, 16> buf1 = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
     std::vector<uint8_t> buf2{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}};
+    constexpr std::array<char, 16> cbuf = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
 
     constexpr cuid2 u1 = cuid2::from_bytes(buf1).value();
     constexpr cuid2 u2 = cuid2::from_bytes(std::array<uint8_t, 16>{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}}).value();
     cuid2 u3 = cuid2::from_bytes(std::span<uint8_t, 16>{buf2}).value();
     cuid2 u4 = cuid2::from_bytes(std::span{buf2}.subspan<0, 16>()).value();
+    constexpr cuid2 u5 = cuid2::from_bytes(cbuf).value();
 
     CHECK(u1 == u2);
     CHECK(u1 != cuid2());
     CHECK(cuid2() < u2);
     CHECK(u2 == u3);
     CHECK(u4 == u3);
+    CHECK(u5 == u1);
 
     CHECK(u2.bytes == buf1);
     CHECK(u3.bytes == buf1);

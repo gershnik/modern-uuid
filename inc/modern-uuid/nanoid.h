@@ -212,8 +212,9 @@ namespace muuid {
         static constexpr std::optional<basic_nanoid> from_bytes(std::span<Byte, basic_nanoid::bytes_count> src) noexcept {
 
             basic_nanoid ret;
-            std::copy(src.begin(), src.end(), ret.bytes.data());
-
+            for(size_t i = 0; i < src.size(); ++i) 
+                ret.bytes[i] = uint8_t(src[i]);
+            
             if constexpr (!Alphabet::is_full) {
                 impl::bit_packer<Alphabet::bits_per_char, basic_nanoid::bytes_count> packer(src);
                 for(size_t i = 0; i < CharCount; ++i) {

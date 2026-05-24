@@ -190,7 +190,8 @@ namespace muuid {
         /// Constructs ulid from a span of 16 byte-like objects
         template<impl::byte_like Byte>
         constexpr ulid(std::span<Byte, 16> src) noexcept {
-            std::copy(src.begin(), src.end(), this->bytes.data());
+            for(size_t i = 0; i < src.size(); ++i) 
+                this->bytes[i] = uint8_t(src[i]);
         }
 
         /// Constructs ulid from anything convertible to a span of 16 byte-like objects

@@ -317,15 +317,19 @@ namespace muuid {
         template<impl::byte_like Byte>
         static constexpr std::optional<cuid2> from_bytes(std::span<Byte, 16> src) noexcept {
 
-            if (src[0] > 25)
+            if (uint8_t(src[0]) > 25)
                 return {};
             auto max_bytes = cuid2::max().bytes;
             if (std::lexicographical_compare(max_bytes.begin() + 1, max_bytes.end(),
-                                             src.begin() + 1, src.end()))
+                                             src.begin() + 1, src.end(),
+                                            [](auto lhs, auto rhs) {
+                                                return uint8_t(lhs) < uint8_t(rhs);
+                                            }))
                 return {};
 
             cuid2 ret;
-            std::copy(src.begin(), src.end(), ret.bytes.data());
+            for(size_t i = 0; i < src.size(); ++i) 
+                ret.bytes[i] = uint8_t(src[i]);
             return ret;
         }
 

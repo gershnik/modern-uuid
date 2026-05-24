@@ -304,11 +304,10 @@ namespace muuid
         public:
             constexpr bit_packer() noexcept = default;
 
-            template<class Byte>
-            requires(std::is_same_v<std::remove_cv_t<Byte>, uint8_t>)
+            template<impl::byte_like Byte>
             constexpr bit_packer(std::span<Byte, bit_packer::packed_bytes> src) noexcept {
                 for (size_t src_idx = 0; src_idx != bit_packer::packed_bytes; ++src_idx) {
-                    uint64_t carry = src[src_idx];
+                    uint64_t carry = uint8_t(src[src_idx]);
                     for(size_t i = 0; i < bit_packer::units; ++i) {
                         auto val = this->m_units[i];
                         uint64_t next_carry = val >> 56;
