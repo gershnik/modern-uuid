@@ -212,7 +212,7 @@ namespace {
 
             this->m_holder.set(pers);
             if (!this->m_initialized) {
-                PersData data;
+                PersData data{};
                 static_cast<Derived *>(this)->init_new(data);
                 m_initialized = true;
             }
@@ -246,13 +246,13 @@ namespace {
         void mutate(Func && func) {
             if (this->m_holder) {
                 std::lock_guard guard{this->m_holder};
-                PersData data;
+                PersData data{};
                 if (m_holder.load(data))
                     static_cast<Derived *>(this)->load_existing(data);
                 func(data);
                 this->m_holder.save(data);
             } else {
-                PersData data;
+                PersData data{};
                 func(data);
             }
         }
