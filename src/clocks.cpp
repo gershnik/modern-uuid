@@ -214,7 +214,7 @@ namespace {
             if (!this->m_initialized) {
                 PersData data{};
                 static_cast<Derived *>(this)->init_new(data);
-                m_initialized = true;
+                this->m_initialized = true;
             }
         }
 
@@ -247,7 +247,7 @@ namespace {
             if (this->m_holder) {
                 std::lock_guard guard{this->m_holder};
                 PersData data{};
-                if (m_holder.load(data))
+                if (this->m_holder.load(data))
                     static_cast<Derived *>(this)->load_existing(data);
                 func(data);
                 this->m_holder.save(data);
@@ -374,7 +374,7 @@ namespace {
                 if (!this->adjust(now, adjusted_now, clock_seq, false)) {
                     do {
                         now = next_distinct_now(now);
-                    } while (!adjust(now, adjusted_now, clock_seq, true));
+                    } while (!this->adjust(now, adjusted_now, clock_seq, true));
                 }
                 assert(this->m_adjustment <= std::numeric_limits<int32_t>::max());
                 data = { time_point_cast<nanoseconds>(this->m_last_time), this->m_clock_seq, int32_t(this->m_adjustment)};
@@ -465,7 +465,7 @@ namespace {
         }
 
         void get(time_point<system_clock, milliseconds> & adjusted_now, uint64_t & tail_low, uint16_t & tail_high) {
-            this->mutate([&](ulid_persistence_data & data) {
+            mutate([&](ulid_persistence_data & data) {
                 auto now = system_clock::now();
                 adjust(now, adjusted_now);
                 tail_low = m_tail.low;
