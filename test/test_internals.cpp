@@ -53,8 +53,11 @@ TEST_CASE( "reinterpret_bytes" ) {
 
     CHECK(do_reinterpret_bytes_partial<0, 1>() == do_memcpy_partial(0, 1));
     CHECK(do_reinterpret_bytes_partial<0, 2>() == do_memcpy_partial(0, 2));
-    CHECK(do_reinterpret_bytes_partial<2, 3>() == do_memcpy_partial(2, 3));
+    CHECK(do_reinterpret_bytes_partial<1, 1>() == do_memcpy_partial(1, 1));
+    CHECK(do_reinterpret_bytes_partial<1, 2>() == do_memcpy_partial(1, 2));
     CHECK(do_reinterpret_bytes_partial<1, 3>() == do_memcpy_partial(1, 3));
+    CHECK(do_reinterpret_bytes_partial<2, 1>() == do_memcpy_partial(2, 1));
+    CHECK(do_reinterpret_bytes_partial<2, 2>() == do_memcpy_partial(2, 2));
     
 }
 
