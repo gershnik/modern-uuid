@@ -106,7 +106,7 @@ public:
 protected:
     template<size_t N>
     bool read(uint8_t (&buf)[N]) {
-        if (sys_lseek(m_desc, SEEK_SET, 0) < 0)
+        if (sys_lseek(m_desc, 0, SEEK_SET) < 0)
             throw std::system_error(std::error_code(errno, std::system_category()));
         for (size_t read = 0; read < sizeof(buf); ) {
             auto byte_count = sys_read(m_desc, buf + read, unsigned(sizeof(buf) - read));
@@ -127,7 +127,7 @@ protected:
     void write(uint8_t (&buf)[N]) {
         if (sys_ftruncate(m_desc, 0) < 0)
             throw std::system_error(std::error_code(errno, std::system_category()));
-        if (sys_lseek(m_desc, SEEK_SET, 0) < 0)
+        if (sys_lseek(m_desc, 0, SEEK_SET) < 0)
             throw std::system_error(std::error_code(errno, std::system_category()));
         for (size_t written = 0; written < sizeof(buf); ) {
             auto byte_count = sys_write(m_desc, buf + written, unsigned(sizeof(buf) - written));
