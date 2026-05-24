@@ -453,7 +453,7 @@ namespace muuid {
         friend constexpr size_t hash_value(const cuid2 & val) noexcept {
             static_assert(sizeof(cuid2) > sizeof(size_t) && sizeof(cuid2) % sizeof(size_t) == 0);
             size_t temp;
-            const uint8_t * data = static_cast<const uint8_t *>(static_cast<const void *>(&val.bytes));
+            const uint8_t * data = val.bytes.data();
             size_t ret = 0;
             for(unsigned i = 0; i < sizeof(cuid2) / sizeof(size_t); ++i) {
                 data = impl::reinterpret_bytes(data, temp);
