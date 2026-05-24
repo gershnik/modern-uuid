@@ -11,6 +11,8 @@
 #include <map>
 #include <unordered_map>
 
+#include "test_util.h"
+
 using namespace muuid;
 using namespace std::literals;
 
@@ -270,6 +272,14 @@ TEST_CASE("input") {
     CHECK(!ibuf);
     CHECK(ibuf.fail());
     CHECK(!ibuf.eof());
+
+    ibuf.clear();
+    ibuf.str("7D444840-9DC0-11D1-B245-5FFDCE74FAD2 3d813cbb-47fb-32ba-91df-831e1593ac29");
+    uuid val1;
+    ibuf >> val >> val1;
+    CHECK(ibuf);
+    CHECK(val == uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+    CHECK(val1 == uuid("3d813cbb-47fb-32ba-91df-831e1593ac29"));
 }
 
 TEST_CASE("inputw") {
@@ -300,12 +310,15 @@ TEST_CASE("inputw") {
     CHECK(ibuf.fail());
     CHECK(ibuf.eof());
 
-    ibuf.clear();
-    ibuf.str(L"7D4448409DC0-11D1-B245-5FFDCE74FAD2 ");
-    ibuf >> val;
-    CHECK(!ibuf);
-    CHECK(ibuf.fail());
-    CHECK(!ibuf.eof());
+    if (g_wide_ctype_works) {
+        ibuf.clear();
+        ibuf.str(L"7D444840-9DC0-11D1-B245-5FFDCE74FAD2 3d813cbb-47fb-32ba-91df-831e1593ac29");
+        uuid val1;
+        ibuf >> val >> val1;
+        CHECK(ibuf);
+        CHECK(val == uuid("7d444840-9dc0-11d1-b245-5ffdce74fad2"));
+        CHECK(val1 == uuid("3d813cbb-47fb-32ba-91df-831e1593ac29"));
+    }
 }
 
 TEST_CASE("random") {

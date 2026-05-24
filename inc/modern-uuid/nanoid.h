@@ -326,16 +326,17 @@ namespace muuid {
         /// Reads nanoid from an istream
         template<impl::char_like T>
         friend std::basic_istream<T> & operator>>(std::basic_istream<T> & str, basic_nanoid & val) {
+            typename std::basic_istream<T>::sentry sentry(str);
+            if (!sentry)
+                return str;
+            
             std::array<T, CharCount> buf;
-            auto * strbuf = str.rdbuf();
-            for(T & c: buf) {
-                auto res = strbuf->sbumpc();
-                if (res == std::char_traits<T>::eof()) {
-                    str.setstate(std::ios_base::eofbit | std::ios_base::failbit);
-                    return str;
-                }
-                c = T(res);
+            str.read(buf.data(), buf.size());
+            if (str.gcount() != std::streamsize(buf.size())) {
+                str.setstate(std::ios_base::failbit);
+                return str;
             }
+            
             if (auto maybe_val = basic_nanoid::from_chars(buf))
                 val = *maybe_val;
             else

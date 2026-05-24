@@ -275,6 +275,14 @@ TEST_CASE("input") {
     CHECK(!ibuf);
     CHECK(ibuf.fail());
     CHECK(!ibuf.eof());
+
+    ibuf.clear();
+    ibuf.str("01BX5ZZKBKACTAV9WEVGEMMVRY 01ksb2x3mp4gm8dnwzfqat8h4x");
+    ulid val1;
+    ibuf >> val >> val1;
+    CHECK(ibuf);
+    CHECK(val == ulid("01bx5zzkbkactav9wevgemmvry"));
+    CHECK(val1 == ulid("01ksb2x3mp4gm8dnwzfqat8h4x"));
 }
 
 TEST_CASE("inputw") {
@@ -311,6 +319,16 @@ TEST_CASE("inputw") {
     CHECK(!ibuf);
     CHECK(ibuf.fail());
     CHECK(!ibuf.eof());
+
+    if (g_wide_ctype_works) {
+        ibuf.clear();
+        ibuf.str(L"01BX5ZZKBKACTAV9WEVGEMMVRY 01ksb2x3mp4gm8dnwzfqat8h4x");
+        ulid val1;
+        ibuf >> val >> val1;
+        CHECK(ibuf);
+        CHECK(val == ulid("01bx5zzkbkactav9wevgemmvry"));
+        CHECK(val1 == ulid("01ksb2x3mp4gm8dnwzfqat8h4x"));
+    }
 }
 
 TEST_CASE("generate") {

@@ -234,6 +234,14 @@ TEST_CASE("input") {
     CHECK(!ibuf);
     CHECK(ibuf.fail());
     CHECK(!ibuf.eof());
+
+    ibuf.clear();
+    ibuf.str("Uakgb_J5m9g-0JDMbcJqL 4Sf40b3f38tGdw9ZziTMJ");
+    nanoid val1;
+    ibuf >> val >> val1;
+    CHECK(ibuf);
+    CHECK(val == nanoid("Uakgb_J5m9g-0JDMbcJqL"));
+    CHECK(val1 == nanoid("4Sf40b3f38tGdw9ZziTMJ"));
 }
 
 TEST_CASE("inputw") {
@@ -264,6 +272,16 @@ TEST_CASE("inputw") {
     CHECK(!ibuf);
     CHECK(ibuf.fail());
     CHECK(!ibuf.eof());
+
+    if (g_wide_ctype_works) {
+        ibuf.clear();
+        ibuf.str(L"Uakgb_J5m9g-0JDMbcJqL 4Sf40b3f38tGdw9ZziTMJ");
+        nanoid val1;
+        ibuf >> val >> val1;
+        CHECK(ibuf);
+        CHECK(val == nanoid("Uakgb_J5m9g-0JDMbcJqL"));
+        CHECK(val1 == nanoid("4Sf40b3f38tGdw9ZziTMJ"));
+    }
 }
 
 TEST_CASE("generate") {

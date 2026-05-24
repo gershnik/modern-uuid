@@ -10,6 +10,8 @@
 #include <array>
 #include <string_view>
 
+extern bool g_wide_ctype_works;
+
 template<class T>
 auto get_ends(const T & seq) {
     return std::make_pair(std::begin(seq), std::end(seq));

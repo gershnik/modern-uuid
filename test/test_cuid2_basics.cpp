@@ -276,6 +276,14 @@ TEST_CASE("input") {
     CHECK(!ibuf);
     CHECK(ibuf.fail());
     CHECK(!ibuf.eof());
+
+    ibuf.clear();
+    ibuf.str("PFH0HAXFPZOWHT3OI213CQOS rb4h477z33qdt67kysh4zec5");
+    cuid2 val1;
+    ibuf >> val >> val1;
+    CHECK(ibuf);
+    CHECK(val == cuid2("pfh0haxfpzowht3oi213cqos"));
+    CHECK(val1 == cuid2("rb4h477z33qdt67kysh4zec5"));
 }
 
 TEST_CASE("inputw") {
@@ -312,6 +320,16 @@ TEST_CASE("inputw") {
     CHECK(!ibuf);
     CHECK(ibuf.fail());
     CHECK(!ibuf.eof());
+
+    if (g_wide_ctype_works) {
+        ibuf.clear();
+        ibuf.str(L"PFH0HAXFPZOWHT3OI213CQOS rb4h477z33qdt67kysh4zec5");
+        cuid2 val1;
+        ibuf >> val >> val1;
+        CHECK(ibuf);
+        CHECK(val == cuid2("pfh0haxfpzowht3oi213cqos"));
+        CHECK(val1 == cuid2("rb4h477z33qdt67kysh4zec5"));
+    }
 }
 
 TEST_CASE("generate") {
