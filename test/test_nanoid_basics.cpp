@@ -122,6 +122,9 @@ TEST_CASE("hash") {
     CHECK(hasher(val) != 0);
     CHECK(hasher(val) != hasher(nanoid()));
     CHECK(hasher(val) == hasher(val));
+
+    constexpr size_t h = std::hash<nanoid>{}(val);
+    CHECK(h == hasher(val));
 }
 
 TEST_CASE("strings") {
@@ -289,6 +292,10 @@ TEST_CASE("custom1") {
     constexpr auto f2 = fooid("4f90d13a41");
     CHECK(f1 != f2);
     CHECK(f1.to_string() == "4f90d13a42");
+
+    constexpr std::hash<fooid> hasher;
+    constexpr size_t h = std::hash<fooid>{}(f1);
+    CHECK(h == hasher(f1));
 
     std::cout << "nanoid('1234567890abcdef', 10): " << fooid::generate() << '\n';
 }

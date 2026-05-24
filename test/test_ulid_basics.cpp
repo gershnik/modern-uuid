@@ -122,6 +122,9 @@ TEST_CASE("hash") {
     CHECK(hasher(val) != 0);
     CHECK(hasher(val) != hasher(ulid()));
     CHECK(hasher(val) == hasher(val));
+
+    constexpr size_t h = std::hash<ulid>{}(val);
+    CHECK(h == hasher(val));
 }
 
 TEST_CASE("strings") {

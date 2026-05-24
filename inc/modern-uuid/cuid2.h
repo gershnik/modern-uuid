@@ -451,9 +451,8 @@ namespace muuid {
             const uint8_t * data = static_cast<const uint8_t *>(static_cast<const void *>(&val.bytes));
             size_t ret = 0;
             for(unsigned i = 0; i < sizeof(cuid2) / sizeof(size_t); ++i) {
-                memcpy(&temp, data, sizeof(size_t));
+                data = impl::reinterpret_bytes(data, temp);
                 ret = impl::hash_combine(ret, temp);
-                data += sizeof(size_t);
             }
             return ret;
         }

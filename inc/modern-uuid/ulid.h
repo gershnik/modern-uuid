@@ -331,9 +331,8 @@ namespace muuid {
             const uint8_t * data = val.bytes.data();
             size_t ret = 0;
             for(unsigned i = 0; i < sizeof(ulid) / sizeof(size_t); ++i) {
-                memcpy(&temp, data, sizeof(size_t));
+                data = impl::reinterpret_bytes(data, temp);
                 ret = impl::hash_combine(ret, temp);
-                data += sizeof(size_t);
             }
             return ret;
         }

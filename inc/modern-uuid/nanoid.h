@@ -345,21 +345,18 @@ namespace muuid {
 
         /// Returns hash code for the nanoid
         friend constexpr size_t hash_value(const basic_nanoid & val) noexcept {
-            static_assert(sizeof(basic_nanoid) > sizeof(size_t) && sizeof(basic_nanoid) % sizeof(size_t) == 0);
+            
             size_t temp;
             const uint8_t * data = val.bytes.data();
             size_t ret = 0;
 
             if constexpr (constexpr auto remainder = sizeof(val.bytes) % sizeof(size_t)) {
-                temp = 0;
-                memcpy(&temp, data, remainder);
+                data = impl::reinterpret_bytes_partial<0, remainder>(data, temp);
                 ret = impl::hash_combine(ret, temp);
-                data += remainder;
             }
             for(unsigned i = 0; i < sizeof(basic_nanoid) / sizeof(size_t); ++i) {
-                memcpy(&temp, data, sizeof(size_t));
+                data = impl::reinterpret_bytes(data, temp);
                 ret = impl::hash_combine(ret, temp);
-                data += sizeof(size_t);
             }
             return ret;
         }

@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
+#include <climits>
 
 #include <concepts>
 #include <compare>
@@ -98,6 +99,14 @@
 
 #if MUUID_SUPPORTS_STD_FORMAT
     #include <format>
+#endif
+
+#if defined(__cpp_lib_bit_cast)
+    #define MUUID_BIT_CAST(x, y) std::bit_cast<T>(y)
+#elif defined(__has_builtin)
+    #if __has_builtin(__builtin_bit_cast)
+        #define MUUID_BIT_CAST(x, y) __builtin_bit_cast(T, y)
+    #endif
 #endif
 
 namespace muuid
@@ -219,6 +228,66 @@ namespace muuid
                 }
             }
             return bytes + sizeof(T);
+        }
+
+        template<impl::byte_like Byte, std::integral T>
+        constexpr const Byte * reinterpret_bytes(const Byte * bytes, T & val) noexcept {
+            if (!std::is_constant_evaluated()) {
+                memcpy(&val, bytes, sizeof(T));
+            } else {
+            #if MUUID_HAVE_BIT_CAST
+                    Byte cpp_is_dumb[sizeof(T)] = {};
+                    for(size_t i = 0; i < sizeof(T); ++i)
+                        cpp_is_dumb[i] = bytes[i];
+                    val = MUUID_BIT_CAST(T, cpp_is_dumb);
+            #elif defined(__BYTE_ORDER__) || defined(_MSC_VER)
+                    val = 0;
+                    #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ || defined(_MSC_VER)
+                        for(size_t i = sizeof(T); i > 0; --i)
+                            val = (val << 8) | T(uint8_t(bytes[i - 1]));
+                    #else
+                        for(size_t i = 0; i < sizeof(T); ++i)
+                            val = (val << 8) | T(uint8_t(bytes[i]));
+                    #endif
+            #else
+                    #error "Your compiler and library are too ancient, please upgrade"
+            #endif
+            }
+
+            return bytes + sizeof(T);
+        }
+
+        template<size_t Offset, size_t Size, impl::byte_like Byte, std::integral T>
+        constexpr const Byte * reinterpret_bytes_partial(const Byte * bytes, T & val) noexcept {
+            static_assert(Offset < sizeof(T), "Offset must be less than size of T");
+            static_assert(Size <= sizeof(T) - Offset, "Offset+Size must be less or equal to size of T");
+
+            if (!std::is_constant_evaluated()) {
+                val = 0;
+                memcpy((uint8_t *)&val + Offset, bytes, Size);
+            } else {
+                #if defined(MUUID_BIT_CAST)
+                        Byte cpp_is_dumb[sizeof(T)] = {};
+                        for(size_t i = 0; i < Size; ++i)
+                            cpp_is_dumb[i + Offset] = bytes[i];
+                        val = MUUID_BIT_CAST(T, cpp_is_dumb);
+                #elif defined(__BYTE_ORDER__) || defined(_MSC_VER)
+                        val = 0;
+                        #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ || defined(_MSC_VER)
+                            T shift = T(Offset * CHAR_BIT);
+                            for(size_t i = 0; i < Size; ++i, shift += CHAR_BIT)
+                                val |= T(uint8_t(bytes[i])) << shift;
+                        #else
+                            T shift = T((sizeof(T)-Offset-1) * CHAR_BIT);
+                            for(size_t i = 0; i < Size; ++i, shift -= CHAR_BIT)
+                                val |= T(uint8_t(bytes[i])) << shift;
+                        #endif
+                #else
+                        #error "Your compiler and library are too ancient, please upgrade"
+                #endif
+            }
+            
+            return bytes + Size;
         }
 
         template<size_t BitsPerByte, size_t PackedBytes>
