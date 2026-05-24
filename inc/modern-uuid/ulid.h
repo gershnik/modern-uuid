@@ -393,7 +393,7 @@ template<class CharT>
 struct std::formatter<::muuid::ulid, CharT> : 
     public ::muuid::impl::ulid_formatter_base<std::formatter<::muuid::ulid, CharT>, CharT>
 {
-    [[noreturn]] void raise_exception(const char * message) {
+    [[noreturn]] constexpr void raise_exception(const char * message) {
         MUUID_THROW(std::format_error(message));
     }
 };
@@ -402,15 +402,20 @@ struct std::formatter<::muuid::ulid, CharT> :
 
 #if MUUID_SUPPORTS_FMT_FORMAT
 
+MUUID_IGNORE_UNREACHABLE_BEGIN
+
 /// ulid formatter for fmt::format
 template<class CharT>
 struct fmt::formatter<::muuid::ulid, CharT> : 
     public ::muuid::impl::ulid_formatter_base<fmt::formatter<::muuid::ulid, CharT>, CharT>
 {
-    void raise_exception(const char * message) {
+    [[noreturn]] constexpr void raise_exception(const char * message) {
         FMT_THROW(fmt::format_error(message));
+        abort();
     }
 };
+
+MUUID_IGNORE_UNREACHABLE_END
 
 #endif
 

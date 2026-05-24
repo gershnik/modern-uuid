@@ -413,7 +413,7 @@ template<class Alphabet, size_t CharCount, class CharT>
 struct std::formatter<::muuid::basic_nanoid<Alphabet, CharCount>, CharT> : 
     public ::muuid::impl::nanoid_formatter_base<std::formatter<::muuid::basic_nanoid<Alphabet, CharCount>, CharT>, Alphabet, CharCount, CharT>
 {
-    [[noreturn]] void raise_exception(const char * message) {
+    [[noreturn]] constexpr void raise_exception(const char * message) {
         MUUID_THROW(std::format_error(message));
     }
 };
@@ -422,15 +422,19 @@ struct std::formatter<::muuid::basic_nanoid<Alphabet, CharCount>, CharT> :
 
 #if MUUID_SUPPORTS_FMT_FORMAT
 
+MUUID_IGNORE_UNREACHABLE_BEGIN
+
 /// nanoid formatter for fmt::format
 template<class Alphabet, size_t CharCount, class CharT>
 struct fmt::formatter<::muuid::basic_nanoid<Alphabet, CharCount>, CharT> : 
     public ::muuid::impl::nanoid_formatter_base<fmt::formatter<::muuid::basic_nanoid<Alphabet, CharCount>, CharT>, Alphabet, CharCount, CharT>
 {
-    void raise_exception(const char * message) {
+    [[noreturn]] constexpr void raise_exception(const char * message) {
         FMT_THROW(fmt::format_error(message));
+        abort();
     }
 };
+MUUID_IGNORE_UNREACHABLE_END
 
 #endif
 
