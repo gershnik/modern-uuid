@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## [2.3] - 2026-05-25
+
 ### Fixed
 - `MUUID_USE_FMT` now actually works properly
 - Obtaining hash values from all ids is now actually constexpr
@@ -161,3 +163,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 [2.0]: https://github.com/gershnik/modern-uuid/releases/v2.0
 [2.1]: https://github.com/gershnik/modern-uuid/releases/v2.1
 [2.2]: https://github.com/gershnik/modern-uuid/releases/v2.2
+[2.3]: https://github.com/gershnik/modern-uuid/releases/v2.3
