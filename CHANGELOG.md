@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Changed
+- Building tests is now gated behind `-DBUILD_TESTING=ON`.
+- Build now supports `ctest`
+
 ## [2.3] - 2026-05-25
 
 ### Fixed

@@ -25,7 +25,7 @@ set(FMT_INSTALL OFF)
 
 FetchContent_Declare(fmt
     GIT_REPOSITORY  https://github.com/fmtlib/fmt
-    GIT_TAG         12.0.0
+    GIT_TAG         12.1.0
     GIT_SHALLOW     TRUE
     GIT_SUBMODULES_RECURSE FALSE
 )
@@ -81,7 +81,7 @@ endif()
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/run-test.cmake ${TEST_SRCIPT})
 
-add_custom_target(tests)
+add_custom_target(tests ALL)
 
 foreach(suffix ${BUILD_SUFFIXES})
 
@@ -165,9 +165,6 @@ foreach(suffix ${BUILD_SUFFIXES})
             -DLIBRARY=${TEST_SHARED_LIBRARY}
             -P ${CMAKE_CURRENT_BINARY_DIR}/run-test.cmake
     )
-
-
-    list(APPEND TEST_RUNNERS run-test-${suffix})
 
 endforeach()
 
