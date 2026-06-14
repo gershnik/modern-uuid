@@ -45,6 +45,35 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
     endif()
 endif()
 
+set(TEST_SRCIPT 
+"
+cmake_path(GET EXECUTABLE FILENAME exefilename)
+
+macro(run)
+    execute_process(COMMAND \${ARGV} COMMAND_ERROR_IS_FATAL ANY)
+endmacro()
+")
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
+    string(APPEND TEST_SRCIPT "
+run(${ADB} shell mkdir -p ${ANDROID_TEST_DIR}/data)
+run(${ADB} push \"\${EXECUTABLE}\" \"\${LIBRARY}\" ${ANDROID_TEST_DIR})
+run(${ADB} shell \"cd ${ANDROID_TEST_DIR} && LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH} ./\${exefilename} -ni -fc\")
+")
+elseif (CMAKE_CROSSCOMPILING)
+    string(APPEND TEST_SRCIPT "
+run(${CMAKE_CROSSCOMPILING_EMULATOR} \${EXECUTABLE} -ni -fc)
+")
+else()
+    string(APPEND TEST_SRCIPT "
+run(\${EXECUTABLE} -ni -fc)
+")  
+endif()
+
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/run-test.cmake ${TEST_SRCIPT})
+
+add_custom_target(tests)
+
 foreach(suffix ${BUILD_SUFFIXES})
 
     add_executable(test-${suffix} EXCLUDE_FROM_ALL)
@@ -122,45 +151,25 @@ foreach(suffix ${BUILD_SUFFIXES})
         test_internals.cpp
     )
 
-    if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
-
-        if (${suffix} STREQUAL "shared")
-            set(LIB_TO_PUSH "$<TARGET_FILE:modern-uuid-${suffix}>")
-        else()
-            set(LIB_TO_PUSH "")
-        endif()
-
-        add_custom_target(run-test-${suffix}
-            DEPENDS test-${suffix}
-            COMMAND echo "Running test-${suffix}"
-            COMMAND ${ADB} shell mkdir -p ${ANDROID_TEST_DIR}
-            COMMAND ${ADB} push "$<TARGET_FILE:test-${suffix}>" ${LIB_TO_PUSH} ${ANDROID_TEST_DIR}
-            COMMAND ${ADB} shell cd ${ANDROID_TEST_DIR} \"&&\" LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH}:${ANDROID_TEST_DIR} ./test-${suffix} -ni
-        )
-
-    elseif (CMAKE_CROSSCOMPILING)
-
-        add_custom_target(run-test-${suffix}
-            DEPENDS test-${suffix}
-            COMMAND echo "Running test-${suffix}"
-            COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:test-${suffix}> -ni
-        )
-
+    if (${suffix} STREQUAL "shared")
+        set(TEST_SHARED_LIBRARY "$<TARGET_FILE:modern-uuid-${suffix}>")
     else()
-
-        add_custom_target(run-test-${suffix}
-            DEPENDS test-${suffix}
-            COMMAND echo "Running test-${suffix}"
-            COMMAND test-${suffix} -ni
-        )
-
+        set(TEST_SHARED_LIBRARY "")
     endif()
+
+    add_dependencies(tests "test-${suffix}")
+
+    add_test(
+        NAME "test-${suffix}"
+        COMMAND ${CMAKE_COMMAND} 
+            -DEXECUTABLE=$<TARGET_FILE:test-${suffix}>
+            -DLIBRARY=${TEST_SHARED_LIBRARY}
+            -P ${CMAKE_CURRENT_BINARY_DIR}/run-test.cmake
+    )
+
 
     list(APPEND TEST_RUNNERS run-test-${suffix})
 
 endforeach()
 
-add_custom_target(run-tests
-    DEPENDS ${TEST_RUNNERS}
-)
 

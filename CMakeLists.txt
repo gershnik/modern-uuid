@@ -31,7 +31,12 @@ endif()
 set(MUUID_SHARED ${MUUID_SHARED} CACHE BOOL "Whether to produce shared lib" FORCE)
 set(MUUID_STATIC ${MUUID_STATIC} CACHE BOOL "Whether to produce static lib" FORCE)
 
-option(MUUID_NO_TESTS "Whether to disable test targets" OFF)
+option(BUILD_TESTING "Enable testing" ${PROJECT_IS_TOP_LEVEL})
+if (BUILD_TESTING)
+    option(MUUID_NO_TESTS "(deprecated) disables testing" OFF)
+else()
+    option(MUUID_NO_TESTS "(deprecated) disables testing" ON)
+endif()
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED)
@@ -110,7 +115,7 @@ foreach(suffix ${BUILD_SUFFIXES})
 
         target_compile_definitions(modern-uuid-${suffix}
         PRIVATE
-            MUUID_BUILD_DATE_TIME=\"${MUUID_BUILD_DATE_TIME}\"
+            "MUUID_BUILD_DATE_TIME=\"${MUUID_BUILD_DATE_TIME}\""
         )
 
     endif()
@@ -214,10 +219,11 @@ if (PROJECT_IS_TOP_LEVEL)
 
     include(cmake/install.cmake)
 
-    if (NOT MUUID_NO_TESTS)
-        add_subdirectory(test)
-    endif()
+endif()
 
+if (NOT MUUID_NO_TESTS)
+    enable_testing()
+    add_subdirectory(test)
 endif()
 
 

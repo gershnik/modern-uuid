@@ -38,7 +38,8 @@ jobs:
         git reset --hard ${{ github.sha }}
         rm -rf out
         cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
-        cmake --build out --target run-tests
+        cmake --build out --config RelWithDebInfo --target tests
+        ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
         EOF
 
   define-matrix:
@@ -195,10 +196,11 @@ jobs:
 
         if [[ '${{ matrix.os }}' == windows-latest ]]; then
             if [[ '${{ matrix.compiler }}' != '' ]]; then
+                VSROOT=`"/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath`
                 if [[ '${{ matrix.arch }}' == "x64" ]]; then
-                    VCPREFIX="C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\Llvm\\x64\\bin"
+                    VCPREFIX="$VSROOT\\VC\\Tools\\Llvm\\x64\\bin"
                 else
-                    VCPREFIX="C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\Llvm\\bin"
+                    VCPREFIX="$VSROOT\\VC\\Tools\\Llvm\\bin"
                 fi
                 echo "CC=$VCPREFIX\\${{ matrix.compiler }}" >> $GITHUB_ENV
                 echo "CXX=$VCPREFIX\\${{ matrix.compiler }}" >> $GITHUB_ENV
@@ -216,8 +218,10 @@ jobs:
           cmake -S . -B out $EXTRA_FLAGS -DCMAKE_BUILD_TYPE=RelWithDebInfo 
 
     - name: Build
-      run: |
-          cmake --build out --target run-tests
+      run: cmake --build out --config RelWithDebInfo --target tests
+
+    - name: Test
+      run: ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
 
   container:
     needs: define-matrix
@@ -245,10 +249,13 @@ jobs:
         export EXTRA_FLAGS="-DCMAKE_CXX_STANDARD=${{ matrix.cxx_standard }} -DCMAKE_CXX_STANDARD_REQUIRED=ON"
         cmake -S . -B out $EXTRA_FLAGS -DCMAKE_BUILD_TYPE=RelWithDebInfo 
   
-    - name: Build and Test
+    - name: Build
       shell: bash
-      run: |
-        cmake --build out --target run-tests
+      run: cmake --build out --config RelWithDebInfo --target tests
+
+    - name: Test
+      shell: bash
+      run: ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
 
   mingw:
     runs-on: windows-latest
@@ -267,7 +274,13 @@ jobs:
       shell: cmd
       run: |
           PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
-          cmake --build out --target run-tests
+          cmake --build out --config RelWithDebInfo --target tests
+
+    - name: Test
+      shell: cmd
+      run: |
+          PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
+          ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
 
   cygwin:
     runs-on: windows-latest
@@ -291,7 +304,13 @@ jobs:
       shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
       run: |
           cd ${GITHUB_WORKSPACE}
-          cmake --build out --target run-tests
+          cmake --build out --config RelWithDebInfo --target tests
+
+    - name: Test
+      shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+      run: |
+          cd ${GITHUB_WORKSPACE}
+          ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
 
   big-endian:
     runs-on: ubuntu-latest
@@ -312,11 +331,17 @@ jobs:
         export QEMU_LD_PREFIX=/usr/powerpc-linux-gnu/
         cmake -GNinja -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_SYSTEM_PROCESSOR=powerpc
 
-    - name: Build and Test
+    - name: Build
       shell: bash
       run: |
         export QEMU_LD_PREFIX=/usr/powerpc-linux-gnu/
-        cmake --build out --target run-tests
+        cmake --build out --config RelWithDebInfo --target tests
+
+    - name: Test
+      shell: bash
+      run: |
+        export QEMU_LD_PREFIX=/usr/powerpc-linux-gnu/
+        ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
 
   android:
     runs-on: ubuntu-latest
@@ -370,7 +395,8 @@ jobs:
         disable-animations: true
         script: |
             cmake -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE:FILEPATH=$ANDROID_SDK_ROOT/ndk/${{ matrix.version }}/build/cmake/android.toolchain.cmake -DANDROID_ABI:STRING=${{ matrix.arch }} -DANDROID_PLATFORM:STRING=${{ matrix.api }} -DANDROID_STL:STRING=c++_static
-            cmake --build out --target run-tests
+            cmake --build out --config RelWithDebInfo --target tests
+            ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
             killall -INT crashpad_handler || true
 
   emscripten:
@@ -406,6 +432,10 @@ jobs:
         cmake -S . -B out $EXTRA_FLAGS -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_BUILD_TYPE=Release
 
 
-    - name: Build and Test
+    - name: Build
       shell: bash
-      run: cmake --build out --target run-tests
+      run: cmake --build out --config Release --target tests
+
+    - name: Test
+      shell: bash
+      run: ctest --test-dir out -C Release --output-on-failure -VV 
