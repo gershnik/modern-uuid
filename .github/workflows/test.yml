@@ -259,28 +259,33 @@ jobs:
 
   mingw:
     runs-on: windows-latest
-    
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
     steps:
     - name: Checkout
       uses: actions/checkout@v6
 
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: >-
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-ninja
+
     - name: Configure
-      shell: cmd
-      run: |
-          PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
-          cmake -G "MinGW Makefiles" -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+      run: cmake -G "Ninja" -S . -B out -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
     - name: Build
-      shell: cmd
-      run: |
-          PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
-          cmake --build out --config RelWithDebInfo --target tests
+      run: cmake --build out --config RelWithDebInfo --target tests
 
     - name: Test
-      shell: cmd
-      run: |
-          PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
-          ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV 
+      run: ctest --test-dir out -C RelWithDebInfo --output-on-failure -VV
 
   cygwin:
     runs-on: windows-latest
