@@ -156,12 +156,6 @@ TEST_CASE("basic") {
         set_ulid_persistence(nullptr);
     }
     ulid::generate();
-    #if defined(__MINGW32__)
-        // MinGW's thread_local destruction is racy with std::thread::join();
-        // a joined thread's tl destructors may not have run yet. Spin briefly.
-        for (int i = 0; i < 100 && pers.ref_count() != 0; ++i)
-            std::this_thread::sleep_for(10ms);
-    #endif
     CHECK(pers.ref_count() == 0);
 }
 
