@@ -33,6 +33,15 @@ list(APPEND DECLARED_DEPENDENCIES fmt)
 
 FetchContent_MakeAvailable(${DECLARED_DEPENDENCIES})
 
+if ("${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC")
+    set(FRONT_MSVC True)
+else()
+    set(FRONT_MSVC False)
+endif()
+
+set (CLANG_CL "$<AND:$<BOOL:${FRONT_MSVC}>,$<CXX_COMPILER_ID:Clang>>")
+set (CLANG_NORMAL "$<AND:$<NOT:$<BOOL:${FRONT_MSVC}>>,$<CXX_COMPILER_ID:Clang>>")
+
 if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
     set(ANDROID_TEST_DIR /data/local/tmp/muuid_test)
     set(ANDROID_SDK_DIR ${CMAKE_ANDROID_NDK}/../..)
@@ -56,9 +65,9 @@ endmacro()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL Android)
     string(APPEND TEST_SRCIPT "
-run(${ADB} shell mkdir -p ${ANDROID_TEST_DIR}/data)
+run(${ADB} shell mkdir -p ${ANDROID_TEST_DIR})
 run(${ADB} push \"\${EXECUTABLE}\" \"\${LIBRARY}\" ${ANDROID_TEST_DIR})
-run(${ADB} shell \"cd ${ANDROID_TEST_DIR} && LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH} ./\${exefilename} -ni -fc\")
+run(${ADB} shell \"cd ${ANDROID_TEST_DIR} && LD_LIBRARY_PATH=${ANDROID_LD_LIBRARY_PATH}:${ANDROID_TEST_DIR} ./\${exefilename} -ni -fc\")
 ")
 elseif (CMAKE_CROSSCOMPILING)
     string(APPEND TEST_SRCIPT "
@@ -102,29 +111,19 @@ foreach(suffix ${BUILD_SUFFIXES})
 
     target_compile_definitions(test-${suffix}
     PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS;NOMINMAX>
+        $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS NOMINMAX>
         $<$<PLATFORM_ID:Windows>:NOMINMAX>
     )
 
     target_compile_options(test-${suffix}
     PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:/utf-8;/W4;/WX>
-        $<$<CXX_COMPILER_ID:AppleClang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
-        $<$<CXX_COMPILER_ID:GNU>:-Wall;-Wextra;-pedantic;-Wno-psabi>
-        $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING;-pthread>
+        $<$<CXX_COMPILER_ID:MSVC>:/utf-8 /W4 /WX /wd5285>
+        $<${CLANG_NORMAL}:-Wall -Wextra -pedantic -Wno-self-assign-overloaded -Wno-self-move>
+        $<${CLANG_CL}:/W4 /WX>
+        $<$<CXX_COMPILER_ID:AppleClang>:-Wall -Wextra -pedantic -Wno-self-assign-overloaded -Wno-self-move>
+        $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -pedantic -Wno-psabi>
+        $<$<BOOL:${EMSCRIPTEN}>:-sNO_DISABLE_EXCEPTION_CATCHING -pthread>
     )
-
-    if ("${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC")
-        target_compile_options(test-${suffix}
-        PRIVATE
-            $<$<CXX_COMPILER_ID:Clang>:/W4;/WX>
-        )
-    else()
-        target_compile_options(test-${suffix}
-        PRIVATE
-            $<$<CXX_COMPILER_ID:Clang>:-Wall;-Wextra;-pedantic;-Wno-self-assign-overloaded;-Wno-self-move>
-        )
-    endif()
 
     target_link_options(test-${suffix}
     PRIVATE
