@@ -41,6 +41,14 @@ endif()
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED)
 
+if (DEFINED ENV{SOURCE_DATE_EPOCH})
+
+        string(TIMESTAMP MUUID_BUILD_DATE_TIME "%Y-%m-%d %H:%M:%S" UTC)
+
+        message("modern-uuid will use reproducible timestamp: ${MUUID_BUILD_DATE_TIME}")
+
+endif()
+
 set(INCDIR ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 set(SRCDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -107,11 +115,7 @@ foreach(suffix ${BUILD_SUFFIXES})
         MUUID_BUILDING_MUUID=1
     )
 
-    if (DEFINED ENV{SOURCE_DATE_EPOCH})
-
-        string(TIMESTAMP MUUID_BUILD_DATE_TIME "%Y-%m-%d %H:%M:%S" UTC)
-
-        message("modern-uuid-${suffix} will use reproducible timestamp: ${MUUID_BUILD_DATE_TIME}")
+    if (DEFINED MUUID_BUILD_DATE_TIME)
 
         target_compile_definitions(modern-uuid-${suffix}
         PRIVATE
