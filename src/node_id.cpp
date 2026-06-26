@@ -15,6 +15,8 @@
 
 #if __has_include(<net/if.h>)
     #define HAVE_NET_IF_H 1
+    #include <sys/socket.h>
+    #include <sys/types.h>
     #include <net/if.h>
 
     #if __has_include(<net/if_dl.h>)
@@ -22,8 +24,6 @@
         #include <net/if_dl.h>
     #endif
 
-    #include <sys/socket.h>
-    #include <sys/types.h>
     #include <sys/ioctl.h>
     #if __has_include(<sys/sockio.h>)
         #include <sys/sockio.h>
