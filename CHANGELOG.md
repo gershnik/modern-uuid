@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Fixed
+- Compilation on old BSD-like systems where `<net/if.h>` cannot be included on its own. 
+
 ## [2.4] - 2026-06-19
 
 ### Changed
